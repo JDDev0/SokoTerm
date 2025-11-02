@@ -21,5 +21,12 @@ Windows:
 
 ### Compile & Run
 
-1. `cargo build`
-2. `cargo run`
+CLI:
+
+1. `cargo build --features cli`
+2. `cargo run --features cli`
+
+GUI:
+
+1. `cargo build --features gui`
+2. `cargo run --features gui`

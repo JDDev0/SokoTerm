@@ -188,6 +188,14 @@ impl HelpPage {
                 console.reset_color();
                 console.draw_text(": Open help menu");
 
+                #[cfg(feature = "gui")] {
+                    console.draw_text(", ");
+                    console.set_color(Color::LightRed, Color::Default);
+                    console.draw_text("F11");
+                    console.reset_color();
+                    console.draw_text(": Toggle Fullscreen");
+                }
+
                 console.set_underline(true);
                 console.set_color(Color::Cyan, Color::Default);
                 console.set_cursor_pos(0, 6);

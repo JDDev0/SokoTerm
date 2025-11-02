@@ -1,35 +1,23 @@
 #![allow(clippy::uninlined_format_args)]
 
+//Disable windows console window for GUI build
+#![cfg_attr(feature = "gui", windows_subsystem = "windows")]
+
+#[cfg(not(any(feature = "cli", feature = "gui")))]
+compile_error!("Either feature `startup` or `gui` must be enabled");
+
+#[cfg(all(feature = "cli", feature = "gui"))]
+compile_error!("Features `cli` and `gui` are mutually exclusively");
+
 use std::process::ExitCode;
-use std::thread::sleep;
-use std::time::Duration;
-use crate::game::Game;
-use crate::io::Console;
+use crate::startup::run_game;
 
 pub mod game;
 pub mod collections;
 pub mod io;
 
+mod startup;
+
 fn main() -> ExitCode {
-    let console = Console::new().unwrap();
-
-    let game = Game::new(&console);
-    let mut game = match game {
-        Ok(game) => game,
-        Err(err) => {
-            drop(console);
-
-            eprintln!("{err}");
-
-            return ExitCode::FAILURE;
-        },
-    };
-
-    loop {
-        if game.update() {
-            return ExitCode::SUCCESS;
-        }
-
-        sleep(Duration::from_millis(40));
-    }
+    run_game()
 }

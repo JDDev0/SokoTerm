@@ -5,4 +5,12 @@ edition = "2024"
 
 [dependencies]
 rodio = "0.20.1"
-console-lib = { version = "0.3.0", features = ["custom_panic_hook"] }
+
+console-lib = { version = "0.3.0", features = ["custom_panic_hook"], optional = true }
+
+bevy = { version = "0.17.2", optional = true}
+smol_str = { version = "0.2.2", optional = true}
+
+[features]
+cli = ["dep:console-lib"]
+gui = ["dep:bevy", "dep:smol_str"]

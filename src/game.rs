@@ -568,8 +568,6 @@ impl <'a> Game<'a> {
             self.game_state.is_player_background = !self.game_state.is_player_background;
         }
 
-        self.draw();
-
         false
     }
 
@@ -641,7 +639,7 @@ impl <'a> Game<'a> {
         }
     }
 
-    fn draw(&self) {
+    pub fn draw(&self) {
         self.console.repaint();
 
         if self.game_state.is_help {
