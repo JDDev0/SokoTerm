@@ -52,6 +52,12 @@ pub fn run_game() -> ExitCode {
             add_plugins(DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
                     title: format!("Console Sokoban (v{})", Game::VERSION),
+                    resize_constraints: WindowResizeConstraints {
+                        min_width: 480.0,
+                        min_height: 360.0,
+                        max_width: f32::INFINITY,
+                        max_height: f32::INFINITY,
+                    },
                     mode: WindowMode::BorderlessFullscreen(MonitorSelection::Primary),
                     ..default()
                 }),
