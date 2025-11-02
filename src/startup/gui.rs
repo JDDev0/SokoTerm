@@ -152,8 +152,8 @@ fn update_text_entities(
                 Text2d::new(String::from_utf8_lossy(&[character])),
                 text_font.clone(),
                 Transform::from_translation(Vec3::new(screen_x, screen_y, 0.0)),
-                TextColor(fg.fg_color_into_bevy_color()),
-                TextBackgroundColor(bg.bg_color_into_bevy_color()),
+                TextColor(fg.into()),
+                TextBackgroundColor(bg.into()),
                 ConsoleTextCharacter { x, y },
             ));
         }
@@ -278,8 +278,8 @@ fn draw_game(
         let (fg, bg) = text_color_buffer[x + y * 74];
 
         text.0 = String::from_utf8_lossy(&[character]).into();
-        fg_color.0 = fg.fg_color_into_bevy_color();
-        bg_color.0 = bg.bg_color_into_bevy_color();
+        fg_color.0 = fg.into();
+        bg_color.0 = bg.into();
     }
 
     state.mark_not_dirty();

@@ -24,10 +24,10 @@ impl ConsoleState {
             dirty: true,
 
             curser_pos: (0, 0),
-            current_color_pair: (Color::Default, Color::Default),
+            current_color_pair: (Color::White, Color::Black),
 
             text_buffer: vec![b' '; A * B].into_boxed_slice(),
-            text_color_buffer: vec![(Color::Default, Color::Default); A * B].into_boxed_slice(),
+            text_color_buffer: vec![(Color::White, Color::Black); A * B].into_boxed_slice(),
             //TODO: underline
 
             input_queue_keyboard: VecDeque::default(),
@@ -48,7 +48,7 @@ impl ConsoleState {
         self.curser_pos = (0, 0);
 
         self.text_buffer.fill(b' ');
-        self.text_color_buffer.fill((Color::Default, Color::Default));
+        self.text_color_buffer.fill((Color::White, Color::Black));
         //TODO: underline
     }
 
@@ -177,9 +177,9 @@ impl <'a> Console<'a> {
         }
     }
 
-    /// Resets the color for foreground and background to [Color::Default]
+    /// Resets the color for foreground to [Color::White] and background to [Color::Black]
     pub fn reset_color(&self) {
-        self.set_color(Color::Default, Color::Default)
+        self.set_color(Color::White, Color::Black)
     }
 
     pub fn set_underline(&self, _underline: bool) {
@@ -467,24 +467,8 @@ pub enum Color {
     LightYellow,
     LightWhite,
 
-    /// Default color from bevy
+    /// Default color is [Color::Black]
     Default = -1
-}
-
-impl Color {
-    pub fn fg_color_into_bevy_color(self) -> bevy::color::Color {
-        match self {
-            Color::Default => Color::White.into(),
-            _ => self.into()
-        }
-    }
-
-    pub fn bg_color_into_bevy_color(self) -> bevy::color::Color {
-        match self {
-            Color::Default => Color::Black.into(),
-            _ => self.into()
-        }
-    }
 }
 
 impl From<Color> for bevy::color::Color {
@@ -507,7 +491,7 @@ impl From<Color> for bevy::color::Color {
             Color::LightCyan => bevy::color::Color::srgb_u8(51, 199, 222),
             Color::LightWhite => bevy::color::Color::srgb_u8(255, 255, 255),
 
-            Color::Default => bevy::color::Color::srgb_u8(0, 0, 0),
+            Color::Default => bevy::color::Color::srgb_u8(23, 20, 33),
         }
     }
 }
