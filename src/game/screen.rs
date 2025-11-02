@@ -955,6 +955,15 @@ impl Screen for ScreenInGame {
             return;
         };
 
+        //Reset
+        if key == Key::R {
+            self.start_level(level_pack.levels()[current_level_index].level());
+
+            game_state.play_sound_effect(audio::LEVEL_RESET);
+
+            return;
+        }
+
         //Level end
         if self.continue_flag {
             if key == Key::ENTER {
@@ -972,12 +981,13 @@ impl Screen for ScreenInGame {
                 }
 
                 self.start_level(game_state.get_current_level_pack().unwrap().levels()[game_state.current_level_index].level());
-            }else if key == Key::R {
-                self.start_level(level_pack.levels()[current_level_index].level());
-
-                game_state.play_sound_effect(audio::LEVEL_RESET);
             }
 
+            return;
+        }
+
+        //Prevent movement after level complete
+        if self.game_over_flag {
             return;
         }
 
@@ -993,15 +1003,6 @@ impl Screen for ScreenInGame {
             if level.is_some() {
                 game_state.play_sound_effect(audio::UNDO_REDO_EFFECT);
             }
-
-            return;
-        }
-
-        //Reset
-        if key == Key::R {
-            self.start_level(level_pack.levels()[current_level_index].level());
-
-            game_state.play_sound_effect(audio::LEVEL_RESET);
 
             return;
         }
