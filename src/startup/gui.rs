@@ -121,8 +121,8 @@ fn update_text_entities(
     let console_width = char_width * 74.0;
     let console_height = char_height * 23.0;
 
-    let padding_x = (gameplay_width as f32 - console_width) * 0.5;
-    let padding_y = (gameplay_height as f32 - console_height) * 0.5;
+    let padding_x = (gameplay_width - console_width) * 0.5;
+    let padding_y = (gameplay_height - console_height) * 0.5;
 
     let x_offset = BORDER_WIDTH as f32 + padding_x + char_width * 0.5;
     let y_offset = BORDER_WIDTH as f32 + padding_y + char_height * 0.5;
@@ -145,8 +145,8 @@ fn update_text_entities(
         for x in 0..74 {
             let (character, (fg, bg)) = iter.next().unwrap();
 
-            let screen_x = x_offset + x as f32 * char_width - window_width as f32 * 0.5;
-            let screen_y = window_height as f32 * 0.5 - (y_offset + y as f32 * char_height);
+            let screen_x = x_offset + x as f32 * char_width - window_width * 0.5;
+            let screen_y = window_height * 0.5 - (y_offset + y as f32 * char_height);
 
             commands.spawn((
                 Text2d::new(String::from_utf8_lossy(&[character])),
