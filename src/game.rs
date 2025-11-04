@@ -13,6 +13,9 @@ use crate::game::screen::{Screen, ScreenId, ScreenInGame, ScreenLevelEditor, Scr
 use crate::game::screen::dialog::{Dialog, DialogType};
 use crate::io::{Console, Key};
 
+#[cfg(feature = "steam")]
+use bevy_steamworks::*;
+
 mod level;
 mod screen;
 mod help_page;
@@ -96,10 +99,18 @@ struct GameState {
     editor_state: EditorState,
 
     audio_handler: Option<AudioHandler>,
+
+    #[cfg(feature = "steam")]
+    steam_client: Client,
 }
 
 impl GameState {
-    fn new(level_packs: Vec<LevelPack>, editor_level_packs: Vec<LevelPack>) -> Self {
+    fn new(
+        level_packs: Vec<LevelPack>, editor_level_packs: Vec<LevelPack>,
+
+        #[cfg(feature = "steam")]
+        steam_client: Client,
+    ) -> Self {
         Self {
             current_screen_id: ScreenId::StartMenu,
             should_call_on_set_screen: Default::default(),
@@ -122,6 +133,9 @@ impl GameState {
             editor_state: EditorState::new(editor_level_packs),
 
             audio_handler: AudioHandler::new().ok(),
+
+            #[cfg(feature = "steam")]
+            steam_client
         }
     }
 
@@ -294,11 +308,23 @@ impl <'a> Game<'a> {
         directory.push(Self::SAVE_GAME_FOLDER);
         std::fs::create_dir_all(&directory)?;
 
+        #[cfg(feature = "steam")]
+        {
+            let mut directory = directory.clone();
+            directory.push("/SteamWorkshop");
+            std::fs::create_dir_all(&directory)?;
+        }
+
         directory.push("/");
         Ok(directory)
     }
 
-    pub fn new(console: &'a Console) -> Result<Self, Box<dyn Error>> {
+    pub fn new(
+        console: &'a Console,
+
+        #[cfg(feature = "steam")]
+        steam_client: Client,
+    ) -> Result<Self, Box<dyn Error>> {
         let (width, height) = console.get_console_size();
         if width < Self::CONSOLE_MIN_WIDTH || height < Self::CONSOLE_MIN_HEIGHT {
             return Err(Box::new(GameError::new(format!(
@@ -518,7 +544,12 @@ impl <'a> Game<'a> {
         
         editor_level_packs.sort_by_key(|level_pack| level_pack.id().to_string());
 
-        let mut game_state = GameState::new(level_packs, editor_level_packs);
+        let mut game_state = GameState::new(
+            level_packs, editor_level_packs,
+
+            #[cfg(feature = "steam")]
+            steam_client,
+        );
 
         let mut save_game_file = Game::get_or_create_save_game_folder()?;
         save_game_file.push("secret.lvl.sav");

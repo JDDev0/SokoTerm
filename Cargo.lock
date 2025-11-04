@@ -7,6 +7,7 @@ name = "ConsoleSokoban"
 version = "2.3.0-dev"
 dependencies = [
  "bevy",
+ "bevy-steamworks",
  "console-lib",
  "rodio",
  "smol_str",
@@ -331,6 +332,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "342f7e9335416dc98642d5747c4ed8a6ad9f7244a36d5b2b7a1b7910e4d8f524"
 dependencies = [
  "bevy_internal",
+]
+
+[[package]]
+name = "bevy-steamworks"
+version = "0.15.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "337bd586c459365734d261253adf0b6f526cc932464c2c9c8465b66f7801bb5e"
+dependencies = [
+ "bevy_app",
+ "bevy_ecs",
+ "steamworks",
 ]
 
 [[package]]
@@ -4166,6 +4178,24 @@ name = "static_assertions"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
+
+[[package]]
+name = "steamworks"
+version = "0.12.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "722f54c70818b8debdc25b18618b77a0a69fa280012c29e7904d32f9136299fc"
+dependencies = [
+ "bitflags 2.9.1",
+ "paste",
+ "steamworks-sys",
+ "thiserror 2.0.17",
+]
+
+[[package]]
+name = "steamworks-sys"
+version = "0.12.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "42862065c9e685d08cc3d9f6c609d4b46bd9684ec7e9420688eb979213469582"
 
 [[package]]
 name = "strict-num"

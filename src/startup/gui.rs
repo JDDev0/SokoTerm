@@ -11,6 +11,9 @@ use crate::game::Game;
 use crate::io::bevy_abstraction::{ConsoleState, Key};
 use crate::io::Console;
 
+#[cfg(feature = "steam")]
+use bevy_steamworks::*;
+
 #[expect(clippy::type_complexity)]
 static CONSOLE_STATE: LazyLock<Arc<Mutex<ConsoleState>>, fn() -> Arc<Mutex<ConsoleState>>> =
     LazyLock::new(|| Arc::new(Mutex::new(ConsoleState::new::<74, 23>())));
@@ -35,8 +38,23 @@ struct CharacterScaling {
 }
 
 pub fn run_game() -> ExitCode {
+    let mut app = App::new();
+
+    #[cfg(feature = "steam")]
+    let steam_client = {
+        //TODO handler error on init
+        app.add_plugins(SteamworksPlugin::init_app(4160140).unwrap());
+
+        app.world().get_resource::<Client>().unwrap().clone()
+    };
+
     let console = Box::leak(Box::new(Console::new(CONSOLE_STATE.clone())));
-    let game = Game::new(console);
+    let game = Game::new(
+        console,
+
+        #[cfg(feature = "steam")]
+        steam_client,
+    );
     let game = match game {
         Ok(game) => game,
         Err(err) => {
@@ -45,8 +63,6 @@ pub fn run_game() -> ExitCode {
             return ExitCode::FAILURE;
         },
     };
-
-    let mut app = App::new();
 
     app.
             add_plugins(DefaultPlugins.set(WindowPlugin {
