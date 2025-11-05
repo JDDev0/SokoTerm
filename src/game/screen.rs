@@ -975,42 +975,6 @@ impl Screen for ScreenInGame {
             if key == Key::ENTER {
                 self.continue_flag = false;
 
-                #[cfg(feature = "steam")]
-                if level_pack.id() == "main" && current_level_index == 95 {
-                    Achievement::LEVEL_PACK_MAIN_LEVEL_96_COMPLETED.unlock(steam_client.clone());
-                }
-
-                #[cfg(feature = "steam")]
-                if level_pack.level_pack_best_moves_sum().is_some() && level_pack.level_pack_best_time_sum().is_some() {
-                    match level_pack.id() {
-                        "tutorial" => {
-                            Achievement::LEVEL_PACK_TUTORIAL_COMPLETED.unlock(steam_client.clone());
-
-                            if level_pack.level_pack_best_time_sum().unwrap() < 4000 {
-                                Achievement::LEVEL_PACK_TUTORIAL_FAST.unlock(steam_client.clone());
-                            }
-                        },
-
-                        "main" => {
-                            Achievement::LEVEL_PACK_MAIN_COMPLETED.unlock(steam_client.clone());
-                        },
-
-                        "special" => {
-                            Achievement::LEVEL_PACK_SPECIAL_COMPLETED.unlock(steam_client.clone());
-                        },
-
-                        "demon" => {
-                            Achievement::LEVEL_PACK_DEMON_COMPLETED.unlock(steam_client.clone());
-                        },
-
-                        "secret" => {
-                            Achievement::LEVEL_PACK_SECRET_COMPLETED.unlock(steam_client.clone());
-                        },
-
-                        _ => {},
-                    }
-                }
-
                 //All levels completed
                 if current_level_index + 1 == level_pack.level_count() {
                     self.game_over_flag = true;
@@ -1138,6 +1102,42 @@ impl Screen for ScreenInGame {
 
                 if current_level_index >= level_pack.min_level_not_completed() {
                     level_pack.set_min_level_not_completed(current_level_index + 1);
+                }
+
+                #[cfg(feature = "steam")]
+                if level_pack.id() == "main" && current_level_index == 95 {
+                    Achievement::LEVEL_PACK_MAIN_LEVEL_96_COMPLETED.unlock(steam_client.clone());
+                }
+
+                #[cfg(feature = "steam")]
+                if level_pack.level_pack_best_moves_sum().is_some() && level_pack.level_pack_best_time_sum().is_some() {
+                    match level_pack.id() {
+                        "tutorial" => {
+                            Achievement::LEVEL_PACK_TUTORIAL_COMPLETED.unlock(steam_client.clone());
+
+                            if level_pack.level_pack_best_time_sum().unwrap() < 4000 {
+                                Achievement::LEVEL_PACK_TUTORIAL_FAST.unlock(steam_client.clone());
+                            }
+                        },
+
+                        "main" => {
+                            Achievement::LEVEL_PACK_MAIN_COMPLETED.unlock(steam_client.clone());
+                        },
+
+                        "special" => {
+                            Achievement::LEVEL_PACK_SPECIAL_COMPLETED.unlock(steam_client.clone());
+                        },
+
+                        "demon" => {
+                            Achievement::LEVEL_PACK_DEMON_COMPLETED.unlock(steam_client.clone());
+                        },
+
+                        "secret" => {
+                            Achievement::LEVEL_PACK_SECRET_COMPLETED.unlock(steam_client.clone());
+                        },
+
+                        _ => {},
+                    }
                 }
 
                 if let Err(err) = level_pack.save_save_game() {
