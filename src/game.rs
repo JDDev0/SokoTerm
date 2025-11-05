@@ -21,6 +21,9 @@ mod screen;
 mod help_page;
 mod audio;
 
+#[cfg(feature = "steam")]
+pub mod steam;
+
 struct EditorState {
     level_packs: Vec<LevelPack>,
     selected_level_pack_index: usize,
@@ -135,7 +138,7 @@ impl GameState {
             audio_handler: AudioHandler::new().ok(),
 
             #[cfg(feature = "steam")]
-            steam_client
+            steam_client,
         }
     }
 

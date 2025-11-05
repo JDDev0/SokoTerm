@@ -9,6 +9,9 @@ use crate::game::screen::dialog::{DialogOk, DialogSelection, DialogYesCancelNo};
 use crate::collections::UndoHistory;
 use crate::io::{Color, Console, Key};
 
+#[cfg(feature = "steam")]
+use crate::game::steam::achievement::Achievement;
+
 pub mod dialog;
 pub mod utils;
 
@@ -950,6 +953,9 @@ impl Screen for ScreenInGame {
             return;
         }
 
+        #[cfg(feature = "steam")]
+        let steam_client = game_state.steam_client.clone();
+
         let current_level_index = game_state.current_level_index;
         let Some(level_pack) = game_state.get_current_level_pack_mut() else {
             return;
@@ -968,6 +974,42 @@ impl Screen for ScreenInGame {
         if self.continue_flag {
             if key == Key::ENTER {
                 self.continue_flag = false;
+
+                #[cfg(feature = "steam")]
+                if level_pack.id() == "main" && current_level_index == 95 {
+                    Achievement::LEVEL_PACK_MAIN_LEVEL_96_COMPLETED.unlock(steam_client.clone());
+                }
+
+                #[cfg(feature = "steam")]
+                if level_pack.level_pack_best_moves_sum().is_some() && level_pack.level_pack_best_time_sum().is_some() {
+                    match level_pack.id() {
+                        "tutorial" => {
+                            Achievement::LEVEL_PACK_TUTORIAL_COMPLETED.unlock(steam_client.clone());
+
+                            if level_pack.level_pack_best_time_sum().unwrap() < 4000 {
+                                Achievement::LEVEL_PACK_TUTORIAL_FAST.unlock(steam_client.clone());
+                            }
+                        },
+
+                        "main" => {
+                            Achievement::LEVEL_PACK_MAIN_COMPLETED.unlock(steam_client.clone());
+                        },
+
+                        "special" => {
+                            Achievement::LEVEL_PACK_SPECIAL_COMPLETED.unlock(steam_client.clone());
+                        },
+
+                        "demon" => {
+                            Achievement::LEVEL_PACK_DEMON_COMPLETED.unlock(steam_client.clone());
+                        },
+
+                        "secret" => {
+                            Achievement::LEVEL_PACK_SECRET_COMPLETED.unlock(steam_client.clone());
+                        },
+
+                        _ => {},
+                    }
+                }
 
                 //All levels completed
                 if current_level_index + 1 == level_pack.level_count() {
@@ -1112,6 +1154,9 @@ impl Screen for ScreenInGame {
             }
 
             if self.secret_found_flag {
+                #[cfg(feature = "steam")]
+                Achievement::LEVEL_PACK_SECRET_DISCOVERED.unlock(steam_client.clone());
+
                 game_state.open_dialog(Box::new(DialogOk::new_secret_found("You have found a secret!")));
 
                 if let Err(err) = game_state.on_found_secret() {

@@ -55,6 +55,8 @@ pub fn run_game() -> ExitCode {
 
         //TODO handler error on init
         app.add_plugins(steamworks_plugin);
+        app.add_systems(Startup, crate::game::steam::steam_init);
+        app.add_systems(Update, crate::game::steam::steam_callback);
 
         app.world().get_resource::<Client>().unwrap().clone()
     };
