@@ -963,9 +963,14 @@ impl Screen for ScreenInGame {
 
         //Reset
         if key == Key::R {
+            let should_play_sound_effect = self.level.as_ref().unwrap().current_index() > 0 &&
+                    ((self.time_min * 60) + self.time_sec) * 1000 + self.time_millis > 50;
+
             self.start_level(level_pack.levels()[current_level_index].level());
 
-            game_state.play_sound_effect(audio::LEVEL_RESET);
+            if should_play_sound_effect {
+                game_state.play_sound_effect(audio::LEVEL_RESET);
+            }
 
             return;
         }
