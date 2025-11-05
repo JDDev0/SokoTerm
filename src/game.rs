@@ -281,8 +281,6 @@ impl <'a> Game<'a> {
     pub const LEVEL_MAX_WIDTH: usize = Self::CONSOLE_MIN_WIDTH;
     pub const LEVEL_MAX_HEIGHT: usize = Self::CONSOLE_MIN_HEIGHT - 1;
 
-    pub const MAX_LEVEL_PACK_ID_LEN: usize = 16;
-
     const PLAYER_BACKGROUND_DELAY: i32 = 12;
 
     const SAVE_GAME_FOLDER: &'static str = "ConsoleSokoban";
@@ -402,10 +400,10 @@ impl <'a> Game<'a> {
             };
 
             let level_pack_id = &level_pack_file_name[..level_pack_file_name.len() - 4];
-            if level_pack_id.len() > Self::MAX_LEVEL_PACK_ID_LEN {
+            if level_pack_id.len() > LevelPack::MAX_LEVEL_PACK_NAME_LEN {
                 return Err(Box::new(GameError::new(format!(
                     "Error while loading level pack \"{}\": Level pack ID is too long (Max: {})",
-                    arg, Self::MAX_LEVEL_PACK_ID_LEN
+                    arg, LevelPack::MAX_LEVEL_PACK_NAME_LEN
                 ))));
             }
 

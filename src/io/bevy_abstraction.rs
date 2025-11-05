@@ -413,6 +413,7 @@ impl Key {
 
             //Other keys
             bevy::input::keyboard::Key::Escape => Key::ESC,
+            bevy::input::keyboard::Key::Delete => Key::DELETE,
             bevy::input::keyboard::Key::Backspace => Key::DELETE,
             bevy::input::keyboard::Key::Enter => Key::ENTER,
             bevy::input::keyboard::Key::Tab => Key::TAB,

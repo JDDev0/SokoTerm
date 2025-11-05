@@ -422,6 +422,7 @@ impl LevelWithStats {
 
 #[derive(Debug)]
 pub struct LevelPack {
+    name: String,
     id: String,
     path: String,
     levels: Vec<LevelWithStats>,
@@ -433,11 +434,14 @@ pub struct LevelPack {
 }
 
 impl LevelPack {
+    pub const MAX_LEVEL_PACK_NAME_LEN: usize = 25;
+
     pub const MAX_LEVEL_PACK_COUNT: usize = 64;
     pub const MAX_LEVEL_COUNT_PER_PACK: usize = 191;
 
-    pub fn new(id: impl Into<String>, path: impl Into<String>) -> Self {
+    pub fn new(name: impl Into<String>, id: impl Into<String>, path: impl Into<String>) -> Self {
         Self {
+            name: name.into(),
             id: id.into(),
             path: path.into(),
             levels: vec![],
@@ -449,6 +453,7 @@ impl LevelPack {
     }
 
     pub fn read_from_save_game(id: impl Into<String>, path: impl Into<String>, lvl_data: impl Into<String>) -> Result<Self, Box<dyn Error>> {
+        let mut lvl_name = None;
         let id = id.into();
         let path = path.into();
         let lvl_data = lvl_data.into();
@@ -462,7 +467,25 @@ impl LevelPack {
                 ))));
             }
 
-            let line = lines.first().unwrap().trim();
+            let mut line = lines.first().unwrap().trim();
+            if let Some(name) = line.strip_prefix("Name: ") {
+                let name = name.trim();
+                if name.len() > Self::MAX_LEVEL_PACK_NAME_LEN {
+                    return Err(Box::new(LevelLoadingError::new(format!(
+                        "The level pack name \"{name}\" is too long!"
+                    ))));
+                }
+
+                lvl_name = Some(name);
+
+                if lines.len() == 1 {
+                    return Err(Box::new(LevelLoadingError::new(format!(
+                        "The level pack file \"{path}\" does not contain level count!"
+                    ))));
+                }
+                line = lines.get(1).unwrap().trim();
+            }
+
             if !line.starts_with("Levels: ") {
                 return Err(Box::new(LevelLoadingError::new(format!(
                     "The level count is missing in the level pack file \"{path}\"!"
@@ -487,7 +510,7 @@ impl LevelPack {
             };
 
             let mut line_iter = lines.into_iter().
-                    skip(1).
+                    skip(if lvl_name.is_none() { 1 } else { 2 }).
                     filter(|line| !line.trim().is_empty());
             for i in 0..level_count {
                 let line = line_iter.next();
@@ -610,6 +633,7 @@ impl LevelPack {
                 }).collect::<Vec<_>>();
 
         let mut level_pack = Self {
+            name: lvl_name.map(ToString::to_string).unwrap_or_else(|| id.clone()),
             id,
             path,
             levels,
@@ -630,6 +654,7 @@ impl LevelPack {
     pub fn save_editor_level_pack_to_path(&self, path: impl Into<String>) -> Result<(), Box<dyn Error>> {
         let mut file = File::create(path.into())?;
 
+        writeln!(file, "Name: {}", self.name)?;
         writeln!(file, "Levels: {}", self.levels.len())?;
 
         for level in self.levels.iter().
@@ -661,6 +686,10 @@ impl LevelPack {
         file.flush()?;
 
         Ok(())
+    }
+
+    pub fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn id(&self) -> &str {

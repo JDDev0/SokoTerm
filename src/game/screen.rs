@@ -236,25 +236,25 @@ impl Screen for ScreenSelectLevelPack {
 
         console.set_cursor_pos(0, y);
         console.set_color(Color::Cyan, Color::Default);
-        console.draw_text(".-------------------------------------.");
+        console.draw_text(".------------------------------------------------------------------------.");
         for i in 1..4 {
             console.set_cursor_pos(0, y + i);
-            console.draw_text("|                                     |");
+            console.draw_text("|                                                                        |");
         }
         console.set_cursor_pos(0, y + 4);
-        console.draw_text("\'-------------------------------------\'");
+        console.draw_text("\'------------------------------------------------------------------------\'");
         console.reset_color();
 
         if game_state.get_level_pack_index() == game_state.get_level_pack_count() {
             //Level Pack Editor entry
-            console.set_cursor_pos(6, y + 2);
+            console.set_cursor_pos(23, y + 2);
             console.draw_text("Create or edit level packs");
         }else {
             //Draw sum of best time and sum of best moves
             console.set_cursor_pos(1, y + 1);
-            console.draw_text(format!("Selected level pack: {:>16}", game_state.level_packs().get(game_state.get_level_pack_index()).unwrap().id()));
+            console.draw_text(format!("Selected level pack: {}", game_state.level_packs().get(game_state.get_level_pack_index()).unwrap().name()));
             console.set_cursor_pos(1, y + 2);
-            console.draw_text("Sum of best time   :   ");
+            console.draw_text("Sum of best time   : ");
             match game_state.get_current_level_pack().as_ref().unwrap().level_pack_best_time_sum() {
                 None => console.draw_text("X:XX:XX:XX.XXX"),
                 Some(best_time_sum) => {
@@ -269,7 +269,7 @@ impl Screen for ScreenSelectLevelPack {
                 },
             }
             console.set_cursor_pos(1, y + 3);
-            console.draw_text("Sum of best moves  :          ");
+            console.draw_text("Sum of best moves  : ");
             match game_state.get_current_level_pack().as_ref().unwrap().level_pack_best_moves_sum() {
                 None => console.draw_text("XXXXXXX"),
                 Some(best_moves_sum) => console.draw_text(format!("{:07}", best_moves_sum)),
@@ -383,7 +383,7 @@ impl Screen for ScreenSelectLevel {
     fn draw(&self, game_state: &GameState, console: &Console) {
         console.reset_color();
         console.set_underline(true);
-        console.draw_text(format!("Select a level (Level pack \"{}\"):", game_state.get_current_level_pack().unwrap().id()));
+        console.draw_text(format!("Select a level (Level pack \"{}\"):", game_state.get_current_level_pack().unwrap().name()));
         console.set_underline(false);
 
         let level_count = game_state.get_current_level_pack().as_ref().unwrap().level_count();
@@ -1333,8 +1333,8 @@ impl Screen for ScreenSelectLevelPackEditor {
                 console.set_color(Color::LightRed, Color::Default);
                 console.draw_text(error_msg);
             }else {
-                console.set_cursor_pos(29, y + 2);
-                console.draw_text("Create level pack");
+                console.set_cursor_pos(28, y + 2);
+                console.draw_text("Create a level pack");
             }
         }else {
             console.set_cursor_pos(1, y + 1);
@@ -1349,7 +1349,7 @@ impl Screen for ScreenSelectLevelPackEditor {
         if self.is_creating_new_level_pack {
             match key {
                 key if key.is_ascii() && (key.is_alphanumeric() || key == Key::UNDERSCORE || key == Key::MINUS) => {
-                    if self.new_level_pack_id.len() >= Game::MAX_LEVEL_PACK_ID_LEN {
+                    if self.new_level_pack_id.len() >= LevelPack::MAX_LEVEL_PACK_NAME_LEN {
                         return;
                     }
                     
@@ -1389,7 +1389,7 @@ impl Screen for ScreenSelectLevelPackEditor {
                         return;
                     };
 
-                    let level_pack = LevelPack::new(&self.new_level_pack_id, save_game_file);
+                    let level_pack = LevelPack::new(&self.new_level_pack_id, &self.new_level_pack_id, save_game_file);
                     if let Err(err) = level_pack.save_editor_level_pack() {
                         game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
                     }
