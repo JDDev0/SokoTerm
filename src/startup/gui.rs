@@ -14,6 +14,8 @@ use crate::io::Console;
 #[cfg(feature = "steam")]
 use bevy_steamworks::*;
 
+mod error;
+
 #[expect(clippy::type_complexity)]
 static CONSOLE_STATE: LazyLock<Arc<Mutex<ConsoleState>>, fn() -> Arc<Mutex<ConsoleState>>> =
     LazyLock::new(|| Arc::new(Mutex::new(ConsoleState::new::<74, 23>())));
@@ -42,8 +44,17 @@ pub fn run_game() -> ExitCode {
 
     #[cfg(feature = "steam")]
     let steam_client = {
+        let steamworks_plugin = SteamworksPlugin::init_app(4160140);
+        let steamworks_plugin = match steamworks_plugin {
+            Ok(steamworks_plugin) => steamworks_plugin,
+            Err(err) => {
+                error::show_error_dialog(&mut app, &format!("Could not initialize Steam Client: {err}"));
+                return ExitCode::FAILURE;
+            },
+        };
+
         //TODO handler error on init
-        app.add_plugins(SteamworksPlugin::init_app(4160140).unwrap());
+        app.add_plugins(steamworks_plugin);
 
         app.world().get_resource::<Client>().unwrap().clone()
     };
@@ -58,7 +69,7 @@ pub fn run_game() -> ExitCode {
     let game = match game {
         Ok(game) => game,
         Err(err) => {
-            eprintln!("{err}");
+            error::show_error_dialog(&mut app, &format!("Could not initialize game: {err}"));
 
             return ExitCode::FAILURE;
         },
