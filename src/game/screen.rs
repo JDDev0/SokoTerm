@@ -207,7 +207,7 @@ impl Screen for ScreenSelectLevelPack {
                 }else {
                     Color::Yellow
                 });
-                console.draw_text(format!("{:2}", i + 1));
+                console.draw_text(utils::number_to_string_leading_ascii(2, i as u32 + 1, false));
             }
 
             console.reset_color();
@@ -217,7 +217,7 @@ impl Screen for ScreenSelectLevelPack {
             console.draw_text("---");
         }
 
-        //Mark selected level
+        //Mark selected level pack
         let x = (game_state.get_level_pack_index()%24)*3;
         let y = 1 + (game_state.get_level_pack_index()/24)*2;
 
@@ -464,9 +464,9 @@ impl Screen for ScreenSelectLevel {
         //Draw best time and best moves
         console.reset_color();
         console.set_cursor_pos(1, y + 1);
-        console.draw_text("Selected level:        ");
+        console.draw_text("Selected level:       ");
         let selected_level = self.selected_level;
-        console.draw_text(utils::number_to_string_leading_ascii(2, selected_level as u32 + 1, true));
+        console.draw_text(format!("{:03}", selected_level as u32 + 1));
 
         console.set_cursor_pos(1, y + 2);
         console.draw_text("Best time     : ");
@@ -1280,7 +1280,7 @@ impl Screen for ScreenSelectLevelPackEditor {
                 console.draw_text(" +");
             }else {
                 console.set_color(Color::Black, Color::Green);
-                console.draw_text(format!("{:2}", i + 1));
+                console.draw_text(utils::number_to_string_leading_ascii(2, i as u32 + 1, false));
             }
 
             console.reset_color();
@@ -1290,7 +1290,7 @@ impl Screen for ScreenSelectLevelPackEditor {
             console.draw_text("---");
         }
 
-        //Mark selected level
+        //Mark selected level pack
         let x = (game_state.editor_state.get_level_pack_index()%24)*3;
         let y = 1 + (game_state.editor_state.get_level_pack_index()/24)*2;
 
@@ -1305,7 +1305,7 @@ impl Screen for ScreenSelectLevelPackEditor {
         console.draw_text("----");
 
         //Draw border for best time and best moves
-        let y = 4 + (entry_count/24)*2;
+        let y = 4 + ((entry_count - 1)/24)*2;
 
         console.set_cursor_pos(0, y);
         console.set_color(Color::Cyan, Color::Default);
@@ -1471,7 +1471,7 @@ impl Screen for ScreenSelectLevelPackEditor {
                     game_state.editor_state.selected_level_pack_index -= 1;
                 },
                 Key::UP => {
-                    if game_state.editor_state.selected_level_pack_index <= 24 {
+                    if game_state.editor_state.selected_level_pack_index < 24 {
                         break 'outer;
                     }
 
@@ -1669,7 +1669,7 @@ impl Screen for ScreenLevelPackEditor {
         console.draw_text("----");
 
         //Draw border for best time and best moves
-        let y = 4 + (entry_count/24)*2;
+        let y = 4 + ((entry_count - 1)/24)*2;
 
         console.set_cursor_pos(0, y);
         console.set_color(Color::Cyan, Color::Default);
@@ -1722,7 +1722,7 @@ impl Screen for ScreenLevelPackEditor {
             console.set_cursor_pos(1, y + 1);
             console.draw_text("Selected level: ");
             let selected_level = game_state.editor_state.selected_level_index;
-            console.draw_text(utils::number_to_string_leading_ascii(2, selected_level as u32 + 1, true));
+            console.draw_text(format!("{:03}", selected_level as u32 + 1));
 
             console.set_cursor_pos(1, y + 2);
             console.draw_text(format!(
@@ -1860,7 +1860,7 @@ impl Screen for ScreenLevelPackEditor {
                     game_state.editor_state.selected_level_index -= 1;
                 },
                 Key::UP => {
-                    if game_state.editor_state.selected_level_index <= 24 {
+                    if game_state.editor_state.selected_level_index < 24 {
                         break 'outer;
                     }
 
