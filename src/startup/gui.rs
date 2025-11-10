@@ -294,11 +294,7 @@ fn draw_game(
 ) {
     //TODO optimize repaint logic
 
-    let mut state = CONSOLE_STATE.lock().unwrap();
-    //TODO check if dirty does any performance improvement
-    if !state.dirty() {
-        return;
-    }
+    let state = CONSOLE_STATE.lock().unwrap();
 
     let text_buffer = state.text_buffer();
     let text_color_buffer = state.text_color_buffer();
@@ -316,7 +312,4 @@ fn draw_game(
         fg_color.0 = fg.into();
         bg_color.0 = bg.into();
     }
-
-    state.mark_not_dirty();
 }
-

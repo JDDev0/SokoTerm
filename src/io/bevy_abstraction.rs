@@ -5,8 +5,6 @@ use std::sync::{Arc, Mutex};
 use smol_str::SmolStr;
 
 pub struct ConsoleState {
-    dirty: bool,
-
     curser_pos: (usize, usize),
     current_color_pair: (Color, Color),
 
@@ -21,8 +19,6 @@ pub struct ConsoleState {
 impl ConsoleState {
     pub fn new<const A: usize, const B: usize>() -> Self {
         Self {
-            dirty: true,
-
             curser_pos: (0, 0),
             current_color_pair: (Color::White, Color::Black),
 
@@ -35,16 +31,7 @@ impl ConsoleState {
         }
     }
 
-    pub fn dirty(&self) -> bool {
-        self.dirty
-    }
-
-    pub fn mark_not_dirty(&mut self) {
-        self.dirty = false;
-    }
-
     pub fn clear_screen(&mut self) {
-        self.dirty = true;
         self.curser_pos = (0, 0);
 
         self.text_buffer.fill(b' ');
