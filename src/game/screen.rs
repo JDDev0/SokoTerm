@@ -369,18 +369,18 @@ impl Screen for ScreenSelectLevelPack {
 
 pub struct ScreenSelectLevel {
     selected_level: usize,
+    level_preview: bool,
 }
 
 impl ScreenSelectLevel {
     pub fn new() -> Self {
         Self {
             selected_level: Default::default(),
+            level_preview: false,
         }
     }
-}
 
-impl Screen for ScreenSelectLevel {
-    fn draw(&self, game_state: &GameState, console: &Console) {
+    fn draw_overview(&self, game_state: &GameState, console: &Console) {
         console.reset_color();
         console.set_underline(true);
         console.draw_text(format!("Select a level (Level pack \"{}\"):", game_state.get_current_level_pack().unwrap().name()));
@@ -489,19 +489,107 @@ impl Screen for ScreenSelectLevel {
                 console.draw_text(format!("{:04}", best_moves));
             },
         }
+
+        console.reset_color();
+        console.set_cursor_pos(29, y + 1);
+        console.draw_text("Press ");
+
+        console.set_color(Color::Red, Color::Default);
+        console.draw_text("p");
+
+        console.reset_color();
+        console.draw_text(" for level preview");
+    }
+
+    fn draw_level_preview(&self, game_state: &GameState, console: &Console) {
+        if self.selected_level > 0 {
+            console.set_color(Color::Red, Color::Default);
+            console.draw_text("<");
+
+            console.reset_color();
+            console.draw_text(format!(" Level {:03}", self.selected_level));
+        }
+
+        if self.selected_level < game_state.get_current_level_pack().unwrap().level_count() - 1 {
+            console.reset_color();
+            console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 11, 0);
+            console.draw_text(format!("Level {:03} ", self.selected_level + 2));
+
+            console.set_color(Color::Red, Color::Default);
+            console.draw_text(">");
+        }
+
+        console.reset_color();
+        console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 23) as f64 * 0.5) as usize, 0);
+        console.draw_text("Preview (");
+
+        console.set_color(Color::Red, Color::Default);
+        console.draw_text("p");
+
+        console.reset_color();
+        console.draw_text(format!(") [Level {:03}]", self.selected_level + 1));
+
+        let min_level_not_completed = game_state.get_current_level_pack().as_ref().unwrap().min_level_not_completed();
+        let level = game_state.get_current_level_pack().unwrap().levels()[self.selected_level].level();
+
+        if self.selected_level > min_level_not_completed {
+            let x = ((Game::CONSOLE_MIN_WIDTH - 40) as f64 * 0.5) as usize;
+            let y = ((Game::CONSOLE_MIN_HEIGHT - 5) as f64 * 0.5) as usize;
+
+            console.set_cursor_pos(x, y);
+            console.set_color(Color::Cyan, Color::Default);
+            console.draw_text(".--------------------------------------.");
+            for i in 1..4 {
+                console.set_cursor_pos(x, y + i);
+                console.draw_text("|                                      |");
+            }
+            console.set_cursor_pos(x, y + 4);
+            console.draw_text("\'--------------------------------------\'");
+
+            console.reset_color();
+            console.set_cursor_pos(x + 2, y + 2);
+            console.draw_text(format!("Beat level {:03} to unlock this level.", self.selected_level));
+        }else {
+            let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
+            let y_offset = 1;
+
+            level.draw(console, x_offset, y_offset, game_state.is_player_background(), None);
+        }
+    }
+}
+
+impl Screen for ScreenSelectLevel {
+    fn draw(&self, game_state: &GameState, console: &Console) {
+        if self.level_preview && game_state.get_level_pack_index() < game_state.get_level_pack_count() {
+            self.draw_level_preview(game_state, console);
+        }else {
+            self.draw_overview(game_state, console);
+        }
     }
 
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
         if key == Key::ESC {
             game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
 
-            game_state.set_screen(ScreenId::SelectLevelPack);
+            if self.level_preview {
+                self.level_preview = false;
+            }else {
+                game_state.set_screen(ScreenId::SelectLevelPack);
+            }
 
             return;
         }
 
         if key == Key::F1 {
             game_state.open_help_page();
+
+            return;
+        }
+
+        if key == Key::P {
+            game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
+
+            self.level_preview = !self.level_preview;
 
             return;
         }
@@ -540,6 +628,8 @@ impl Screen for ScreenSelectLevel {
                 },
 
                 Key::ENTER => {
+                    self.level_preview = false;
+
                     if self.selected_level <= game_state.get_current_level_pack().
                             as_ref().unwrap().min_level_not_completed() {
                         game_state.play_sound_effect_ui_select();
