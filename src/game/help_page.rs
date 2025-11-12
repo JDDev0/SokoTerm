@@ -482,7 +482,7 @@ impl HelpPage {
                 console.set_color(Color::LightRed, Color::Default);
                 console.draw_text("ENTER");
                 console.reset_color();
-                console.draw_text(": Selects or create a level");
+                console.draw_text(": Selects or creates a level");
 
                 console.set_cursor_pos(0, 12);
                 console.set_color(Color::LightRed, Color::Default);
