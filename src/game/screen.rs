@@ -560,7 +560,7 @@ impl ScreenSelectLevel {
 
 impl Screen for ScreenSelectLevel {
     fn draw(&self, game_state: &GameState, console: &Console) {
-        if self.level_preview && game_state.get_level_pack_index() < game_state.get_level_pack_count() {
+        if self.level_preview {
             self.draw_level_preview(game_state, console);
         }else {
             self.draw_overview(game_state, console);
@@ -1664,6 +1664,7 @@ impl Screen for ScreenSelectLevelPackEditor {
 }
 
 pub struct ScreenLevelPackEditor {
+    level_preview: bool,
     is_creating_new_level: bool,
     is_editing_height: bool,
     is_deleting_level: bool,
@@ -1674,6 +1675,7 @@ pub struct ScreenLevelPackEditor {
 impl ScreenLevelPackEditor {
     pub fn new() -> Self {
         Self {
+            level_preview: false,
             is_creating_new_level: Default::default(),
             is_editing_height: Default::default(),
             is_deleting_level: Default::default(),
@@ -1681,10 +1683,8 @@ impl ScreenLevelPackEditor {
             new_level_height_str: String::new(),
         }
     }
-}
 
-impl Screen for ScreenLevelPackEditor {
-    fn draw(&self, game_state: &GameState, console: &Console) {
+    fn draw_overview(&self, game_state: &GameState, console: &Console) {
         console.reset_color();
         console.set_underline(true);
         console.draw_text(format!("Edit a level (Level pack \"{}\"):", game_state.editor_state.get_current_level_pack().unwrap().id()));
@@ -1804,8 +1804,8 @@ impl Screen for ScreenLevelPackEditor {
                 console.set_color(Color::LightRed, Color::Default);
                 console.draw_text(error_msg);
             }else {
-                console.set_cursor_pos(31, y + 2);
-                console.draw_text("Create level");
+                console.set_cursor_pos(30, y + 2);
+                console.draw_text("Create a level");
             }
         }else {
             //Draw best time and best moves
@@ -1820,6 +1820,118 @@ impl Screen for ScreenLevelPackEditor {
                 game_state.editor_state.get_current_level().unwrap().width(),
                 game_state.editor_state.get_current_level().unwrap().height(),
             ));
+
+            console.reset_color();
+            console.set_cursor_pos(1, y + 3);
+            console.draw_text("Press ");
+
+            console.set_color(Color::Red, Color::Default);
+            console.draw_text("p");
+
+            console.reset_color();
+            console.draw_text(" for level preview");
+        }
+    }
+
+    fn draw_level_preview(&self, game_state: &GameState, console: &Console) {
+        let selected_level = game_state.editor_state.get_level_index();
+
+        if selected_level > 0 {
+            console.set_color(Color::Red, Color::Default);
+            console.draw_text("<");
+
+            console.reset_color();
+            console.draw_text(format!(" Level {:03}", selected_level));
+        }
+
+        if game_state.editor_state.get_current_level_pack().unwrap().level_count() > 0 &&
+                selected_level < game_state.editor_state.get_current_level_pack().unwrap().level_count() - 1 {
+            console.reset_color();
+            console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 11, 0);
+            console.draw_text(format!("Level {:03} ", selected_level + 2));
+
+            console.set_color(Color::Red, Color::Default);
+            console.draw_text(">");
+        }
+
+        if game_state.editor_state.get_current_level_pack().unwrap().level_count() > 0 &&
+                selected_level == game_state.editor_state.get_current_level_pack().unwrap().level_count() - 1 {
+            console.reset_color();
+            console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 16, 0);
+            console.draw_text("Create a level ");
+
+            console.set_color(Color::Red, Color::Default);
+            console.draw_text(">");
+        }
+
+        if selected_level == game_state.editor_state.get_current_level_pack().unwrap().level_count() {
+            let has_max_level_count = game_state.editor_state.get_current_level_pack().unwrap().level_count() == LevelPack::MAX_LEVEL_COUNT_PER_PACK;
+
+            console.reset_color();
+            console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 11) as f64 * 0.5) as usize, 0);
+            console.draw_text("Preview (");
+
+            console.set_color(Color::Red, Color::Default);
+            console.draw_text("p");
+
+            console.reset_color();
+            console.draw_text(")");
+
+            let x = ((Game::CONSOLE_MIN_WIDTH - 40) as f64 * 0.5) as usize;
+            let y = ((Game::CONSOLE_MIN_HEIGHT - 5) as f64 * 0.5) as usize;
+
+            console.set_cursor_pos(x, y);
+            console.set_color(Color::Cyan, Color::Default);
+            console.draw_text(".--------------------------------------.");
+            for i in 1..4 {
+                console.set_cursor_pos(x, y + i);
+                console.draw_text("|                                      |");
+            }
+            console.set_cursor_pos(x, y + 4);
+            console.draw_text("\'--------------------------------------\'");
+
+            if has_max_level_count {
+                let error_msg = format!(
+                    "Max level count ({}) reached",
+                    LevelPack::MAX_LEVEL_COUNT_PER_PACK,
+                );
+
+                let x_offset = ((Game::CONSOLE_MIN_WIDTH - error_msg.len()) as f64 * 0.5) as usize;
+                console.set_cursor_pos(x_offset, y + 2);
+                console.set_color(Color::LightRed, Color::Default);
+                console.draw_text(error_msg);
+            }else {
+                console.set_cursor_pos(30, y + 2);
+                console.reset_color();
+                console.draw_text("Create a level");
+            }
+        }else {
+            console.reset_color();
+            console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 23) as f64 * 0.5) as usize, 0);
+            console.draw_text("Preview (");
+
+            console.set_color(Color::Red, Color::Default);
+            console.draw_text("p");
+
+            console.reset_color();
+            console.draw_text(format!(") [Level {:03}]", selected_level + 1));
+
+            let level = game_state.editor_state.get_current_level_pack().unwrap().levels()[selected_level].level();
+
+            let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
+            let y_offset = 1;
+
+            level.draw(console, x_offset, y_offset, game_state.is_player_background(), None);
+        }
+    }
+}
+
+impl Screen for ScreenLevelPackEditor {
+    fn draw(&self, game_state: &GameState, console: &Console) {
+        if self.level_preview {
+            self.draw_level_preview(game_state, console);
+        }else {
+            self.draw_overview(game_state, console);
         }
     }
 
@@ -1926,13 +2038,25 @@ impl Screen for ScreenLevelPackEditor {
         if key == Key::ESC {
             game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
 
-            game_state.set_screen(ScreenId::SelectLevelPackEditor);
+            if self.level_preview {
+                self.level_preview = false;
+            }else {
+                game_state.set_screen(ScreenId::SelectLevelPackEditor);
+            }
 
             return;
         }
 
         if key == Key::F1 {
             game_state.open_help_page();
+
+            return;
+        }
+
+        if key == Key::P {
+            game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
+
+            self.level_preview = !self.level_preview;
 
             return;
         }
@@ -1972,6 +2096,8 @@ impl Screen for ScreenLevelPackEditor {
                 },
 
                 Key::ENTER => {
+                    self.level_preview = false;
+
                     if game_state.editor_state.selected_level_index == game_state.editor_state.get_current_level_pack().unwrap().level_count() {
                         //Level Editor entry
                         if game_state.editor_state.get_current_level_pack().unwrap().level_count() == LevelPack::MAX_LEVEL_COUNT_PER_PACK {
