@@ -4,7 +4,7 @@
 #![cfg_attr(feature = "gui", windows_subsystem = "windows")]
 
 #[cfg(not(any(feature = "cli", feature = "gui")))]
-compile_error!("Either feature `startup` or `gui` must be enabled");
+compile_error!("Either feature `cli` or `gui` must be enabled");
 
 #[cfg(all(feature = "cli", feature = "gui"))]
 compile_error!("Features `cli` and `gui` are mutually exclusively");
