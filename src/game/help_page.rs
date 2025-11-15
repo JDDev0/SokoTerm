@@ -458,13 +458,24 @@ impl HelpPage {
                 console.reset_color();
                 console.draw_text(": Exports the selected level pack to the current directory");
 
-                console.set_cursor_pos(0, 7);
+                #[cfg(feature = "steam")]
+                {
+                    console.set_cursor_pos(0, 7);
+                    console.set_color(Color::LightRed, Color::Default);
+                    console.draw_text("u");
+                    console.reset_color();
+                    console.draw_text(": Upload the selected level pack to the steam workshop");
+                }
+
+                let y_offset = if cfg!(feature = "steam") { 8 } else { 7 };
+
+                console.set_cursor_pos(0, y_offset);
                 console.set_color(Color::LightRed, Color::Default);
                 console.draw_text("DELETE");
                 console.reset_color();
                 console.draw_text(": Deletes the selected level pack");
 
-                console.set_cursor_pos(0, 8);
+                console.set_cursor_pos(0, y_offset + 1);
                 console.set_color(Color::LightRed, Color::Default);
                 console.draw_text("ESC");
                 console.reset_color();
@@ -472,25 +483,25 @@ impl HelpPage {
 
                 console.set_underline(true);
 
-                console.set_cursor_pos(0, 10);
+                console.set_cursor_pos(0, y_offset + 3);
                 console.set_color(Color::Cyan, Color::Default);
                 console.draw_text("4.1.2 Level selection\n");
 
                 console.set_underline(false);
 
-                console.set_cursor_pos(0, 11);
+                console.set_cursor_pos(0, y_offset + 4);
                 console.set_color(Color::LightRed, Color::Default);
                 console.draw_text("ENTER");
                 console.reset_color();
                 console.draw_text(": Selects or creates a level");
 
-                console.set_cursor_pos(0, 12);
+                console.set_cursor_pos(0, y_offset + 5);
                 console.set_color(Color::LightRed, Color::Default);
                 console.draw_text("DELETE");
                 console.reset_color();
                 console.draw_text(": Deletes the selected level");
 
-                console.set_cursor_pos(0, 13);
+                console.set_cursor_pos(0, y_offset + 6);
                 console.set_color(Color::LightRed, Color::Default);
                 console.draw_text("ESC");
                 console.reset_color();

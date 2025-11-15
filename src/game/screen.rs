@@ -11,6 +11,8 @@ use crate::io::{Color, Console, Key};
 
 #[cfg(feature = "steam")]
 use crate::game::steam::achievement::Achievement;
+#[cfg(feature = "steam")]
+use crate::game::steam;
 
 pub mod dialog;
 pub mod utils;
@@ -164,8 +166,8 @@ impl Screen for ScreenSelectLevelPack {
         console.draw_text("Select a level pack:");
         console.set_underline(false);
 
-        //Include Level Pack Editor entry
-        let entry_count = game_state.get_level_pack_count() + 1;
+        //Include Level Pack Editor entry (And Steam Workshop entry on steam build)
+        let entry_count = game_state.get_level_pack_count() + if cfg!(feature = "steam") { 2 } else { 1 };
 
         //Draw first line
         console.set_cursor_pos(0, 1);
@@ -196,7 +198,11 @@ impl Screen for ScreenSelectLevelPack {
             }
 
             console.set_cursor_pos(x, y);
-            if i == game_state.get_level_pack_count() {
+            if i == game_state.get_level_pack_count() + 1 {
+                //And Steam Workshop entry on steam build
+                console.set_color(Color::White, Color::LightBlue);
+                console.draw_text("[]");
+            }else if i == game_state.get_level_pack_count() {
                 //Level Pack Editor entry
                 console.set_color(Color::White, Color::LightBlue);
                 console.draw_text(" +");
@@ -245,14 +251,42 @@ impl Screen for ScreenSelectLevelPack {
         console.draw_text("\'------------------------------------------------------------------------\'");
         console.reset_color();
 
-        if game_state.get_level_pack_index() == game_state.get_level_pack_count() {
-            //Level Pack Editor entry
-            console.set_cursor_pos(23, y + 2);
-            console.draw_text("Create or edit level packs");
+        if game_state.get_level_pack_index() >= game_state.get_level_pack_count() {
+            if game_state.get_level_pack_index() == game_state.get_level_pack_count() + 1 {
+                #[cfg(feature = "steam")]
+                {
+                    //And Steam Workshop entry on steam build
+                    console.set_cursor_pos(14, y + 1);
+                    console.draw_text("Download level packs from the Steam Workshop");
+
+                    console.set_cursor_pos(8, y + 3);
+                    console.set_color(Color::LightBlack, Color::Default);
+                    console.draw_text("You must relaunch the game after downloading level packs.");
+                }
+
+                #[cfg(not(feature = "steam"))]
+                unreachable!();
+            }else {
+                //Level Pack Editor entry
+                console.set_cursor_pos(23, y + 2);
+                console.draw_text("Create or edit level packs");
+            }
         }else {
             //Draw sum of best time and sum of best moves
             console.set_cursor_pos(1, y + 1);
             console.draw_text(format!("Selected level pack: {}", game_state.level_packs().get(game_state.get_level_pack_index()).unwrap().name()));
+
+            #[cfg(feature = "steam")]
+            if game_state.level_packs().get(game_state.get_level_pack_index()).unwrap().steam_workshop_id().is_some() {
+                console.draw_text(" [");
+
+                console.set_color(Color::Red, Color::Default);
+                console.draw_text("o");
+
+                console.reset_color();
+                console.draw_text(": open Steam Workshop]");
+            }
+
             console.set_cursor_pos(1, y + 2);
             console.draw_text("Sum of best time   : ");
             match game_state.get_current_level_pack().as_ref().unwrap().level_pack_best_time_sum() {
@@ -292,9 +326,15 @@ impl Screen for ScreenSelectLevelPack {
             return;
         }
 
+        #[cfg(feature = "steam")]
+        if key == Key::O && game_state.get_level_pack_index() < game_state.get_level_pack_count() &&
+                let Some(id) = game_state.level_packs().get(game_state.get_level_pack_index()).unwrap().steam_workshop_id() {
+            game_state.steam_client.friends().activate_game_overlay_to_web_page(&format!("steam://url/CommunityFilePage/{}", id.0));
+        }
+
         'outer: {
-            //Include Level Pack Editor entry
-            let entry_count = game_state.get_level_pack_count() + 1;
+            //Include Level Pack Editor entry (And Steam Workshop entry on steam build)
+            let entry_count = game_state.get_level_pack_count() + if cfg!(feature = "steam") { 2 } else { 1 };
 
             match key {
                 Key::LEFT => {
@@ -329,11 +369,22 @@ impl Screen for ScreenSelectLevelPack {
                 Key::ENTER => {
                     game_state.play_sound_effect_ui_select();
 
-                    if game_state.get_level_pack_index() == game_state.get_level_pack_count() {
-                        //Level Pack Editor entry
-                        game_state.set_level_index(0);
+                    if game_state.get_level_pack_index() >= game_state.get_level_pack_count() {
+                        if game_state.get_level_pack_index() == game_state.get_level_pack_count() + 1 {
+                            #[cfg(feature = "steam")]
+                            {
+                                //And Steam Workshop entry on steam build
+                                game_state.steam_client.friends().activate_game_overlay_to_web_page(&format!("steam://url/SteamWorkshopPage/{}", steam::APP_ID.0));
+                            }
 
-                        game_state.set_screen(ScreenId::SelectLevelPackEditor);
+                            #[cfg(not(feature = "steam"))]
+                            unreachable!();
+                        }else {
+                            //Level Pack Editor entry
+                            game_state.set_level_index(0);
+
+                            game_state.set_screen(ScreenId::SelectLevelPackEditor);
+                        }
                     }else {
                         //Set selected level
                         let min_level_not_completed = game_state.get_current_level_pack().as_ref().unwrap().min_level_not_completed();
@@ -356,8 +407,8 @@ impl Screen for ScreenSelectLevelPack {
         if row == 0 {
             return;
         }
-        //Include Level Pack Editor entry
-        let entry_count = game_state.get_level_pack_count() + 1;
+        //Include Level Pack Editor entry (And Steam Workshop entry on steam build)
+        let entry_count = game_state.get_level_pack_count() + if cfg!(feature = "steam") { 2 } else { 1 };
 
         let level_pack_index = column/3 + (row - 1)/2*24;
         if level_pack_index < entry_count {
@@ -726,7 +777,7 @@ impl ScreenInGame {
 
     fn draw_tutorial_level_text(&self, game_state: &GameState, console: &Console) {
         //Draw special help text for tutorial levels (tutorial pack and tutorial levels in special pack)
-        if game_state.get_level_pack_index() == 0 { //Tutorial pack
+        if game_state.get_level_pack_index() == 0 { //Built-in Tutorial pack
             console.reset_color();
             match game_state.current_level_index {
                 0 => {
@@ -1233,6 +1284,10 @@ impl Screen for ScreenInGame {
 
                         _ => {},
                     }
+
+                    if level_pack.steam_workshop_id().is_some() {
+                        Achievement::STEAM_WORKSHOP_LEVEL_PACK_COMPLETED.unlock(steam_client.clone());
+                    }
                 }
 
                 if let Err(err) = level_pack.save_save_game() {
@@ -1296,6 +1351,12 @@ impl Screen for ScreenInGame {
     fn on_set_screen(&mut self, game_state: &mut GameState) {
         self.start_level(game_state.get_current_level_pack().as_ref().unwrap().levels().get(
             game_state.get_level_index()).unwrap().level());
+
+        #[cfg(feature = "steam")]
+        if game_state.get_current_level_pack().unwrap().steam_workshop_id().is_some() {
+            Achievement::STEAM_WORKSHOP_LEVEL_PACK_PLAYED.unlock(game_state.steam_client.clone());
+        }
+        //TODO grant achievement if community level
     }
 }
 
@@ -1537,6 +1598,24 @@ impl Screen for ScreenSelectLevelPackEditor {
             self.is_exporting_level_pack = true;
 
             game_state.open_dialog(Box::new(DialogYesNo::new("Do you want to export the level pack to the current directory?")));
+        }
+
+        #[cfg(feature = "steam")]
+        if key == Key::U && game_state.editor_state.selected_level_pack_index != game_state.editor_state.get_level_pack_count() {
+            let ret = steam::prepare_workshop_upload_temp_data(
+                game_state.editor_state.get_current_level_pack().unwrap(),
+            );
+            if let Err(err) = ret {
+                game_state.open_dialog(Box::new(DialogOk::new_error(
+                    "Could not prepare files for upload to steam workshop!",
+                )));
+                println!("{err}"); //TODO remove and create proper popup with erro text
+
+                return;
+            }
+
+            game_state.play_sound_effect_ui_dialog_open();
+            game_state.show_workshop_upload_popup = true;
         }
 
         if key == Key::DELETE && game_state.editor_state.selected_level_pack_index != game_state.editor_state.get_level_pack_count() {

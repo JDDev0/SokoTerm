@@ -15,6 +15,7 @@ use crate::startup::run_game;
 pub mod game;
 pub mod collections;
 pub mod io;
+pub mod utils;
 
 mod startup;
 

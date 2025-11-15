@@ -1,20 +1,29 @@
 use std::cmp;
-use bevy::prelude::*;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::{Arc, LazyLock, Mutex};
-use bevy::asset::{embedded_asset, load_embedded_asset};
+use bevy::prelude::*;
 use bevy::input::ButtonState;
-use bevy::input::keyboard::{KeyboardInput};
+use bevy::input::keyboard::KeyboardInput;
 use bevy::input::mouse::MouseButtonInput;
 use bevy::window::{PrimaryWindow, WindowMode, WindowResized};
+use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use crate::game::Game;
 use crate::io::bevy_abstraction::{ConsoleState, Key};
 use crate::io::Console;
 
 #[cfg(feature = "steam")]
 use bevy_steamworks::*;
+#[cfg(feature = "steam")]
+use crate::game::level::LevelPack;
+#[cfg(feature = "steam")]
+use crate::game::steam;
 
-mod error;
+mod assets;
+mod startup_error;
+
+#[cfg(feature = "steam")]
+mod steam_plugin;
 
 #[expect(clippy::type_complexity)]
 static CONSOLE_STATE: LazyLock<Arc<Mutex<ConsoleState>>, fn() -> Arc<Mutex<ConsoleState>>> =
@@ -39,24 +48,32 @@ struct CharacterScaling {
     y_offset: f32,
 }
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Default, States)]
+enum AppState {
+    #[default]
+    InGame,
+
+    #[cfg(feature = "steam")]
+    SteamWorkshopUploadPopup,
+}
+
 pub fn run_game() -> ExitCode {
     let mut app = App::new();
 
     #[cfg(feature = "steam")]
     let steam_client = {
-        let steamworks_plugin = SteamworksPlugin::init_app(4160140);
+        let steamworks_plugin = SteamworksPlugin::init_app(steam::APP_ID);
         let steamworks_plugin = match steamworks_plugin {
             Ok(steamworks_plugin) => steamworks_plugin,
             Err(err) => {
-                error::show_error_dialog(&mut app, &format!("Could not initialize Steam Client: {err}"));
+                startup_error::show_startup_error_dialog(&mut app, &format!("Could not initialize Steam Client: {err}"));
                 return ExitCode::FAILURE;
             },
         };
 
-        //TODO handler error on init
         app.add_plugins(steamworks_plugin);
-        app.add_systems(Startup, crate::game::steam::steam_init);
-        app.add_systems(Update, crate::game::steam::steam_callback);
+        app.add_systems(Startup, steam::steam_init);
+        app.add_systems(Update, steam::steam_callback);
 
         app.world().get_resource::<Client>().unwrap().clone()
     };
@@ -66,16 +83,40 @@ pub fn run_game() -> ExitCode {
         console,
 
         #[cfg(feature = "steam")]
-        steam_client,
+        steam_client.clone(),
     );
     let game = match game {
         Ok(game) => game,
         Err(err) => {
-            error::show_error_dialog(&mut app, &format!("Could not initialize game: {err}"));
+            startup_error::show_startup_error_dialog(&mut app, &format!("Could not initialize game: {err}"));
 
             return ExitCode::FAILURE;
         },
     };
+
+    #[cfg(feature = "steam")]
+    {
+        let subscribed_items_count = steam_client.ugc().subscribed_items(false).len();
+        let mut count_already_loaded_level_packs = game.game_state().level_packs().len();
+        if !game.game_state().level_packs().iter().any(|level_pack| level_pack.id() == "secret") {
+            count_already_loaded_level_packs += 1;
+        }
+
+        let level_count_sum = subscribed_items_count + count_already_loaded_level_packs;
+
+        if level_count_sum > LevelPack::MAX_LEVEL_PACK_COUNT {
+            startup_error::show_startup_error_dialog(&mut app, &format!(
+                "You have subscribed to too many level packs ({}, max: {})!\nPlease unsubscribe from {} level pack(s) to continue playing.\n\n\
+                Sorry, but I'm too lazy to implement scroll bars for now...",
+
+                subscribed_items_count,
+                LevelPack::MAX_LEVEL_PACK_COUNT - count_already_loaded_level_packs,
+                subscribed_items_count - (LevelPack::MAX_LEVEL_PACK_COUNT - count_already_loaded_level_packs),
+            ));
+
+            return ExitCode::FAILURE;
+        }
+    }
 
     app.
             add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -92,6 +133,9 @@ pub fn run_game() -> ExitCode {
                 }),
                 ..default()
             })).
+
+            init_state::<AppState>().
+
             insert_resource(Time::<Fixed>::from_seconds(0.040)). //Run FixedUpdate every 40ms
             insert_resource(ClearColor(Color::srgb_u8(23, 20, 33))).
             insert_resource(CharacterScaling::default()).
@@ -100,11 +144,32 @@ pub fn run_game() -> ExitCode {
             add_systems(Startup, update_text_entities).
             insert_non_send_resource(game).
 
-            add_systems(FixedUpdate, update_game).
+            add_systems(FixedUpdate, update_game.run_if(in_state(AppState::InGame))).
 
-            add_systems(Update, (on_resize, draw_game));
+            add_systems(Update, draw_console_text.run_if(in_state(AppState::InGame))).
+            add_systems(Update, (on_resize, toggle_fullscreen));
 
-    embedded_asset!(app, "../../assets/font/JetBrainsMono-Bold.ttf");
+    #[cfg(feature = "steam")]
+    {
+        app.add_plugins(steam_plugin::SteamPlugin);
+    }
+
+    let embedded = app.world_mut().resource_mut::<EmbeddedAssetRegistry>();
+
+    embedded.insert_asset(
+        PathBuf::from("../../assets/font/JetBrainsMono-Bold.ttf"),
+        Path::new("font/JetBrainsMono-Bold.ttf"),
+        assets::font::JETBRAINS_MONO_BOLD_BYTES,
+    );
+
+    #[cfg(feature = "steam")]
+    {
+        embedded.insert_asset(
+            PathBuf::from("../../assets/font/JetBrainsMonoNL-ExtraLight.ttf"),
+            Path::new("font/JetBrainsMonoNL-ExtraLight.ttf"),
+            assets::font::JETBRAINS_MONO_NL_EXTRA_LIGHT_BYTES,
+        );
+    }
 
     let exit_code = app.run();
     match exit_code {
@@ -164,7 +229,7 @@ fn update_text_entities(
     character_scaling.x_offset = x_offset;
     character_scaling.y_offset = y_offset;
 
-    let font = load_embedded_asset!(&*asset_server, "../../assets/font/JetBrainsMono-Bold.ttf");
+    let font = asset_server.load("embedded://font/JetBrainsMono-Bold.ttf");
     let text_font = TextFont {
         font: font.clone(),
         font_size,
@@ -196,7 +261,7 @@ fn update_text_entities(
 }
 
 fn update_game(
-    mut window_query: Query<&mut Window, With<PrimaryWindow>>,
+    window_query: Query<&Window, With<PrimaryWindow>>,
 
     mut game: NonSendMut<Game>,
 
@@ -206,9 +271,12 @@ fn update_game(
     mut mouse_event: MessageReader<MouseButtonInput>,
 
     mut app_exit_event_writer: MessageWriter<AppExit>,
+
+    #[cfg(feature = "steam")]
+    mut app_state_next_state: ResMut<NextState<AppState>>,
 ) {
     {
-        let mut window = window_query.single_mut().unwrap();
+        let window = window_query.single().unwrap();
 
         let mut state = CONSOLE_STATE.lock().unwrap();
         for event in keyboard_event.read() {
@@ -217,13 +285,6 @@ fn update_game(
             }
 
             if event.logical_key == bevy::input::keyboard::Key::F11 {
-                if window.mode == WindowMode::Windowed {
-                    window.mode = WindowMode::BorderlessFullscreen(MonitorSelection::Primary);
-                }else {
-                    window.mode = WindowMode::Windowed;
-                    window.position = WindowPosition::Centered(MonitorSelection::Current);
-                }
-
                 continue;
             }
 
@@ -262,6 +323,11 @@ fn update_game(
     if should_stop {
         app_exit_event_writer.write(AppExit::Success);
     }
+
+    #[cfg(feature = "steam")]
+    if game.game_state().show_workshop_upload_popup {
+        app_state_next_state.set(AppState::SteamWorkshopUploadPopup);
+    }
 }
 
 fn on_resize(
@@ -289,7 +355,24 @@ fn on_resize(
     }
 }
 
-fn draw_game(
+fn toggle_fullscreen(
+    mut window_query: Query<&mut Window, With<PrimaryWindow>>,
+
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+) {
+    let mut window = window_query.single_mut().unwrap();
+
+    if keyboard_input.just_pressed(KeyCode::F11) {
+        if window.mode == WindowMode::Windowed {
+            window.mode = WindowMode::BorderlessFullscreen(MonitorSelection::Primary);
+        }else {
+            window.mode = WindowMode::Windowed;
+            window.position = WindowPosition::Centered(MonitorSelection::Current);
+        }
+    }
+}
+
+fn draw_console_text(
     mut console_text_characters: Query<(&mut Text2d, &mut TextColor, &mut TextBackgroundColor, &ConsoleTextCharacter)>,
 ) {
     //TODO optimize repaint logic

@@ -8,23 +8,25 @@ use std::io::Read;
 use std::path::Path;
 use crate::game::audio::AudioHandler;
 use crate::game::help_page::HelpPage;
-use crate::game::level::{Level, LevelPack, Tile};
+use crate::game::level::{Level, LevelPack};
 use crate::game::screen::{Screen, ScreenId, ScreenInGame, ScreenLevelEditor, ScreenLevelPackEditor, ScreenSelectLevel, ScreenSelectLevelPack, ScreenSelectLevelPackEditor, ScreenStartMenu};
 use crate::game::screen::dialog::{Dialog, DialogType};
 use crate::io::{Console, Key};
 
 #[cfg(feature = "steam")]
+use bevy::prelude::*;
+#[cfg(feature = "steam")]
 use bevy_steamworks::*;
 
-mod level;
+pub mod level;
 mod screen;
 mod help_page;
-mod audio;
+pub mod audio;
 
 #[cfg(feature = "steam")]
 pub mod steam;
 
-struct EditorState {
+pub struct EditorState {
     level_packs: Vec<LevelPack>,
     selected_level_pack_index: usize,
     selected_level_index: usize,
@@ -80,7 +82,7 @@ impl EditorState {
     }
 }
 
-struct GameState {
+pub struct GameState {
     current_screen_id: ScreenId,
     should_call_on_set_screen: bool,
 
@@ -105,6 +107,8 @@ struct GameState {
 
     #[cfg(feature = "steam")]
     steam_client: Client,
+    #[cfg(feature = "steam")]
+    pub show_workshop_upload_popup: bool,
 }
 
 impl GameState {
@@ -139,6 +143,8 @@ impl GameState {
 
             #[cfg(feature = "steam")]
             steam_client,
+            #[cfg(feature = "steam")]
+            show_workshop_upload_popup: false,
         }
     }
 
@@ -229,7 +235,12 @@ impl GameState {
         if level_pack_index == 1 && !self.found_secret_main_level_pack {
             self.found_secret_main_level_pack = true;
 
-            let secret_level_pack = LevelPack::read_from_save_game("secret", "build-in:secret", Game::MAP_SECRET)?;
+            let secret_level_pack = LevelPack::read_from_save_game(
+                "secret", "built-in:secret", Game::MAP_SECRET, false,
+
+                #[cfg(feature = "steam")]
+                None,
+            )?;
 
             //Save immediately in order to keep secret level pack after game restart if not yet played
             secret_level_pack.save_save_game()?;
@@ -260,6 +271,11 @@ impl GameState {
         if let Some(audio_handler) = &self.audio_handler {
             let _ = audio_handler.play_sound_effect(sound_effect);
         }
+    }
+
+    #[cfg(feature = "steam")]
+    pub fn editor_state(&self) -> &EditorState {
+        &self.editor_state
     }
 }
 
@@ -350,10 +366,30 @@ impl <'a> Game<'a> {
 
         let mut level_packs = Vec::with_capacity(LevelPack::MAX_LEVEL_PACK_COUNT);
         level_packs.append(&mut vec![
-            LevelPack::read_from_save_game("tutorial", "build-in:tutorial", Self::MAP_TUTORIAL)?,
-            LevelPack::read_from_save_game("main", "build-in:main", Self::MAP_MAIN)?,
-            LevelPack::read_from_save_game("special", "build-in:special", Self::MAP_SPECIAL)?,
-            LevelPack::read_from_save_game("demon", "build-in:demon", Self::MAP_DEMON)?,
+            LevelPack::read_from_save_game(
+                "tutorial", "built-in:tutorial", Self::MAP_TUTORIAL, false,
+
+                #[cfg(feature = "steam")]
+                None,
+            )?,
+            LevelPack::read_from_save_game(
+                "main", "built-in:main", Self::MAP_MAIN, false,
+
+                #[cfg(feature = "steam")]
+                None,
+            )?,
+            LevelPack::read_from_save_game(
+                "special", "built-in:special", Self::MAP_SPECIAL, false,
+
+                #[cfg(feature = "steam")]
+                None,
+            )?,
+            LevelPack::read_from_save_game(
+                "demon", "built-in:demon", Self::MAP_DEMON, false,
+
+                #[cfg(feature = "steam")]
+                None,
+            )?,
         ]);
 
         for arg in std::env::args().
@@ -418,7 +454,12 @@ impl <'a> Game<'a> {
                 }
             }
 
-            level_packs.push(LevelPack::read_from_save_game(level_pack_id, &arg, level_pack_data)?);
+            level_packs.push(LevelPack::read_from_save_game(
+                level_pack_id, &arg, level_pack_data, false,
+
+                #[cfg(feature = "steam")]
+                None,
+            )?);
         }
 
         if level_packs.len() > LevelPack::MAX_LEVEL_PACK_COUNT {
@@ -430,22 +471,6 @@ impl <'a> Game<'a> {
         }
 
         for level_pack in level_packs.iter() {
-            if level_pack.level_count() == 0 {
-                return Err(Box::new(GameError::new(format!(
-                    "Error while loading level pack \"{}\": Level pack contains no levels",
-                    level_pack.id()
-                ))));
-            }
-
-            if level_pack.level_count() > LevelPack::MAX_LEVEL_COUNT_PER_PACK {
-                return Err(Box::new(GameError::new(format!(
-                    "Error while loading level pack \"{}\": Level pack contains too many levels ({}, max: {})",
-                    level_pack.id(),
-                    level_pack.level_count(),
-                    LevelPack::MAX_LEVEL_COUNT_PER_PACK,
-                ))));
-            }
-
             for (i, level) in level_pack.levels().iter().
                     map(|level| level.level()).
                     enumerate() {
@@ -456,21 +481,6 @@ impl <'a> Game<'a> {
                         i + 1,
                         Self::LEVEL_MAX_WIDTH,
                         Self::LEVEL_MAX_HEIGHT,
-                    ))));
-                }
-
-                let player_tile_count = level.tiles().iter().filter(|tile| **tile == Tile::Player).count();
-                if player_tile_count == 0 {
-                    return Err(Box::new(GameError::new(format!(
-                        "Error while loading level pack \"{}\": Level {} does not contain a player tile",
-                        level_pack.id(),
-                        i + 1,
-                    ))));
-                }else if player_tile_count > 1 {
-                    return Err(Box::new(GameError::new(format!(
-                        "Error while loading level pack \"{}\": Level {} contains too many player tiles",
-                        level_pack.id(),
-                        i + 1,
                     ))));
                 }
             }
@@ -504,7 +514,12 @@ impl <'a> Game<'a> {
                     ))));
                 };
 
-                editor_level_packs.push(LevelPack::read_from_save_game(level_pack_id, entry.path().to_str().unwrap(), level_pack_data)?);
+                editor_level_packs.push(LevelPack::read_from_save_game(
+                    level_pack_id, entry.path().to_str().unwrap(), level_pack_data, true,
+
+                    #[cfg(feature = "steam")]
+                    None,
+                )?);
             }
         }
 
@@ -566,6 +581,93 @@ impl <'a> Game<'a> {
 
             game_state,
         })
+    }
+
+    #[cfg(feature = "steam")]
+    pub fn load_steam_workshop_level_pack(
+        &mut self,
+
+        item: QueryResult,
+    ) -> Result<(), Box<dyn Error>> {
+        info!("Loading steam workshop level pack (ID: {}, Name: \"{}\")", item.published_file_id.0, item.title);
+
+        let install_info = self.game_state.steam_client.ugc().item_install_info(item.published_file_id);
+        let Some(install_info) = install_info else {
+            return Err(Box::new(GameError::new(format!(
+                "Steam workshop level pack (ID: {}, Name: \"{}\") does not exist or is invalid!",
+                item.published_file_id.0, item.title,
+            ))));
+        };
+
+        let mut level_pack_path = OsString::from(install_info.folder);
+        level_pack_path.push("/pack.lvl");
+
+        let level_pack_path = Path::new(&level_pack_path);
+        if !std::fs::exists(level_pack_path)? || !level_pack_path.is_file() {
+            return Err(Box::new(GameError::new(format!(
+                "Steam workshop level pack (ID: {}, Name: \"{}\") is invalid!",
+                item.published_file_id.0, item.title,
+            ))));
+        }
+
+        let mut level_pack_file = match File::open(level_pack_path) {
+            Ok(file) => file,
+            Err(err) => return Err(Box::new(GameError::new(format!(
+                "Error while loading level pack from steam workshop (ID: {}, Name: \"{}\"): {}",
+                item.published_file_id.0, item.title,
+                err,
+            )))),
+        };
+
+        let mut level_pack_data = String::new();
+        if let Err(err) = level_pack_file.read_to_string(&mut level_pack_data) {
+            return Err(Box::new(GameError::new(format!(
+                "Error while loading level pack from steam workshop (ID: {}, Name: \"{}\"): {}",
+                item.published_file_id.0, item.title,
+                err,
+            ))));
+        };
+
+        let level_pack_id = format!("workshop:{}", item.published_file_id.0);
+
+        let ascii_level_title = item.title.replace(|c: char| !c.is_ascii(), "?");
+
+        let mut truncated_workshop_item_name = ascii_level_title;
+        if truncated_workshop_item_name.len() > LevelPack::MAX_LEVEL_PACK_NAME_LEN {
+            truncated_workshop_item_name = truncated_workshop_item_name[..LevelPack::MAX_LEVEL_PACK_NAME_LEN - 3].to_string() + "...";
+        }
+
+        for id in self.game_state.level_packs.iter().
+                map(|level_pack| level_pack.id()) {
+            if id == level_pack_id {
+                return Err(Box::new(GameError::new(format!("Level pack \"{}\" already exists!", level_pack_id))));
+            }
+        }
+
+        let mut level_pack = LevelPack::read_from_save_game(
+            level_pack_id, level_pack_path.to_str().unwrap(), level_pack_data, false,
+
+            Some(item.published_file_id),
+        )?;
+        level_pack.set_name(truncated_workshop_item_name);
+
+        for (i, level) in level_pack.levels().iter().
+                map(|level| level.level()).
+                enumerate() {
+            if level.width() > Self::LEVEL_MAX_WIDTH || level.height() > Self::LEVEL_MAX_HEIGHT {
+                return Err(Box::new(GameError::new(format!(
+                    "Error while loading level pack from steam workshop (ID: {}, Name: \"{}\"): Level {} is too large (Max: {}x{})",
+                    item.published_file_id.0, item.title,
+                    i + 1,
+                    Self::LEVEL_MAX_WIDTH,
+                    Self::LEVEL_MAX_HEIGHT,
+                ))));
+            }
+        }
+
+        self.game_state.level_packs.push(level_pack);
+
+        Ok(())
     }
 
     #[must_use]
@@ -689,6 +791,16 @@ impl <'a> Game<'a> {
             dialog.draw(self.console, Self::CONSOLE_MIN_WIDTH, Self::CONSOLE_MIN_HEIGHT);
         }
     }
+
+    #[cfg(feature = "steam")]
+    pub fn game_state(&self) -> &GameState {
+        &self.game_state
+    }
+
+    #[cfg(feature = "steam")]
+    pub fn game_state_mut(&mut self) -> &mut GameState {
+        &mut self.game_state
+    }
 }
 
 #[derive(Debug)]
@@ -697,7 +809,7 @@ pub struct GameError {
 }
 
 impl GameError {
-    fn new(message: impl Into<String>) -> Self {
+    pub fn new(message: impl Into<String>) -> Self {
         Self { message: message.into() }
     }
 }

@@ -1,14 +1,19 @@
-use bevy::asset::{embedded_asset, load_embedded_asset};
+use std::path::{Path, PathBuf};
+use bevy::asset::io::embedded::EmbeddedAssetRegistry;
+use bevy::input_focus::{AutoFocus, InputDispatchPlugin, InputFocus};
+use bevy::input_focus::tab_navigation::{TabGroup, TabIndex, TabNavigationPlugin};
+use bevy::picking::hover::Hovered;
 use bevy::prelude::*;
+use bevy::ui_widgets::{observe, Activate, Button, Checkbox, RadioGroup, UiWidgetsPlugins};
 use crate::game::Game;
-use crate::startup::gui::spawn_camera;
+use crate::startup::gui::{assets, spawn_camera};
 
 #[derive(Debug, Default, Resource)]
 struct ErrorTextResource {
     error_text: Box<str>,
 }
 
-pub fn show_error_dialog(app: &mut App, error_message: &str) {
+pub fn show_startup_error_dialog(app: &mut App, error_message: &str) {
     app.
             add_plugins(DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
@@ -23,9 +28,21 @@ pub fn show_error_dialog(app: &mut App, error_message: &str) {
                 }),
                 ..default()
             })).
+            add_plugins((
+                UiWidgetsPlugins,
+                InputDispatchPlugin,
+                TabNavigationPlugin,
+            )).
+
             add_systems(Startup, spawn_camera);
 
-    embedded_asset!(app, "../../../assets/font/JetBrainsMono-Bold.ttf");
+    let embedded = app.world_mut().resource_mut::<EmbeddedAssetRegistry>();
+
+    embedded.insert_asset(
+        PathBuf::from("../../../assets/font/JetBrainsMono-Bold.ttf"),
+        Path::new("font/JetBrainsMono-Bold.ttf"),
+        assets::font::JETBRAINS_MONO_BOLD_BYTES,
+    );
 
     app.
             insert_resource(ErrorTextResource {
@@ -34,8 +51,10 @@ pub fn show_error_dialog(app: &mut App, error_message: &str) {
 
             add_systems(Startup, create_error_dialog_menu).
 
-            add_systems(Update, button_update).
-            //TODO allow closing window with "Enter"
+            add_systems(Update, (
+                update_hover_ui_styles,
+                update_focus_styles,
+            )).
 
             run();
 }
@@ -48,7 +67,7 @@ fn create_error_dialog_menu(
 ) {
     error!(target: "ConsoleSokoban", "{}", &error_text.error_text);
 
-    let font = load_embedded_asset!(&*asset_server, "../../../assets/font/JetBrainsMono-Bold.ttf");
+    let font = asset_server.load("embedded://font/JetBrainsMono-Bold.ttf");
     let text_font = TextFont {
         font: font.clone(),
         font_size: 25.0,
@@ -70,6 +89,7 @@ fn create_error_dialog_menu(
             row_gap: px(10),
             ..default()
         },
+        TabGroup::default(),
         children![(
             Text::new("An error occurred"),
             heading_font.clone(),
@@ -81,7 +101,6 @@ fn create_error_dialog_menu(
             TextColor(crate::io::bevy_abstraction::Color::Red.into()),
             TextLayout::new(Justify::Center, LineBreak::WordBoundary),
         ), (
-            Button,
             Node {
                 width: px(100),
                 height: px(50),
@@ -90,6 +109,10 @@ fn create_error_dialog_menu(
                 align_items: AlignItems::Center,
                 ..default()
             },
+            Button,
+            AutoFocus,
+            Hovered::default(),
+            TabIndex::default(),
             BorderColor::all(crate::io::bevy_abstraction::Color::White),
             BorderRadius::all(px(10)),
             BackgroundColor(crate::io::bevy_abstraction::Color::Black.into()),
@@ -98,34 +121,54 @@ fn create_error_dialog_menu(
                 text_font.clone(),
                 TextColor(crate::io::bevy_abstraction::Color::White.into()),
             )],
+            observe(|_: On<Activate>, mut app_exit_event_writer: MessageWriter<AppExit>| {
+                app_exit_event_writer.write(AppExit::Success);
+            }),
         )],
     ));
 }
 
-fn button_update(
-    mut interaction_query: Query<
+#[expect(clippy::type_complexity)]
+fn update_hover_ui_styles(
+    button_query: Query<
+        (&Hovered, &mut BackgroundColor),
         (
-            &Interaction,
-            &mut BackgroundColor,
+            With<Button>,
+            Changed<Hovered>,
         ),
-        Changed<Interaction>,
     >,
-
-    mut app_exit_event_writer: MessageWriter<AppExit>,
 ) {
-    for (interaction, mut color) in interaction_query.iter_mut() {
-        match interaction {
-            Interaction::Pressed => {
-                app_exit_event_writer.write(AppExit::Success);
-            },
+    for (Hovered(hovered), mut background_color) in button_query {
+        if *hovered {
+            background_color.0 = crate::io::bevy_abstraction::Color::LightBlack.into();
+        }else {
+            background_color.0 = crate::io::bevy_abstraction::Color::Black.into();
+        }
+    }
+}
 
-            Interaction::Hovered => {
-                color.0 = crate::io::bevy_abstraction::Color::LightBlack.into();
-            },
+#[expect(clippy::type_complexity)]
+fn update_focus_styles(
+    mut commands: Commands,
 
-            Interaction::None => {
-                color.0 = crate::io::bevy_abstraction::Color::Black.into();
-            },
+    focus: Res<InputFocus>,
+
+    ui_element_query: Query<
+        Entity,
+        Or<(With<Button>, With<RadioGroup>, With<Checkbox>)>,
+    >,
+) {
+    if focus.is_changed() {
+        for ui_element_id in ui_element_query {
+            if focus.0 == Some(ui_element_id) {
+                commands.entity(ui_element_id).insert(Outline {
+                    color: Color::WHITE,
+                    width: px(5),
+                    offset: px(5),
+                });
+            }else {
+                commands.entity(ui_element_id).remove::<Outline>();
+            }
         }
     }
 }

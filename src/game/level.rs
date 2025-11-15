@@ -1,10 +1,14 @@
-use crate::game::Game;
+use crate::game::{Game, GameError};
 use std::error::Error;
+use std::ffi::OsString;
 use std::fmt::{Debug, Display, Formatter, Write as _};
 use std::fs::File;
 use std::io::Write;
 use std::str::FromStr;
 use crate::io::{Color, Console};
+
+#[cfg(feature = "steam")]
+use bevy_steamworks::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Tile {
@@ -431,6 +435,9 @@ pub struct LevelPack {
 
     level_pack_best_time_sum: Option<u64>,
     level_pack_best_moves_sum: Option<u32>,
+
+    #[cfg(feature = "steam")]
+    steam_workshop_id: Option<PublishedFileId>,
 }
 
 impl LevelPack {
@@ -449,10 +456,18 @@ impl LevelPack {
             min_level_not_completed: Default::default(),
             level_pack_best_time_sum: Default::default(),
             level_pack_best_moves_sum: Default::default(),
+
+            #[cfg(feature = "steam")]
+            steam_workshop_id: None,
         }
     }
 
-    pub fn read_from_save_game(id: impl Into<String>, path: impl Into<String>, lvl_data: impl Into<String>) -> Result<Self, Box<dyn Error>> {
+    pub fn read_from_save_game(
+        id: impl Into<String>, path: impl Into<String>, lvl_data: impl Into<String>, editor_level_pack: bool,
+
+        #[cfg(feature = "steam")]
+        steam_workshop_id: Option<PublishedFileId>,
+    ) -> Result<Self, Box<dyn Error>> {
         let mut lvl_name = None;
         let id = id.into();
         let path = path.into();
@@ -552,15 +567,34 @@ impl LevelPack {
                 }
 
                 let level = Level::from_str(&level_str.join("\n"));
-                match level {
-                    Ok(level) => levels.push(level),
+                let level = match level {
+                    Ok(level) => level,
                     Err(err) => {
                         return Err(Box::new(LevelLoadingError::new(format!(
                             "\"{}\" occurred during parsing of level {} is invalid in the level pack file \"{path}\"!",
                             err, i + 1
                         ))));
                     },
+                };
+
+                if !editor_level_pack {
+                    let player_tile_count = level.tiles().iter().filter(|tile| **tile == Tile::Player).count();
+                    if player_tile_count == 0 {
+                        return Err(Box::new(GameError::new(format!(
+                            "Error while loading level pack \"{}\": Level {} does not contain a player tile",
+                            id,
+                            i + 1,
+                        ))));
+                    }else if player_tile_count > 1 {
+                        return Err(Box::new(GameError::new(format!(
+                            "Error while loading level pack \"{}\": Level {} contains too many player tiles",
+                            id,
+                            i + 1,
+                        ))));
+                    }
                 }
+
+                levels.push(level);
             }
 
             if line_iter.next().is_some() {
@@ -570,9 +604,31 @@ impl LevelPack {
             }
         }
 
+        if !editor_level_pack && levels.is_empty() {
+            return Err(Box::new(GameError::new(format!(
+                "Error while loading level pack \"{}\": Level pack contains no levels",
+                id,
+            ))));
+        }
+
         let mut save_game_file = Game::get_or_create_save_game_folder()?;
-        save_game_file.push(&id);
-        save_game_file.push(".lvl.sav");
+        {
+            #[cfg(not(feature = "steam"))]
+            {
+                save_game_file.push(&id);
+                save_game_file.push(".lvl.sav");
+            }
+
+            #[cfg(feature = "steam")]
+            if let Some(steam_workshop_id) = steam_workshop_id {
+                save_game_file.push("SteamWorkshop/");
+                save_game_file.push(steam_workshop_id.0.to_string());
+                save_game_file.push(".lvl.sav");
+            }else {
+                save_game_file.push(&id);
+                save_game_file.push(".lvl.sav");
+            }
+        }
 
         let mut min_level_not_completed= Default::default();
         let mut level_stats: Vec<(Option<u64>, Option<u32>)> = vec![Default::default(); Self::MAX_LEVEL_COUNT_PER_PACK];
@@ -641,6 +697,9 @@ impl LevelPack {
             min_level_not_completed,
             level_pack_best_time_sum: Default::default(),
             level_pack_best_moves_sum: Default::default(),
+
+            #[cfg(feature = "steam")]
+            steam_workshop_id,
         };
         level_pack.calculate_stats_sum();
 
@@ -651,7 +710,7 @@ impl LevelPack {
         self.save_editor_level_pack_to_path(&self.path)
     }
 
-    pub fn save_editor_level_pack_to_path(&self, path: impl Into<String>) -> Result<(), Box<dyn Error>> {
+    pub fn save_editor_level_pack_to_path(&self, path: impl Into<OsString>) -> Result<(), Box<dyn Error>> {
         let mut file = File::create(path.into())?;
 
         writeln!(file, "Name: {}", self.name)?;
@@ -668,8 +727,23 @@ impl LevelPack {
 
     pub fn save_save_game(&self) -> Result<(), Box<dyn Error>> {
         let mut save_game_file = Game::get_or_create_save_game_folder()?;
-        save_game_file.push(&self.id);
-        save_game_file.push(".lvl.sav");
+        {
+            #[cfg(not(feature = "steam"))]
+            {
+                save_game_file.push(&self.id);
+                save_game_file.push(".lvl.sav");
+            }
+
+            #[cfg(feature = "steam")]
+            if let Some(steam_workshop_id) = self.steam_workshop_id {
+                save_game_file.push("SteamWorkshop/");
+                save_game_file.push(steam_workshop_id.0.to_string());
+                save_game_file.push(".lvl.sav");
+            }else {
+                save_game_file.push(&self.id);
+                save_game_file.push(".lvl.sav");
+            }
+        }
 
         let mut file = File::create(save_game_file)?;
 
@@ -690,6 +764,10 @@ impl LevelPack {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn set_name(&mut self, name: impl Into<String>) {
+        self.name = name.into();
     }
 
     pub fn id(&self) -> &str {
@@ -781,6 +859,11 @@ impl LevelPack {
 
         self.level_pack_best_time_sum = stats_sum.0;
         self.level_pack_best_moves_sum = stats_sum.1;
+    }
+
+    #[cfg(feature = "steam")]
+    pub fn steam_workshop_id(&self) -> Option<PublishedFileId> {
+        self.steam_workshop_id
     }
 }
 
