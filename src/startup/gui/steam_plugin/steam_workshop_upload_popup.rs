@@ -10,6 +10,7 @@ use bevy::ui_widgets::{checkbox_self_update, observe, Activate, Button, Checkbox
 use bevy::prelude::*;
 use bevy::text::LineHeight;
 use bevy::ui::Checked;
+use bevy::window::{CursorIcon, PrimaryWindow, SystemCursorIcon};
 use bevy_steamworks::*;
 use crate::game::{audio, steam, Game, GameError};
 use crate::game::steam::achievement::Achievement;
@@ -42,6 +43,7 @@ impl Plugin for SteamWorkshopUploadPopupPlugin {
                     update_ui_styles,
                     update_hover_ui_styles,
                     update_focus_styles,
+                    update_mouse_cursor_style,
                     on_validate_and_start_upload,
                     on_set_upload_progress_title.pipe(handle_recoverable_error),
                     on_set_upload_progress_content.pipe(handle_recoverable_error),
@@ -106,6 +108,9 @@ struct SetUploadProgressPopupContent {
 }
 
 #[derive(Debug, Component)]
+struct TextInputField;
+
+#[derive(Debug, Component)]
 struct LevelPackName;
 
 #[derive(Debug, Component)]
@@ -154,6 +159,8 @@ fn process_and_update_upload_progress(
 
     upload_progress_popup_button_container_query: Query<Entity, With<UploadProgressPopupButtonContainer>>,
 
+    window_query: Query<Entity, With<PrimaryWindow>>,
+
     steam_client: Res<Client>,
     difficulty_tag_resource: Res<DifficultyTag>,
     asset_server: Res<AssetServer>,
@@ -167,7 +174,7 @@ fn process_and_update_upload_progress(
     match current_data {
         SteamWorkshopUploadWorkingData::CreateItemResult(Ok((id, _needs_to_accept_workshop_terms))) => {
             let level_pack_name = {
-                let Some(children) = level_pack_name_text_input_field_query.iter().next() else {
+                let Ok(children) = level_pack_name_text_input_field_query.single() else {
                     return Err(Box::new(GameError::new("Level pack name input field invalid")));
                 };
 
@@ -182,7 +189,7 @@ fn process_and_update_upload_progress(
                 level_pack_name
             };
             let level_pack_description = {
-                let Some(children) = level_pack_description_text_input_field_query.iter().next() else {
+                let Ok(children) = level_pack_description_text_input_field_query.single() else {
                     return Err(Box::new(GameError::new("Level pack description input field invalid")));
                 };
 
@@ -252,6 +259,10 @@ fn process_and_update_upload_progress(
                 sound_effect: audio::UI_ERROR_EFFECT,
             });
 
+            if let Ok(window_id) = window_query.single() {
+                commands.entity(window_id).insert(CursorIcon::System(SystemCursorIcon::Default));
+            }
+
             set_upload_progress_popup_title.write(SetUploadProgressPopupTitle {
                 title: "Upload failed!".to_string(),
                 error: true,
@@ -262,7 +273,7 @@ fn process_and_update_upload_progress(
                 error: true,
             });
 
-            let Some(popup_button_container_id) = upload_progress_popup_button_container_query.into_iter().next() else {
+            let Ok(popup_button_container_id) = upload_progress_popup_button_container_query.single() else {
                 return Err(Box::new(GameError::new("Invalid popup status")));
             };
 
@@ -329,6 +340,10 @@ fn process_and_update_upload_progress(
                 sound_effect: audio::LEVEL_COMPLETE_EFFECT,
             });
 
+            if let Ok(window_id) = window_query.single() {
+                commands.entity(window_id).insert(CursorIcon::System(SystemCursorIcon::Default));
+            }
+
             set_upload_progress_popup_title.write(SetUploadProgressPopupTitle {
                 title: "Upload completed!".to_string(),
                 error: false,
@@ -345,7 +360,7 @@ fn process_and_update_upload_progress(
                 error: false,
             });
 
-            let Some(popup_button_container_id) = upload_progress_popup_button_container_query.into_iter().next() else {
+            let Ok(popup_button_container_id) = upload_progress_popup_button_container_query.single() else {
                 return Err(Box::new(GameError::new("Invalid popup status")));
             };
 
@@ -455,6 +470,10 @@ fn process_and_update_upload_progress(
                 sound_effect: audio::UI_ERROR_EFFECT,
             });
 
+            if let Ok(window_id) = window_query.single() {
+                commands.entity(window_id).insert(CursorIcon::System(SystemCursorIcon::Default));
+            }
+
             set_upload_progress_popup_title.write(SetUploadProgressPopupTitle {
                 title: "Upload failed!".to_string(),
                 error: true,
@@ -465,7 +484,7 @@ fn process_and_update_upload_progress(
                 error: true,
             });
 
-            let Some(popup_button_container_id) = upload_progress_popup_button_container_query.into_iter().next() else {
+            let Ok(popup_button_container_id) = upload_progress_popup_button_container_query.single() else {
                 return Err(Box::new(GameError::new("Invalid popup status")));
             };
 
@@ -527,7 +546,7 @@ fn process_and_update_upload_progress(
 }
 
 fn process_update_progress_status(
-    upload_progress_popup_content_text_query: Query<(&mut Text, &mut TextColor), With<UploadProgressPopupContent>>,
+    mut upload_progress_popup_content_text_query: Query<(&mut Text, &mut TextColor), With<UploadProgressPopupContent>>,
 
     update_watch_handle: Option<Res<UpdateWatchHandleWrapper>>,
     previous_update_status: Option<ResMut<PreviousUpdateStatus>>,
@@ -573,7 +592,7 @@ fn process_update_progress_status(
             };
             info!("Workshop Update Item status: {update_status_text}");
 
-            let Some((mut popup_text, _)) = upload_progress_popup_content_text_query.into_iter().next() else {
+            let Ok((mut popup_text, _)) = upload_progress_popup_content_text_query.single_mut() else {
                 return Err(Box::new(GameError::new("Invalid popup status")));
             };
 
@@ -591,14 +610,9 @@ fn update_text_input_fields(
     focus: Res<InputFocus>,
     time: Res<Time>,
 
-    level_pack_name_text_input_field_query: Query<
-        &Children,
-        With<LevelPackName>,
-    >,
-
-    level_pack_description_text_input_field_query: Query<
-        &Children,
-        With<LevelPackDescription>,
+    text_input_field_query: Query<
+        (&Children, Has<LevelPackName>),
+        With<TextInputField>,
     >,
 
     children_query: Query<&Children>,
@@ -611,11 +625,7 @@ fn update_text_input_fields(
         return;
     };
 
-    let (children, is_level_pack_name) = if let Ok(children) = level_pack_name_text_input_field_query.get(entity_id) {
-        (children, true)
-    }else if let Ok(children) = level_pack_description_text_input_field_query.get(entity_id) {
-        (children, false)
-    }else {
+    let Ok((children, is_level_pack_name)) = text_input_field_query.get(entity_id) else {
         return;
     };
 
@@ -856,7 +866,7 @@ fn update_focus_styles(
 
     ui_element_query: Query<
         Entity,
-        Or<(With<LevelPackName>, With<LevelPackDescription>, With<Button>, With<RadioGroup>, With<Checkbox>)>,
+        Or<(With<TextInputField>, With<Button>, With<RadioGroup>, With<Checkbox>)>,
     >,
 
     text_cursor_query: Query<
@@ -883,15 +893,57 @@ fn update_focus_styles(
     }
 }
 
+fn update_mouse_cursor_style(
+    mut commands: Commands,
+
+    hovering_changed_query: Query<&Hovered, Changed<Hovered>>,
+    hovered_query: Query<(&Hovered, Has<TextInputField>)>,
+
+    window_query: Query<Entity, With<PrimaryWindow>>,
+    cursor_icon_query: Query<&CursorIcon, With<PrimaryWindow>>,
+) {
+    if cursor_icon_query.iter().any(|cursor_icon| *cursor_icon == CursorIcon::System(SystemCursorIcon::Wait)) {
+        return;
+    }
+
+    let any_hovering_changed = hovering_changed_query.iter().any(|_| true);
+    if !any_hovering_changed {
+        return;
+    }
+
+    let (hovering_any, is_text_input_field) = hovered_query.iter().
+            find(|(hovering, _)| hovering.0).
+            map(|(hovering, is_text_input_field)| (hovering.0, is_text_input_field)).
+            unwrap_or_else(|| (false, false));
+
+    if let Ok(window_id) = window_query.single() {
+        if hovering_any {
+            if is_text_input_field {
+                commands.entity(window_id).insert(CursorIcon::System(SystemCursorIcon::Text));
+            }else {
+                commands.entity(window_id).insert(CursorIcon::System(SystemCursorIcon::Pointer));
+            }
+        }else {
+            commands.entity(window_id).insert(CursorIcon::System(SystemCursorIcon::Default));
+        }
+    }
+}
+
 fn on_validate_and_start_upload(
     mut commands: Commands,
 
     mut event_reader: MessageReader<ValidateAndStartUpload>,
 
+    window_query: Query<Entity, With<PrimaryWindow>>,
+
     asset_server: Res<AssetServer>,
     steam_client: Res<Client>,
 ) {
     for _ in event_reader.read() {
+        if let Ok(window_id) = window_query.single() {
+            commands.entity(window_id).insert(CursorIcon::System(SystemCursorIcon::Wait));
+        }
+
         let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
         let text_font = TextFont {
             font: font.clone(),
@@ -1087,6 +1139,8 @@ fn on_open_steam_workshop_upload_popup(
                         ..default()
                     },
                     LevelPackName,
+                    TextInputField,
+                    Hovered::default(),
                     TabIndex::default(),
                     BackgroundColor(Color::srgb_u8(120, 120, 120)),
                     ResizableNodeDimension::Height(1.2),
@@ -1122,6 +1176,8 @@ fn on_open_steam_workshop_upload_popup(
                         ..default()
                     },
                     LevelPackDescription,
+                    TextInputField,
+                    Hovered::default(),
                     TabIndex::default(),
                     BackgroundColor(Color::srgb_u8(120, 120, 120)),
                     ResizableNodeDimension::Height(3.2),
@@ -1309,6 +1365,7 @@ fn on_close_steam_workshop_upload_popup(
     mut commands: Commands,
 
     steam_workshop_upload_popup_elements: Query<Entity, With<SteamWorkshopUploadPopup>>,
+    window_query: Query<Entity, With<PrimaryWindow>>,
 
     mut game: NonSendMut<Game>,
 ) {
@@ -1320,16 +1377,20 @@ fn on_close_steam_workshop_upload_popup(
         commands.entity(entity).despawn();
     }
 
+    if let Ok(window_id) = window_query.single() {
+        commands.entity(window_id).insert(CursorIcon::System(SystemCursorIcon::Default));
+    }
+
     game.game_state_mut().show_workshop_upload_popup = false;
 }
 
 fn on_set_upload_progress_title(
     mut set_upload_progress_popup_title_event: MessageReader<SetUploadProgressPopupTitle>,
 
-    upload_progress_popup_title_text_query: Query<(&mut Text, &mut TextColor), With<UploadProgressPopupTitle>>,
+    mut upload_progress_popup_title_text_query: Query<(&mut Text, &mut TextColor), With<UploadProgressPopupTitle>>,
 ) -> Result<(), Box<dyn Error>> {
     if let Some(event) = set_upload_progress_popup_title_event.read().next() {
-        let Some((mut popup_text, mut popup_text_color)) = upload_progress_popup_title_text_query.into_iter().next() else {
+        let Ok((mut popup_text, mut popup_text_color)) = upload_progress_popup_title_text_query.single_mut() else {
             return Err(Box::new(GameError::new("Invalid popup status")));
         };
 
@@ -1347,10 +1408,10 @@ fn on_set_upload_progress_title(
 fn on_set_upload_progress_content(
     mut set_upload_progress_popup_content_event: MessageReader<SetUploadProgressPopupContent>,
 
-    upload_progress_popup_title_text_query: Query<(&mut Text, &mut TextColor), With<UploadProgressPopupContent>>,
+    mut upload_progress_popup_title_text_query: Query<(&mut Text, &mut TextColor), With<UploadProgressPopupContent>>,
 ) -> Result<(), Box<dyn Error>> {
     if let Some(event) = set_upload_progress_popup_content_event.read().next() {
-        let Some((mut popup_text, mut popup_text_color)) = upload_progress_popup_title_text_query.into_iter().next() else {
+        let Ok((mut popup_text, mut popup_text_color)) = upload_progress_popup_title_text_query.single_mut() else {
             return Err(Box::new(GameError::new("Invalid popup status")));
         };
 
