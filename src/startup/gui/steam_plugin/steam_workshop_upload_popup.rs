@@ -605,7 +605,6 @@ fn process_update_progress_status(
     Ok(())
 }
 
-#[expect(clippy::too_many_arguments)]
 fn update_text_input_fields(
     focus: Res<InputFocus>,
     time: Res<Time>,
