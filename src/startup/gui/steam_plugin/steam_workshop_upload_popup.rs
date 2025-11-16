@@ -258,7 +258,7 @@ fn process_and_update_upload_progress(
             });
 
             set_upload_progress_popup_content.write(SetUploadProgressPopupContent {
-                text: format!("An error occurred during item creation: {err}"),
+                text: format!("An error occurred during level pack creation: {err}"),
                 error: true,
             });
 
@@ -461,7 +461,7 @@ fn process_and_update_upload_progress(
             });
 
             set_upload_progress_popup_content.write(SetUploadProgressPopupContent {
-                text: format!("An error occurred during item submission: {err}"),
+                text: format!("An error occurred during level pack submission: {err}"),
                 error: true,
             });
 
