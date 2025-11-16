@@ -1,3 +1,5 @@
+use std::io::Cursor;
+use std::mem;
 use std::path::{Path, PathBuf};
 use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use bevy::input_focus::{AutoFocus, InputDispatchPlugin, InputFocus};
@@ -5,7 +7,9 @@ use bevy::input_focus::tab_navigation::{TabGroup, TabIndex, TabNavigationPlugin}
 use bevy::picking::hover::Hovered;
 use bevy::prelude::*;
 use bevy::ui_widgets::{observe, Activate, Button, Checkbox, RadioGroup, UiWidgetsPlugins};
-use crate::game::Game;
+use bevy::window::{CursorIcon, PrimaryWindow, SystemCursorIcon};
+use rodio::{Decoder, OutputStream, Source};
+use crate::game::{audio, Game};
 use crate::startup::gui::{assets, spawn_camera};
 
 #[derive(Debug, Default, Resource)]
@@ -34,7 +38,10 @@ pub fn show_startup_error_dialog(app: &mut App, error_message: &str) {
                 TabNavigationPlugin,
             )).
 
-            add_systems(Startup, spawn_camera);
+            add_systems(Startup, (
+                spawn_camera,
+                play_error_sound
+            ));
 
     let embedded = app.world_mut().resource_mut::<EmbeddedAssetRegistry>();
 
@@ -54,9 +61,24 @@ pub fn show_startup_error_dialog(app: &mut App, error_message: &str) {
             add_systems(Update, (
                 update_hover_ui_styles,
                 update_focus_styles,
+                update_mouse_cursor_style,
             )).
 
             run();
+}
+
+fn play_error_sound() {
+    let output_stream = OutputStream::try_default();
+    if let Ok((stream, stream_handle)) = output_stream {
+        let cursor = Cursor::new(audio::UI_ERROR_EFFECT);
+        if let Ok(source) = Decoder::new(cursor) {
+            let _ = stream_handle.play_raw(source.convert_samples());
+        }
+
+        //Keep OutputStream and OutputStreamHandle around to finish playing sound effect
+        mem::forget(stream);
+        mem::forget(stream_handle);
+    }
 }
 
 fn create_error_dialog_menu(
@@ -169,6 +191,36 @@ fn update_focus_styles(
             }else {
                 commands.entity(ui_element_id).remove::<Outline>();
             }
+        }
+    }
+}
+
+fn update_mouse_cursor_style(
+    mut commands: Commands,
+
+    hovering_changed_query: Query<&Hovered, Changed<Hovered>>,
+    hovered_query: Query<&Hovered>,
+
+    window_query: Query<Entity, With<PrimaryWindow>>,
+    cursor_icon_query: Query<&CursorIcon, With<PrimaryWindow>>,
+) {
+    if cursor_icon_query.iter().any(|cursor_icon| *cursor_icon == CursorIcon::System(SystemCursorIcon::Wait)) {
+        return;
+    }
+
+    let any_hovering_changed = hovering_changed_query.iter().any(|_| true);
+    if !any_hovering_changed {
+        return;
+    }
+
+    let hovering_any = hovered_query.iter().
+            any(|hovering| hovering.0);
+
+    if let Ok(window_id) = window_query.single() {
+        if hovering_any {
+            commands.entity(window_id).insert(CursorIcon::System(SystemCursorIcon::Pointer));
+        }else {
+            commands.entity(window_id).insert(CursorIcon::System(SystemCursorIcon::Default));
         }
     }
 }
