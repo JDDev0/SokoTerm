@@ -17,13 +17,13 @@ pub struct ConsoleState {
 }
 
 impl ConsoleState {
-    pub fn new<const A: usize, const B: usize>() -> Self {
+    pub fn new<const W: usize, const H: usize>() -> Self {
         Self {
             curser_pos: (0, 0),
             current_color_pair: (Color::White, Color::Black),
 
-            text_buffer: vec![b' '; A * B].into_boxed_slice(),
-            text_color_buffer: vec![(Color::White, Color::Black); A * B].into_boxed_slice(),
+            text_buffer: vec![b' '; W * H].into_boxed_slice(),
+            text_color_buffer: vec![(Color::White, Color::Black); W * H].into_boxed_slice(),
             //TODO: underline
 
             input_queue_keyboard: VecDeque::default(),
