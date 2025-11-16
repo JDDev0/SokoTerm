@@ -30,31 +30,36 @@ pub const BACKGROUND_MUSIC_TRACKS: BackgroundMusicTracks<5> = BackgroundMusicTra
 
 pub const BACKGROUND_MUSIC_FIELDS_OF_ICE: BackgroundMusic = BackgroundMusic {
     id: BackgroundMusicId::new(1),
-    display_name: "Fields of Ice [by Jonathan So]",
+    display_name: "Fields of Ice",
+    creator: "Jonathan So",
     audio_data: include_bytes!("../../assets/audio/background_music_fields_of_ice.ogg"),
 };
 
 pub const BACKGROUND_MUSIC_LEAP: BackgroundMusic = BackgroundMusic {
     id: BackgroundMusicId::new(2),
-    display_name: "Leap [8bit] [by nene]",
+    display_name: "Leap [8bit]",
+    creator: "nene",
     audio_data: include_bytes!("../../assets/audio/background_music_leap.ogg"),
 };
 
 pub const BACKGROUND_MUSIC_TRIANGULAR: BackgroundMusic = BackgroundMusic {
     id: BackgroundMusicId::new(3),
-    display_name: "Triangular Ideology: The Fan Sequel [by Spring Spring]",
+    display_name: "Triangular Ideology: The Fan Sequel",
+    creator: "Spring Spring",
     audio_data: include_bytes!("../../assets/audio/background_music_triangular.ogg"),
 };
 
 pub const BACKGROUND_MUSIC_LONELY_NIGHT: BackgroundMusic = BackgroundMusic {
     id: BackgroundMusicId::new(4),
-    display_name: "Lonely Night [by Centurion_of_war]",
+    display_name: "Lonely Night",
+    creator: "Centurion_of_war",
     audio_data: include_bytes!("../../assets/audio/background_music_lonely_night.ogg"),
 };
 
 pub const BACKGROUND_MUSIC_RESOW: BackgroundMusic = BackgroundMusic {
     id: BackgroundMusicId::new(5),
-    display_name: "Re-Sow [by Chasersgaming]",
+    display_name: "Re-Sow",
+    creator: "Chasersgaming",
     audio_data: include_bytes!("../../assets/audio/background_music_resow.ogg"),
 };
 
@@ -75,6 +80,7 @@ impl BackgroundMusicId {
 pub struct BackgroundMusic {
     id: BackgroundMusicId,
     display_name: &'static str,
+    creator: &'static str,
     audio_data: &'static [u8],
 }
 
@@ -83,8 +89,12 @@ impl BackgroundMusic {
         self.id
     }
 
-    pub fn display_name(&self) -> &str {
+    pub fn display_name(&self) -> &'static str {
         self.display_name
+    }
+
+    pub fn creator(&self) -> &'static str {
+        self.creator
     }
 
     pub fn audio_data(&self) -> &'static [u8] {
@@ -116,6 +126,10 @@ impl<const N: usize> BackgroundMusicTracks<N> {
 
     pub fn get_track_by_id(&self, id: BackgroundMusicId) -> &BackgroundMusic {
         self.tracks.iter().find(|background_music| background_music.id == id).unwrap()
+    }
+
+    pub fn tracks(&self) -> &[&BackgroundMusic] {
+        &self.tracks
     }
 }
 

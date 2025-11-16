@@ -825,6 +825,10 @@ impl LevelPack {
         self.background_music_id
     }
 
+    pub fn set_background_music_id(&mut self, background_music_id: Option<BackgroundMusicId>) {
+        self.background_music_id = background_music_id;
+    }
+
     pub fn levels(&self) -> &[LevelWithStats] {
         &self.levels
     }

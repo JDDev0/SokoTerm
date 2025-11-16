@@ -9,7 +9,7 @@ use std::path::Path;
 use crate::game::audio::{AudioHandler, BackgroundMusic, BackgroundMusicId};
 use crate::game::help_page::HelpPage;
 use crate::game::level::{Level, LevelPack};
-use crate::game::screen::{Screen, ScreenId, ScreenInGame, ScreenLevelEditor, ScreenLevelPackEditor, ScreenSelectLevel, ScreenSelectLevelPack, ScreenSelectLevelPackEditor, ScreenStartMenu};
+use crate::game::screen::{Screen, ScreenId, ScreenInGame, ScreenLevelEditor, ScreenLevelPackEditor, ScreenSelectLevel, ScreenSelectLevelPack, ScreenSelectLevelPackEditor, ScreenSelectLevelPackBackgroundMusic, ScreenStartMenu};
 use crate::game::screen::dialog::{Dialog, DialogType};
 use crate::io::{Console, Key};
 
@@ -275,6 +275,10 @@ impl GameState {
         }
     }
 
+    pub fn current_background_music_id(&self) -> Option<BackgroundMusicId> {
+        self.current_background_music_id
+    }
+
     pub fn stop_background_music(&mut self) {
         if let Some(audio_handler) = &self.audio_handler {
             self.current_background_music_id = None;
@@ -378,6 +382,7 @@ impl <'a> Game<'a> {
             (ScreenId::InGame, Box::new(ScreenInGame::new()) as Box<dyn Screen>),
 
             (ScreenId::SelectLevelPackEditor, Box::new(ScreenSelectLevelPackEditor::new()) as Box<dyn Screen>),
+            (ScreenId::SelectLevelPackBackgroundMusic, Box::new(ScreenSelectLevelPackBackgroundMusic::new()) as Box<dyn Screen>),
             (ScreenId::LevelPackEditor, Box::new(ScreenLevelPackEditor::new()) as Box<dyn Screen>),
             (ScreenId::LevelEditor, Box::new(ScreenLevelEditor::new()) as Box<dyn Screen>),
         ]);

@@ -27,6 +27,7 @@ pub enum ScreenId {
     InGame,
 
     SelectLevelPackEditor,
+    SelectLevelPackBackgroundMusic,
     LevelPackEditor,
     LevelEditor,
 }
@@ -1511,6 +1512,48 @@ impl Screen for ScreenSelectLevelPackEditor {
 
             console.set_cursor_pos(1, y + 2);
             console.draw_text(format!("Levels: {}", game_state.editor_state.get_current_level_pack().unwrap().level_count()));
+
+            console.set_cursor_pos(1, y + 3);
+            console.draw_text("Background music: ");
+
+            match game_state.editor_state.get_current_level_pack().unwrap().
+                    background_music_id().
+                    map(|background_music_id| audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(background_music_id)) {
+                Some(background_music) => {
+                    console.set_color(Color::LightCyan, Color::Default);
+                    console.draw_text(background_music.display_name());
+
+                    console.reset_color();
+                    console.draw_text(" [by ");
+
+                    console.set_color(Color::LightPink, Color::Default);
+                    console.draw_text(background_music.creator());
+
+                    console.reset_color();
+                    console.draw_text("]");
+                },
+
+                None => {
+                    console.draw_text("None");
+                },
+            }
+
+            console.set_color(Color::Red, Color::Default);
+            console.set_cursor_pos(46, y + 1);
+            console.draw_text("s");
+
+            console.reset_color();
+            console.draw_text(":  Select background music");
+
+            #[cfg(feature = "steam")]
+            {
+                console.set_color(Color::Red, Color::Default);
+                console.set_cursor_pos(46, y + 2);
+                console.draw_text("u");
+
+                console.reset_color();
+                console.draw_text(": Upload to Steam Workshop");
+            }
         }
     }
 
@@ -1572,12 +1615,12 @@ impl Screen for ScreenSelectLevelPackEditor {
 
                     game_state.editor_state.level_packs.insert(index, level_pack);
 
-                    self.is_creating_new_level_pack = false;
+                    //self.is_creating_new_level_pack with be set to false in on_set_screen after background music selection
                     self.new_level_pack_id = String::new();
 
                     game_state.editor_state.set_level_pack_index(index);
                     game_state.editor_state.set_level_index(0);
-                    game_state.set_screen(ScreenId::LevelPackEditor);
+                    game_state.set_screen(ScreenId::SelectLevelPackBackgroundMusic);
                 },
 
                 Key::ESC => {
@@ -1605,6 +1648,17 @@ impl Screen for ScreenSelectLevelPackEditor {
             game_state.open_help_page();
 
             return;
+        }
+
+        if key == Key::S && game_state.editor_state.selected_level_pack_index != game_state.editor_state.get_level_pack_count() {
+            match game_state.editor_state.get_current_level_pack().unwrap().
+                    background_music_id().
+                    map(|background_music_id| audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(background_music_id)) {
+                Some(background_music) => game_state.set_background_music_loop(background_music),
+                None => game_state.stop_background_music(),
+            }
+
+            game_state.set_screen(ScreenId::SelectLevelPackBackgroundMusic);
         }
 
         if key == Key::E && game_state.editor_state.selected_level_pack_index != game_state.editor_state.get_level_pack_count() {
@@ -1751,6 +1805,137 @@ impl Screen for ScreenSelectLevelPackEditor {
                     game_state.editor_state.level_packs.remove(index);
                 }
             }
+        }
+    }
+
+    fn on_set_screen(&mut self, game_state: &mut GameState) {
+        if self.is_creating_new_level_pack {
+            //Background music was selected for newly created level pack -> Do not change music and enter level pack editor
+
+            self.is_creating_new_level_pack = false;
+            game_state.set_screen(ScreenId::LevelPackEditor);
+        }else {
+            game_state.set_background_music_loop(&audio::BACKGROUND_MUSIC_FIELDS_OF_ICE);
+        }
+    }
+}
+
+pub struct ScreenSelectLevelPackBackgroundMusic {}
+
+impl ScreenSelectLevelPackBackgroundMusic {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Screen for ScreenSelectLevelPackBackgroundMusic {
+    fn draw(&self, game_state: &GameState, console: &Console) {
+        console.reset_color();
+        console.set_underline(true);
+        console.draw_text("Select the background music for the level pack:");
+        console.set_underline(false);
+
+        console.set_color(Color::Red, Color::Default);
+        console.set_cursor_pos(0, 1);
+        console.draw_text("ENTER");
+
+        console.reset_color();
+        console.draw_text(": Save selection");
+
+        console.set_color(Color::Red, Color::Default);
+        console.set_cursor_pos(0, 2);
+        console.draw_text("ESC");
+
+        console.reset_color();
+        console.draw_text(": Cancel");
+
+        console.reset_color();
+        console.set_cursor_pos(0, 4);
+        console.draw_text("( ) None");
+
+        let current_selected_music_index = game_state.current_background_music_id().
+                map(|id| id.id()).
+                unwrap_or(0);
+
+        for track in audio::BACKGROUND_MUSIC_TRACKS.tracks() {
+            console.reset_color();
+            console.set_cursor_pos(0, track.id().id() + 4);
+            console.reset_color();
+            console.draw_text("( ) ");
+
+            console.set_color(Color::LightCyan, Color::Default);
+            console.draw_text(format!("{:35}", track.display_name()));
+
+            console.reset_color();
+            console.draw_text(" [by ");
+
+            console.set_color(Color::LightPink, Color::Default);
+            console.draw_text(track.creator());
+
+            console.reset_color();
+            console.draw_text("]");
+        }
+
+        console.set_color(Color::Yellow, Color::Default);
+        console.set_cursor_pos(1, current_selected_music_index + 4);
+        console.draw_text("X");
+    }
+
+    fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
+        let current_background_music_id = game_state.current_background_music_id();
+        let mut current_selected_music_index = current_background_music_id.
+                map(|id| id.id()).
+                unwrap_or(0);
+
+        if key == Key::UP && current_selected_music_index > 0 {
+            current_selected_music_index -= 1;
+        }else if key == Key::DOWN && current_selected_music_index < audio::BACKGROUND_MUSIC_TRACKS.tracks().len() {
+            current_selected_music_index += 1;
+        }
+
+        if current_selected_music_index == 0 {
+            game_state.stop_background_music();
+        }else {
+            game_state.set_background_music_loop(audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(
+                audio::BACKGROUND_MUSIC_TRACKS.check_id(current_selected_music_index).unwrap(),
+            ));
+        }
+
+        if key == Key::ENTER {
+            game_state.editor_state.get_current_level_pack_mut().unwrap().set_background_music_id(current_background_music_id);
+
+            if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
+                game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
+            }
+        }
+
+        if key == Key::ENTER || key == Key::ESC {
+            game_state.set_screen(ScreenId::SelectLevelPackEditor);
+        }
+    }
+
+    fn on_mouse_pressed(&mut self, game_state: &mut GameState, column: usize, row: usize) {
+        if row == 1 && column < 5 {
+            self.on_key_pressed(game_state, Key::ENTER);
+        }else if row == 2 && column < 3 {
+            self.on_key_pressed(game_state, Key::ESC);
+        }
+
+        if row < 4 {
+            return;
+        }
+
+        let background_music_selection_index = row - 4;
+        if background_music_selection_index > audio::BACKGROUND_MUSIC_TRACKS.tracks().len() {
+            return;
+        }
+
+        if background_music_selection_index == 0 {
+            game_state.stop_background_music();
+        }else {
+            game_state.set_background_music_loop(audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(
+                audio::BACKGROUND_MUSIC_TRACKS.check_id(background_music_selection_index).unwrap(),
+            ));
         }
     }
 }
@@ -2249,6 +2434,14 @@ impl Screen for ScreenLevelPackEditor {
                     game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
                 }
             }
+        }
+    }
+
+    fn on_set_screen(&mut self, game_state: &mut GameState) {
+        if let Some(background_music_id) = game_state.editor_state.get_current_level_pack().as_ref().unwrap().background_music_id() {
+            game_state.set_background_music_loop(audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(background_music_id));
+        }else {
+            game_state.stop_background_music();
         }
     }
 }

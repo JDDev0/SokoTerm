@@ -411,7 +411,7 @@ impl HelpPage {
                 console.set_color(Color::LightCyan, Color::Default);
                 console.set_cursor_pos(0, 10);
                 console.draw_text("@");
-                console.set_color(Color::Pink, Color::Default);
+                console.set_color(Color::LightPink, Color::Default);
                 console.set_cursor_pos(2, 10);
                 console.draw_text("@");
                 console.set_color(Color::Default, Color::LightBlue);
@@ -426,7 +426,7 @@ impl HelpPage {
                 console.set_color(Color::LightCyan, Color::Default);
                 console.set_cursor_pos(0, 13);
                 console.draw_text("*");
-                console.set_color(Color::Pink, Color::Default);
+                console.set_color(Color::LightPink, Color::Default);
                 console.set_cursor_pos(2, 13);
                 console.draw_text("*");
                 console.set_color(Color::LightRed, Color::Default);
@@ -454,20 +454,26 @@ impl HelpPage {
 
                 console.set_cursor_pos(0, 6);
                 console.set_color(Color::LightRed, Color::Default);
+                console.draw_text("s");
+                console.reset_color();
+                console.draw_text(": Select the background music for the selected level pack");
+
+                console.set_cursor_pos(0, 7);
+                console.set_color(Color::LightRed, Color::Default);
                 console.draw_text("e");
                 console.reset_color();
                 console.draw_text(": Exports the selected level pack to the current directory");
 
                 #[cfg(feature = "steam")]
                 {
-                    console.set_cursor_pos(0, 7);
+                    console.set_cursor_pos(0, 8);
                     console.set_color(Color::LightRed, Color::Default);
                     console.draw_text("u");
                     console.reset_color();
                     console.draw_text(": Upload the selected level pack to the steam workshop");
                 }
 
-                let y_offset = if cfg!(feature = "steam") { 8 } else { 7 };
+                let y_offset = if cfg!(feature = "steam") { 9 } else { 8 };
 
                 console.set_cursor_pos(0, y_offset);
                 console.set_color(Color::LightRed, Color::Default);
