@@ -1,6 +1,8 @@
 use std::error::Error;
 use std::io::Cursor;
-use rodio::{Decoder, OutputStream, OutputStreamHandle, Source, StreamError};
+use std::num::NonZeroUsize;
+use std::time::Duration;
+use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, Source};
 
 pub const UI_SELECT_EFFECT: &[u8] = include_bytes!("../../assets/audio/ui_select.ogg");
 pub const UI_ERROR_EFFECT: &[u8] = include_bytes!("../../assets/audio/ui_error.ogg");
@@ -18,21 +20,126 @@ pub const LEVEL_PACK_COMPLETE_EFFECT: &[u8] = include_bytes!("../../assets/audio
 pub const LEVEL_RESET: &[u8] = include_bytes!("../../assets/audio/level_reset.ogg");
 pub const STEP_EFFECT: &[u8] = include_bytes!("../../assets/audio/step.ogg");
 
+pub const BACKGROUND_MUSIC_TRACKS: BackgroundMusicTracks<5> = BackgroundMusicTracks::new([
+    &BACKGROUND_MUSIC_FIELDS_OF_ICE,
+    &BACKGROUND_MUSIC_LEAP,
+    &BACKGROUND_MUSIC_TRIANGULAR,
+    &BACKGROUND_MUSIC_LONELY_NIGHT,
+    &BACKGROUND_MUSIC_RESOW,
+]);
+
+pub const BACKGROUND_MUSIC_FIELDS_OF_ICE: BackgroundMusic = BackgroundMusic {
+    id: BackgroundMusicId::new(1),
+    display_name: "Fields of Ice [by Jonathan So]",
+    audio_data: include_bytes!("../../assets/audio/background_music_fields_of_ice.ogg"),
+};
+
+pub const BACKGROUND_MUSIC_LEAP: BackgroundMusic = BackgroundMusic {
+    id: BackgroundMusicId::new(2),
+    display_name: "Leap [8bit] [by nene]",
+    audio_data: include_bytes!("../../assets/audio/background_music_leap.ogg"),
+};
+
+pub const BACKGROUND_MUSIC_TRIANGULAR: BackgroundMusic = BackgroundMusic {
+    id: BackgroundMusicId::new(3),
+    display_name: "Triangular Ideology: The Fan Sequel [by Spring Spring]",
+    audio_data: include_bytes!("../../assets/audio/background_music_triangular.ogg"),
+};
+
+pub const BACKGROUND_MUSIC_LONELY_NIGHT: BackgroundMusic = BackgroundMusic {
+    id: BackgroundMusicId::new(4),
+    display_name: "Lonely Night [by Centurion_of_war]",
+    audio_data: include_bytes!("../../assets/audio/background_music_lonely_night.ogg"),
+};
+
+pub const BACKGROUND_MUSIC_RESOW: BackgroundMusic = BackgroundMusic {
+    id: BackgroundMusicId::new(5),
+    display_name: "Re-Sow [by Chasersgaming]",
+    audio_data: include_bytes!("../../assets/audio/background_music_resow.ogg"),
+};
+
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub struct BackgroundMusicId(NonZeroUsize);
+
+impl BackgroundMusicId {
+    const fn new(id: usize) -> BackgroundMusicId {
+        BackgroundMusicId(NonZeroUsize::new(id).unwrap())
+    }
+
+    pub fn id(&self) -> usize {
+        self.0.get()
+    }
+}
+
+#[derive(Debug)]
+pub struct BackgroundMusic {
+    id: BackgroundMusicId,
+    display_name: &'static str,
+    audio_data: &'static [u8],
+}
+
+impl BackgroundMusic {
+    pub fn id(&self) -> BackgroundMusicId {
+        self.id
+    }
+
+    pub fn display_name(&self) -> &str {
+        self.display_name
+    }
+
+    pub fn audio_data(&self) -> &'static [u8] {
+        self.audio_data
+    }
+}
+
+#[derive(Debug)]
+pub struct BackgroundMusicTracks<const N: usize> {
+    tracks: [&'static BackgroundMusic; N],
+}
+
+impl<const N: usize> BackgroundMusicTracks<N> {
+    const fn new(tracks: [&'static BackgroundMusic; N]) -> BackgroundMusicTracks<N> {
+        BackgroundMusicTracks {
+            tracks,
+        }
+    }
+
+    pub fn check_id(&self, id: usize) -> Option<BackgroundMusicId> {
+        for track in &self.tracks {
+            if track.id.id() == id {
+                return Some(track.id);
+            }
+        }
+
+        None
+    }
+
+    pub fn get_track_by_id(&self, id: BackgroundMusicId) -> &BackgroundMusic {
+        self.tracks.iter().find(|background_music| background_music.id == id).unwrap()
+    }
+}
+
 pub struct AudioHandler {
     _stream: OutputStream,
 
     stream_handle: OutputStreamHandle,
+
+    background_music_sink: Sink,
 }
 
 impl AudioHandler {
-    pub fn new() -> Result<Self, StreamError> {
+    pub fn new() -> Result<Self, Box<dyn Error>> {
         let output_stream = OutputStream::try_default();
         let (_stream, stream_handle) = output_stream?;
+
+        let background_music_sink = Sink::try_new(&stream_handle)?;
 
         Ok(Self {
             _stream,
 
             stream_handle,
+
+            background_music_sink
         })
     }
 
@@ -41,6 +148,22 @@ impl AudioHandler {
         let source = Decoder::new(cursor)?;
 
         self.stream_handle.play_raw(source.convert_samples())?;
+
+        Ok(())
+    }
+
+    pub fn stop_background_music(&self) {
+        self.background_music_sink.stop();
+    }
+
+    pub fn set_background_music_loop(&self, background_music: &'static [u8]) -> Result<(), Box<dyn Error>> {
+        self.stop_background_music();
+
+        let cursor = Cursor::new(background_music);
+        let decoder = Decoder::new_looped(cursor)?;
+        let source = decoder.fade_in(Duration::from_secs(1));
+
+        self.background_music_sink.append(source);
 
         Ok(())
     }

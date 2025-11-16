@@ -6,7 +6,7 @@ use std::mem;
 use std::fs::File;
 use std::io::Read;
 use std::path::Path;
-use crate::game::audio::AudioHandler;
+use crate::game::audio::{AudioHandler, BackgroundMusic, BackgroundMusicId};
 use crate::game::help_page::HelpPage;
 use crate::game::level::{Level, LevelPack};
 use crate::game::screen::{Screen, ScreenId, ScreenInGame, ScreenLevelEditor, ScreenLevelPackEditor, ScreenSelectLevel, ScreenSelectLevelPack, ScreenSelectLevelPackEditor, ScreenStartMenu};
@@ -104,6 +104,7 @@ pub struct GameState {
     editor_state: EditorState,
 
     audio_handler: Option<AudioHandler>,
+    current_background_music_id: Option<BackgroundMusicId>,
 
     #[cfg(feature = "steam")]
     steam_client: Client,
@@ -140,6 +141,7 @@ impl GameState {
             editor_state: EditorState::new(editor_level_packs),
 
             audio_handler: AudioHandler::new().ok(),
+            current_background_music_id: None,
 
             #[cfg(feature = "steam")]
             steam_client,
@@ -270,6 +272,22 @@ impl GameState {
     pub fn play_sound_effect(&self, sound_effect: &'static [u8]) {
         if let Some(audio_handler) = &self.audio_handler {
             let _ = audio_handler.play_sound_effect(sound_effect);
+        }
+    }
+
+    pub fn stop_background_music(&mut self) {
+        if let Some(audio_handler) = &self.audio_handler {
+            self.current_background_music_id = None;
+            audio_handler.stop_background_music();
+        }
+    }
+
+    pub fn set_background_music_loop(&mut self, background_music: &BackgroundMusic) {
+        if let Some(audio_handler) = &self.audio_handler &&
+                self.current_background_music_id.is_none_or(|id| background_music.id() != id) {
+            self.current_background_music_id = Some(background_music.id());
+
+            let _ = audio_handler.set_background_music_loop(background_music.audio_data());
         }
     }
 
@@ -572,6 +590,8 @@ impl <'a> Game<'a> {
         if std::fs::exists(&save_game_file).is_ok_and(|exists| exists) {
             game_state.on_found_secret_for_level_pack(1)?;
         }
+
+        game_state.set_background_music_loop(&audio::BACKGROUND_MUSIC_FIELDS_OF_ICE);
 
         Ok(Self {
             console,

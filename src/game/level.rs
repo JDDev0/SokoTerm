@@ -1,4 +1,4 @@
-use crate::game::{Game, GameError};
+use crate::game::{audio, Game, GameError};
 use std::error::Error;
 use std::ffi::OsString;
 use std::fmt::{Debug, Display, Formatter, Write as _};
@@ -9,6 +9,7 @@ use crate::io::{Color, Console};
 
 #[cfg(feature = "steam")]
 use bevy_steamworks::*;
+use crate::game::audio::BackgroundMusicId;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Tile {
@@ -429,6 +430,9 @@ pub struct LevelPack {
     name: String,
     id: String,
     path: String,
+
+    background_music_id: Option<BackgroundMusicId>,
+
     levels: Vec<LevelWithStats>,
 
     min_level_not_completed: usize,
@@ -453,6 +457,8 @@ impl LevelPack {
             path: path.into(),
             levels: vec![],
 
+            background_music_id: None,
+
             min_level_not_completed: Default::default(),
             level_pack_best_time_sum: Default::default(),
             level_pack_best_moves_sum: Default::default(),
@@ -471,6 +477,9 @@ impl LevelPack {
         let mut lvl_name = None;
         let id = id.into();
         let path = path.into();
+
+        let mut pack_background_music_id = None;
+
         let lvl_data = lvl_data.into();
 
         let mut levels = Vec::with_capacity(Self::MAX_LEVEL_COUNT_PER_PACK);
@@ -482,7 +491,9 @@ impl LevelPack {
                 ))));
             }
 
-            let mut line = lines.first().unwrap().trim();
+            let mut lines = lines.into_iter();
+
+            let mut line = lines.next().unwrap().trim();
             if let Some(name) = line.strip_prefix("Name: ") {
                 let name = name.trim();
                 if name.len() > Self::MAX_LEVEL_PACK_NAME_LEN {
@@ -493,12 +504,37 @@ impl LevelPack {
 
                 lvl_name = Some(name);
 
-                if lines.len() == 1 {
+                let next_line = lines.next();
+                let Some(next_line) = next_line else {
                     return Err(Box::new(LevelLoadingError::new(format!(
                         "The level pack file \"{path}\" does not contain level count!"
                     ))));
+                };
+                line = next_line.trim();
+            }
+
+            if let Some(background_music) = line.strip_prefix("Background Music: ") {
+                let Ok(background_music_id) = usize::from_str(background_music.trim()) else {
+                    return Err(Box::new(LevelLoadingError::new(format!(
+                        "The background music id \"{line}\" is invalid in the level pack file \"{path}\"!"
+                    ))));
+                };
+
+                pack_background_music_id = audio::BACKGROUND_MUSIC_TRACKS.check_id(background_music_id);
+                if pack_background_music_id.is_none() {
+                    return Err(Box::new(LevelLoadingError::new(format!(
+                        "The background music \"{background_music_id}\" from level pack file \"{path}\" does not exist \
+                        (Make sure that you are playing the latest version of Console Sokoban)!"
+                    ))));
                 }
-                line = lines.get(1).unwrap().trim();
+
+                let next_line = lines.next();
+                let Some(next_line) = next_line else {
+                    return Err(Box::new(LevelLoadingError::new(format!(
+                        "The level pack file \"{path}\" does not contain level count!"
+                    ))));
+                };
+                line = next_line.trim();
             }
 
             if !line.starts_with("Levels: ") {
@@ -524,8 +560,7 @@ impl LevelPack {
                 ))));
             };
 
-            let mut line_iter = lines.into_iter().
-                    skip(if lvl_name.is_none() { 1 } else { 2 }).
+            let mut line_iter = lines.
                     filter(|line| !line.trim().is_empty());
             for i in 0..level_count {
                 let line = line_iter.next();
@@ -692,6 +727,9 @@ impl LevelPack {
             name: lvl_name.map(ToString::to_string).unwrap_or_else(|| id.clone()),
             id,
             path,
+
+            background_music_id: pack_background_music_id,
+
             levels,
 
             min_level_not_completed,
@@ -714,6 +752,11 @@ impl LevelPack {
         let mut file = File::create(path.into())?;
 
         writeln!(file, "Name: {}", self.name)?;
+
+        if let Some(background_music_id) = self.background_music_id {
+            writeln!(file, "Background Music: {}", background_music_id.id())?;
+        }
+
         writeln!(file, "Levels: {}", self.levels.len())?;
 
         for level in self.levels.iter().
@@ -776,6 +819,10 @@ impl LevelPack {
 
     pub fn path(&self) -> &str {
         &self.path
+    }
+
+    pub fn background_music_id(&self) -> Option<BackgroundMusicId> {
+        self.background_music_id
     }
 
     pub fn levels(&self) -> &[LevelWithStats] {

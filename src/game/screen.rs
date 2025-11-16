@@ -149,6 +149,10 @@ impl Screen for ScreenStartMenu {
             game_state.exit();
         }
     }
+
+    fn on_set_screen(&mut self, game_state: &mut GameState) {
+        game_state.set_background_music_loop(&audio::BACKGROUND_MUSIC_FIELDS_OF_ICE);
+    }
 }
 
 pub struct ScreenSelectLevelPack {}
@@ -415,6 +419,10 @@ impl Screen for ScreenSelectLevelPack {
             game_state.set_level_pack_index(level_pack_index);
             self.on_key_pressed(game_state, Key::ENTER);
         }
+    }
+
+    fn on_set_screen(&mut self, game_state: &mut GameState) {
+        game_state.set_background_music_loop(&audio::BACKGROUND_MUSIC_FIELDS_OF_ICE);
     }
 }
 
@@ -1356,7 +1364,12 @@ impl Screen for ScreenInGame {
         if game_state.get_current_level_pack().unwrap().steam_workshop_id().is_some() {
             Achievement::STEAM_WORKSHOP_LEVEL_PACK_PLAYED.unlock(game_state.steam_client.clone());
         }
-        //TODO grant achievement if community level
+
+        if let Some(background_music_id) = game_state.get_current_level_pack().as_ref().unwrap().background_music_id() {
+            game_state.set_background_music_loop(audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(background_music_id));
+        }else {
+            game_state.stop_background_music();
+        }
     }
 }
 
