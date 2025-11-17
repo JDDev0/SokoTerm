@@ -1332,7 +1332,32 @@ impl ScreenInGame {
                 },
                 _ => {},
             }
-        }else if game_state.get_level_pack_index() == 2 { //Built-in special pack
+        }else if game_state.get_level_pack_index() == 1 { //Built-in Main pack
+            console.reset_color();
+            if game_state.current_level_index < 3 {
+                let start_y = if game_state.current_level_index < 2 { 8 } else { 11 };
+
+                console.set_cursor_pos(29, start_y);
+                console.set_color(Color::Red, Color::Default);
+                console.draw_text("z");
+
+                console.reset_color();
+                console.draw_text(": Undo, ");
+
+                console.set_color(Color::Red, Color::Default);
+                console.draw_text("y");
+
+                console.reset_color();
+                console.draw_text(": Redo");
+
+                console.set_cursor_pos(29, start_y + 1);
+                console.set_color(Color::Red, Color::Default);
+                console.draw_text("r");
+
+                console.reset_color();
+                console.draw_text(": Restart Level");
+            }
+        }else if game_state.get_level_pack_index() == 2 { //Built-in Special pack
             console.reset_color();
             match game_state.current_level_index {
                 0 => {
