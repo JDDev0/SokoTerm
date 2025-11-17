@@ -1,0 +1,4 @@
+Digital Audio;Kenny;CC0-1.0;https://kenney.nl/assets/digital-audio
+Interface Sounds;Kenny;CC0-1.0;https://kenney.nl/assets/interface-sounds
+RPG Audio;Kenny;CC0-1.0;https://kenney.nl/assets/rpg-audio
+UI Audio;Kenny;CC0-1.0;https://kenney.nl/assets/ui-audio

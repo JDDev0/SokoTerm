@@ -20,6 +20,7 @@ pub mod utils;
 #[derive(Debug, Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum ScreenId {
     StartMenu,
+    About,
 
     SelectLevelPack,
     SelectLevel,
@@ -98,6 +99,12 @@ impl Screen for ScreenStartMenu {
         console.draw_text("JDDev0");
 
         console.reset_color();
+        console.set_cursor_pos(65, 20);
+        console.draw_text("About: ");
+        console.set_color(Color::LightRed, Color::Default);
+        console.draw_text("A");
+
+        console.reset_color();
         console.set_cursor_pos(65, 21);
         console.draw_text("Help: ");
         console.set_color(Color::LightRed, Color::Default);
@@ -128,6 +135,12 @@ impl Screen for ScreenStartMenu {
             return;
         }
 
+        if key == Key::A {
+            game_state.set_screen(ScreenId::About);
+
+            return;
+        }
+
         if key == Key::ENTER {
             game_state.play_sound_effect_ui_select();
 
@@ -143,6 +156,10 @@ impl Screen for ScreenStartMenu {
         if row == 21 && column > 64 && column < 73 {
             game_state.open_help_page();
         }
+
+        if row == 20 && column > 64 && column < 73 {
+            game_state.set_screen(ScreenId::About);
+        }
     }
 
     fn on_dialog_selection(&mut self, game_state: &mut GameState, selection: DialogSelection) {
@@ -153,6 +170,424 @@ impl Screen for ScreenStartMenu {
 
     fn on_set_screen(&mut self, game_state: &mut GameState) {
         game_state.set_background_music_loop(&audio::BACKGROUND_MUSIC_FIELDS_OF_ICE);
+    }
+}
+
+mod attribution {
+    use std::sync::LazyLock;
+
+    const ATTRIBUTION_AUDIO_SOUND_EFFECTS_TEXT: &str = include_str!("../../resources/attribution/audio_sound_effects.txt");
+    const ATTRIBUTION_AUDIO_BACKGROUND_MUSIC_TEXT: &str = include_str!("../../resources/attribution/audio_background_music.txt");
+
+    #[cfg(all(feature = "gui", not(feature = "steam")))]
+    const ATTRIBUTION_FONTS_TEXT: &str = include_str!("../../resources/attribution/fonts_gui.txt");
+    #[cfg(feature = "steam")]
+    const ATTRIBUTION_FONTS_TEXT: &str = include_str!("../../resources/attribution/fonts_steam.txt");
+
+    #[cfg(feature = "cli")]
+    const ATTRIBUTION_LIBRARIES_TEXT: &str = include_str!("../../resources/attribution/libraries_cli.txt");
+    #[cfg(all(feature = "gui", not(feature = "steam")))]
+    const ATTRIBUTION_LIBRARIES_TEXT: &str = include_str!("../../resources/attribution/libraries_gui.txt");
+    #[cfg(feature = "steam")]
+    const ATTRIBUTION_LIBRARIES_TEXT: &str = include_str!("../../resources/attribution/libraries_steam.txt");
+
+    pub static ATTRIBUTION_AUDIO_SOUND_EFFECTS_TOKENS: LazyLock<Box<[[&str; 4]]>> = LazyLock::new(|| {
+        ATTRIBUTION_AUDIO_SOUND_EFFECTS_TEXT.split("\n").
+                filter(|line| !line.trim().is_empty()).
+                map(|line| {
+                    line.split(";").
+                            map(|token| token.trim()).
+                            collect::<Box<[&str]>>().
+                            as_ref().try_into().unwrap()
+                }).collect()
+    });
+
+    pub static ATTRIBUTION_AUDIO_BACKGROUND_MUSIC_TOKENS: LazyLock<Box<[[&str; 4]]>> = LazyLock::new(|| {
+        ATTRIBUTION_AUDIO_BACKGROUND_MUSIC_TEXT.split("\n").
+                filter(|line| !line.trim().is_empty()).
+                map(|line| {
+                    line.split(";").
+                            map(|token| token.trim()).
+                            collect::<Box<[&str]>>().
+                            as_ref().try_into().unwrap()
+                }).collect()
+    });
+
+    #[cfg(feature = "gui")]
+    pub static ATTRIBUTION_FONTS_TOKENS: LazyLock<Box<[[&str; 4]]>> = LazyLock::new(|| {
+        ATTRIBUTION_FONTS_TEXT.split("\n").
+                filter(|line| !line.trim().is_empty()).
+                map(|line| {
+                    line.split(";").
+                            map(|token| token.trim()).
+                            collect::<Box<[&str]>>().
+                            as_ref().try_into().unwrap()
+                }).collect()
+    });
+
+    pub static ATTRIBUTION_LIBRARIES_TOKENS: LazyLock<Box<[[&str; 3]]>> = LazyLock::new(|| {
+        ATTRIBUTION_LIBRARIES_TEXT.split("\n").
+                filter(|line| !line.trim().is_empty()).
+                map(|line| {
+                    line.split(";").
+                            map(|token| token.trim()).
+                            collect::<Box<[&str]>>().
+                            as_ref().try_into().unwrap()
+                }).collect()
+    });
+}
+
+pub struct ScreenAbout {
+    scroll_position_row: usize,
+    scroll_position_row_max: usize,
+}
+
+impl ScreenAbout {
+    pub fn new() -> Self {
+        let mut scroll_position_row_max = 11; //Open source game, version, link, build info, thank you text
+
+        scroll_position_row_max += 3 + 5 * attribution::ATTRIBUTION_AUDIO_SOUND_EFFECTS_TOKENS.len();
+        scroll_position_row_max += 3 + 5 * attribution::ATTRIBUTION_AUDIO_BACKGROUND_MUSIC_TOKENS.len();
+
+        #[cfg(feature = "gui")]
+        {
+            scroll_position_row_max += 3 + 5 * attribution::ATTRIBUTION_FONTS_TOKENS.len();
+        }
+
+        scroll_position_row_max += 3 + 4 * attribution::ATTRIBUTION_LIBRARIES_TOKENS.len();
+
+        //Do not allow scrolling past the last line of text
+        scroll_position_row_max -= Game::CONSOLE_MIN_HEIGHT - 1;
+
+        Self {
+            scroll_position_row: 0,
+            scroll_position_row_max,
+        }
+    }
+
+    fn draw_scrollbar(&self, console: &Console) {
+        console.reset_color();
+        for y in 2..Game::CONSOLE_MIN_HEIGHT - 1 {
+            console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 1, y);
+            console.draw_text("|");
+        }
+
+        console.set_color(Color::Red, Color::Default);
+        console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 1, 2);
+        console.draw_text("^");
+
+        console.set_color(Color::Red, Color::Default);
+        console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 1, Game::CONSOLE_MIN_HEIGHT - 1);
+        console.draw_text("v");
+
+        let scrollbar_indicator_y_pos = (self.scroll_position_row as f64
+                / self.scroll_position_row_max as f64
+                //"-1": One less than count
+                //"-2": Ignore two top rows
+                //"-1": One less than sum, because 1 is added at bottom if not at very top
+                * (Game::CONSOLE_MIN_HEIGHT - 1 - 2 - 1) as f64
+        ).floor() as usize
+                + 2
+                + if self.scroll_position_row == 0 { 0 } else { 1 };
+
+        console.set_color(Color::LightCyan, Color::Default);
+        console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 1, scrollbar_indicator_y_pos);
+        console.draw_text("*");
+    }
+
+    fn set_cursor_pos_if_visible(&self, console: &Console, column: usize, row: usize) -> bool {
+        let min_visible_y = self.scroll_position_row;
+        let max_visible_y = self.scroll_position_row + Game::CONSOLE_MIN_HEIGHT;
+
+        if row > min_visible_y + 1 && row < max_visible_y {
+            console.set_cursor_pos(column, row - min_visible_y);
+
+            true
+        }else {
+            false
+        }
+    }
+}
+
+impl Screen for ScreenAbout {
+    fn draw(&self, _game_state: &GameState, console: &Console) {
+        console.reset_color();
+        console.set_underline(true);
+        console.draw_text("About Console Sokoban:");
+        console.set_underline(false);
+
+        self.draw_scrollbar(console);
+
+        let mut current_row = 2;
+        if self.set_cursor_pos_if_visible(console, 0, current_row) {
+            console.set_color(Color::LightYellow, Color::Default);
+            console.draw_text("Console Sokoban");
+
+            console.reset_color();
+            console.draw_text(" is an open-source game (licensed under the GPLv3)!");
+        }
+
+        current_row += 1;
+        if self.set_cursor_pos_if_visible(console, 0, current_row) {
+            console.reset_color();
+            console.draw_text(format!("Version: {}", Game::VERSION));
+        }
+
+        current_row += 2;
+        if self.set_cursor_pos_if_visible(console, 0, current_row) {
+            console.reset_color();
+            console.draw_text("You can view the source code here: ");
+        }
+
+        current_row += 1;
+        if self.set_cursor_pos_if_visible(console, 0, current_row) {
+            console.set_color(Color::LightBlue, Color::Default);
+            console.set_underline(true);
+            console.draw_text("https://github.com/JDDev0/ConsoleSokoban");
+            console.set_underline(false);
+        }
+
+        current_row += 2;
+        if self.set_cursor_pos_if_visible(console, 0, current_row) {
+            console.reset_color();
+            console.draw_text("This is the ");
+
+            if cfg!(feature = "steam") {
+                console.set_color(Color::LightBlue, Color::Default);
+                console.draw_text("Steam");
+            }else if cfg!(feature = "gui") {
+                console.set_color(Color::Red, Color::Default);
+                console.draw_text("GUI");
+            }else if cfg!(feature = "cli") {
+                console.set_color(Color::Yellow, Color::Default);
+                console.draw_text("CLI");
+            }
+
+            console.reset_color();
+            console.draw_text(" build of this game.");
+        }
+
+        current_row += 3;
+        if self.set_cursor_pos_if_visible(console, 0, current_row) {
+            console.reset_color();
+            console.draw_text("This build of the game uses the following sound effects:");
+        }
+
+        current_row += 1;
+        if self.set_cursor_pos_if_visible(console, 0, current_row) {
+            console.reset_color();
+            console.draw_text("========================================================");
+        }
+
+        for [name, creator, license, project_link] in attribution::ATTRIBUTION_AUDIO_SOUND_EFFECTS_TOKENS.iter() {
+            current_row += 1;
+            if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                console.set_color(Color::LightCyan, Color::Default);
+                console.draw_text(*name);
+            }
+
+            current_row += 1;
+            if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                console.reset_color();
+                console.draw_text("[by ");
+
+                console.set_color(Color::LightPink, Color::Default);
+                console.draw_text(*creator);
+
+                console.reset_color();
+                console.draw_text("]");
+            }
+
+            current_row += 1;
+            if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                console.set_color(Color::LightYellow, Color::Default);
+                console.draw_text(*license);
+            }
+
+            current_row += 1;
+            if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                console.set_color(Color::LightBlue, Color::Default);
+                console.set_underline(true);
+                console.draw_text(*project_link);
+                console.set_underline(false);
+            }
+
+            current_row += 1;
+        }
+
+        current_row += 2;
+        if self.set_cursor_pos_if_visible(console, 0, current_row) {
+            console.reset_color();
+            console.draw_text("This build of the game uses the following background music tracks:");
+        }
+
+        current_row += 1;
+        if self.set_cursor_pos_if_visible(console, 0, current_row) {
+            console.reset_color();
+            console.draw_text("==================================================================");
+        }
+
+        for [name, creator, license, project_link] in attribution::ATTRIBUTION_AUDIO_BACKGROUND_MUSIC_TOKENS.iter() {
+            current_row += 1;
+            if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                console.set_color(Color::LightCyan, Color::Default);
+                console.draw_text(*name);
+            }
+
+            current_row += 1;
+            if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                console.reset_color();
+                console.draw_text("[by ");
+
+                console.set_color(Color::LightPink, Color::Default);
+                console.draw_text(*creator);
+
+                console.reset_color();
+                console.draw_text("]");
+            }
+
+            current_row += 1;
+            if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                console.set_color(Color::LightYellow, Color::Default);
+                console.draw_text(*license);
+            }
+
+            current_row += 1;
+            if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                console.set_color(Color::LightBlue, Color::Default);
+                console.set_underline(true);
+                console.draw_text(*project_link);
+                console.set_underline(false);
+            }
+
+            current_row += 1;
+        }
+
+        #[cfg(feature = "gui")]
+        {
+            current_row += 2;
+            if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                console.reset_color();
+                console.draw_text("This build of the game uses the following text fonts:");
+            }
+
+            current_row += 1;
+            if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                console.reset_color();
+                console.draw_text("=====================================================");
+            }
+
+            for [name, creator, license, project_link] in attribution::ATTRIBUTION_FONTS_TOKENS.iter() {
+                current_row += 1;
+                if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                    console.set_color(Color::LightCyan, Color::Default);
+                    console.draw_text(*name);
+                }
+
+                current_row += 1;
+                if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                    console.reset_color();
+                    console.draw_text("[by ");
+
+                    console.set_color(Color::LightPink, Color::Default);
+                    console.draw_text(*creator);
+
+                    console.reset_color();
+                    console.draw_text("]");
+                }
+
+                current_row += 1;
+                if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                    console.set_color(Color::LightYellow, Color::Default);
+                    console.draw_text(*license);
+                }
+
+                current_row += 1;
+                if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                    console.set_color(Color::LightBlue, Color::Default);
+                    console.set_underline(true);
+                    console.draw_text(*project_link);
+                    console.set_underline(false);
+                }
+
+                current_row += 1;
+            }
+        }
+
+        current_row += 2;
+        if self.set_cursor_pos_if_visible(console, 0, current_row) {
+            console.reset_color();
+            console.draw_text("This build of the game uses the following open-source libraries:");
+        }
+
+        current_row += 1;
+        if self.set_cursor_pos_if_visible(console, 0, current_row) {
+            console.reset_color();
+            console.draw_text("================================================================");
+        }
+
+        for [name, license, project_link] in attribution::ATTRIBUTION_LIBRARIES_TOKENS.iter() {
+            current_row += 1;
+            if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                console.set_color(Color::LightCyan, Color::Default);
+                console.draw_text(*name);
+            }
+
+            current_row += 1;
+            if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                console.set_color(Color::LightYellow, Color::Default);
+                console.draw_text(*license);
+            }
+
+            current_row += 1;
+            if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                console.set_color(Color::LightBlue, Color::Default);
+                console.set_underline(true);
+                console.draw_text(*project_link);
+                console.set_underline(false);
+            }
+
+            current_row += 1;
+        }
+
+        current_row += 2;
+        if self.set_cursor_pos_if_visible(console, 0, current_row) {
+            console.reset_color();
+            console.draw_text("Thank you for playing ");
+
+            console.set_color(Color::LightYellow, Color::Default);
+            console.draw_text("Console Sokoban");
+
+            console.reset_color();
+            console.draw_text("!");
+        }
+    }
+
+    fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
+        if key == Key::UP && self.scroll_position_row > 0 {
+            self.scroll_position_row -= 1;
+        }else if key == Key::DOWN && self.scroll_position_row < self.scroll_position_row_max {
+            self.scroll_position_row += 1;
+        }
+
+        if key == Key::ESC {
+            game_state.set_screen(ScreenId::StartMenu);
+        }
+    }
+
+    fn on_mouse_pressed(&mut self, _game_state: &mut GameState, column: usize, row: usize) {
+        if column == Game::CONSOLE_MIN_WIDTH - 1 && (2..Game::CONSOLE_MIN_HEIGHT).contains(&row) {
+            let scrollbar_y_coord = row - 2;
+
+            self.scroll_position_row = (scrollbar_y_coord as f64
+                    //"-1": One less than count
+                    //"-2": Ignore two top rows
+                    / (Game::CONSOLE_MIN_HEIGHT - 1 - 2) as f64
+                    //"-1": One less than sum, because 1 is added at bottom if not at very top
+                    * (self.scroll_position_row_max - 1) as f64
+            ).floor() as usize
+                    + if scrollbar_y_coord == 0 { 0 } else { 1 };
+        }
     }
 }
 

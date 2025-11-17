@@ -9,7 +9,7 @@ use std::path::Path;
 use crate::game::audio::{AudioHandler, BackgroundMusic, BackgroundMusicId};
 use crate::game::help_page::HelpPage;
 use crate::game::level::{Level, LevelPack};
-use crate::game::screen::{Screen, ScreenId, ScreenInGame, ScreenLevelEditor, ScreenLevelPackEditor, ScreenSelectLevel, ScreenSelectLevelPack, ScreenSelectLevelPackEditor, ScreenSelectLevelPackBackgroundMusic, ScreenStartMenu};
+use crate::game::screen::*;
 use crate::game::screen::dialog::{Dialog, DialogType};
 use crate::io::{Console, Key};
 
@@ -378,6 +378,7 @@ impl <'a> Game<'a> {
 
         let screens = HashMap::from_iter([
             (ScreenId::StartMenu, Box::new(ScreenStartMenu::new()) as Box<dyn Screen>),
+            (ScreenId::About, Box::new(ScreenAbout::new()) as Box<dyn Screen>),
 
             (ScreenId::SelectLevelPack, Box::new(ScreenSelectLevelPack::new()) as Box<dyn Screen>),
             (ScreenId::SelectLevel, Box::new(ScreenSelectLevel::new()) as Box<dyn Screen>),

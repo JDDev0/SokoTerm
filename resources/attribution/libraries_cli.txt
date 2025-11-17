@@ -1,0 +1,26 @@
+alsa-sys v0.3.1;MIT;https://github.com/diwic/alsa-sys
+alsa v0.9.1;Apache-2.0/MIT;https://github.com/diwic/alsa-rs
+arrayvec v0.7.6;MIT OR Apache-2.0;https://github.com/bluss/arrayvec
+bitflags v1.3.2;MIT/Apache-2.0;https://github.com/bitflags/bitflags
+bitflags v2.9.1;MIT OR Apache-2.0;https://github.com/bitflags/bitflags
+bytemuck v1.23.0;Zlib OR Apache-2.0 OR MIT;https://github.com/Lokathor/bytemuck
+byteorder v1.5.0;Unlicense OR MIT;https://github.com/BurntSushi/byteorder
+cfg-if v1.0.0;MIT/Apache-2.0;https://github.com/alexcrichton/cfg-if
+claxon v0.4.3;Apache-2.0;https://github.com/ruuda/claxon
+console-lib v0.3.0;MIT;https://github.com/JDDev0/ConsoleLib
+cpal v0.15.3;Apache-2.0;https://github.com/rustaudio/cpal
+dasp_sample v0.11.0;MIT OR Apache-2.0;https://github.com/rustaudio/sample.git
+encoding_rs v0.8.35;(Apache-2.0 OR MIT) AND BSD-3-Clause;https://github.com/hsivonen/encoding_rs
+hound v3.5.1;Apache-2.0;https://github.com/ruuda/hound
+lazy_static v1.5.0;MIT OR Apache-2.0;https://github.com/rust-lang-nursery/lazy-static.rs
+lewton v0.10.2;MIT OR Apache-2.0;https://github.com/RustAudio/lewton
+libc v0.2.177;MIT OR Apache-2.0;https://github.com/rust-lang/libc
+log v0.4.27;MIT OR Apache-2.0;https://github.com/rust-lang/log
+ogg v0.8.0;BSD-3-Clause;https://github.com/RustAudio/ogg
+rodio v0.20.1;MIT OR Apache-2.0;https://github.com/RustAudio/rodio
+symphonia-bundle-mp3 v0.5.4;MPL-2.0;https://github.com/pdeljanov/Symphonia
+symphonia-core v0.5.4;MPL-2.0;https://github.com/pdeljanov/Symphonia
+symphonia-metadata v0.5.4;MPL-2.0;https://github.com/pdeljanov/Symphonia
+symphonia v0.5.4;MPL-2.0;https://github.com/pdeljanov/Symphonia
+tinyvec_macros v0.1.1;MIT OR Apache-2.0 OR Zlib;https://github.com/Soveu/tinyvec_macros
+tinyvec v1.9.0;Zlib OR Apache-2.0 OR MIT;https://github.com/Lokathor/tinyvec

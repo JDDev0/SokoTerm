@@ -188,7 +188,8 @@ impl HelpPage {
                 console.reset_color();
                 console.draw_text(": Open help menu");
 
-                #[cfg(feature = "gui")] {
+                #[cfg(feature = "gui")]
+                {
                     console.draw_text(", ");
                     console.set_color(Color::LightRed, Color::Default);
                     console.draw_text("F11");
