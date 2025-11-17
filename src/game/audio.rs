@@ -32,35 +32,40 @@ pub const BACKGROUND_MUSIC_FIELDS_OF_ICE: BackgroundMusic = BackgroundMusic {
     id: BackgroundMusicId::new(1),
     display_name: "Fields of Ice",
     creator: "Jonathan So",
-    audio_data: include_bytes!("../../assets/audio/background_music_fields_of_ice.ogg"),
+    intro_audio_data: Some(include_bytes!("../../assets/audio/background_music_fields_of_ice_intro.ogg")),
+    main_loop_audio_data: include_bytes!("../../assets/audio/background_music_fields_of_ice.ogg"),
 };
 
 pub const BACKGROUND_MUSIC_LEAP: BackgroundMusic = BackgroundMusic {
     id: BackgroundMusicId::new(2),
     display_name: "Leap [8bit]",
     creator: "nene",
-    audio_data: include_bytes!("../../assets/audio/background_music_leap.ogg"),
+    intro_audio_data: None,
+    main_loop_audio_data: include_bytes!("../../assets/audio/background_music_leap.ogg"),
 };
 
 pub const BACKGROUND_MUSIC_TRIANGULAR: BackgroundMusic = BackgroundMusic {
     id: BackgroundMusicId::new(3),
     display_name: "Triangular Ideology: The Fan Sequel",
     creator: "Spring Spring",
-    audio_data: include_bytes!("../../assets/audio/background_music_triangular.ogg"),
+    intro_audio_data: None,
+    main_loop_audio_data: include_bytes!("../../assets/audio/background_music_triangular.ogg"),
 };
 
 pub const BACKGROUND_MUSIC_LONELY_NIGHT: BackgroundMusic = BackgroundMusic {
     id: BackgroundMusicId::new(4),
     display_name: "Lonely Night",
     creator: "Centurion_of_war",
-    audio_data: include_bytes!("../../assets/audio/background_music_lonely_night.ogg"),
+    intro_audio_data: None,
+    main_loop_audio_data: include_bytes!("../../assets/audio/background_music_lonely_night.ogg"),
 };
 
 pub const BACKGROUND_MUSIC_RESOW: BackgroundMusic = BackgroundMusic {
     id: BackgroundMusicId::new(5),
     display_name: "Re-Sow",
     creator: "Chasersgaming",
-    audio_data: include_bytes!("../../assets/audio/background_music_resow.ogg"),
+    intro_audio_data: None,
+    main_loop_audio_data: include_bytes!("../../assets/audio/background_music_resow.ogg"),
 };
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
@@ -81,7 +86,8 @@ pub struct BackgroundMusic {
     id: BackgroundMusicId,
     display_name: &'static str,
     creator: &'static str,
-    audio_data: &'static [u8],
+    intro_audio_data: Option<&'static [u8]>,
+    main_loop_audio_data: &'static [u8],
 }
 
 impl BackgroundMusic {
@@ -97,8 +103,12 @@ impl BackgroundMusic {
         self.creator
     }
 
-    pub fn audio_data(&self) -> &'static [u8] {
-        self.audio_data
+    pub fn intro_audio_data(&self) -> Option<&'static [u8]> {
+        self.intro_audio_data
+    }
+
+    pub fn main_loop_audio_data(&self) -> &'static [u8] {
+        self.main_loop_audio_data
     }
 }
 
@@ -170,14 +180,25 @@ impl AudioHandler {
         self.background_music_sink.stop();
     }
 
-    pub fn set_background_music_loop(&self, background_music: &'static [u8]) -> Result<(), Box<dyn Error>> {
+    pub fn set_background_music_loop(&self, intro: Option<&'static [u8]>, main_loop: &'static [u8]) -> Result<(), Box<dyn Error>> {
         self.stop_background_music();
 
-        let cursor = Cursor::new(background_music);
-        let decoder = Decoder::new_looped(cursor)?;
-        let source = decoder.fade_in(Duration::from_secs(1));
+        if let Some(intro) = intro {
+            let cursor = Cursor::new(intro);
+            let decoder = Decoder::new(cursor)?;
+            let source = decoder.fade_in(Duration::from_secs(1));
+            self.background_music_sink.append(source);
+        }
 
-        self.background_music_sink.append(source);
+        let cursor = Cursor::new(main_loop);
+        let decoder = Decoder::new_looped(cursor)?;
+        if intro.is_some() {
+            self.background_music_sink.append(decoder);
+        }else {
+            let source = decoder.fade_in(Duration::from_secs(1));
+
+            self.background_music_sink.append(source);
+        }
 
         Ok(())
     }

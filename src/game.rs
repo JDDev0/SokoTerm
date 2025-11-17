@@ -291,7 +291,10 @@ impl GameState {
                 self.current_background_music_id.is_none_or(|id| background_music.id() != id) {
             self.current_background_music_id = Some(background_music.id());
 
-            let _ = audio_handler.set_background_music_loop(background_music.audio_data());
+            let _ = audio_handler.set_background_music_loop(
+                background_music.intro_audio_data(),
+                background_music.main_loop_audio_data(),
+            );
         }
     }
 
