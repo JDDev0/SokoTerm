@@ -26,7 +26,6 @@ bevy_anti_alias v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_app v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_asset_macros v0.17.2 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_asset v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_audio v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_camera v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_color v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_core_pipeline v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy

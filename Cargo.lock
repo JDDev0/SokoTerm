@@ -481,24 +481,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "bevy_audio"
-version = "0.17.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f83620c82f281848c02ed4b65133a0364512b4eca2b39cd21a171e50e2986d89"
-dependencies = [
- "bevy_app",
- "bevy_asset",
- "bevy_ecs",
- "bevy_math",
- "bevy_reflect",
- "bevy_transform",
- "coreaudio-sys",
- "cpal",
- "rodio",
- "tracing",
-]
-
-[[package]]
 name = "bevy_camera"
 version = "0.17.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -814,7 +796,6 @@ dependencies = [
  "bevy_anti_alias",
  "bevy_app",
  "bevy_asset",
- "bevy_audio",
  "bevy_camera",
  "bevy_color",
  "bevy_core_pipeline",
