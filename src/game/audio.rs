@@ -20,12 +20,13 @@ pub const LEVEL_PACK_COMPLETE_EFFECT: &[u8] = include_bytes!("../../assets/audio
 pub const LEVEL_RESET: &[u8] = include_bytes!("../../assets/audio/level_reset.ogg");
 pub const STEP_EFFECT: &[u8] = include_bytes!("../../assets/audio/step.ogg");
 
-pub const BACKGROUND_MUSIC_TRACKS: BackgroundMusicTracks<5> = BackgroundMusicTracks::new([
+pub const BACKGROUND_MUSIC_TRACKS: BackgroundMusicTracks<6> = BackgroundMusicTracks::new([
     &BACKGROUND_MUSIC_FIELDS_OF_ICE,
     &BACKGROUND_MUSIC_LEAP,
     &BACKGROUND_MUSIC_TRIANGULAR,
     &BACKGROUND_MUSIC_LONELY_NIGHT,
     &BACKGROUND_MUSIC_RESOW,
+    &BACKGROUND_MUSIC_CATCHY,
 ]);
 
 pub const BACKGROUND_MUSIC_FIELDS_OF_ICE: BackgroundMusic = BackgroundMusic {
@@ -66,6 +67,14 @@ pub const BACKGROUND_MUSIC_RESOW: BackgroundMusic = BackgroundMusic {
     creator: "Chasersgaming",
     intro_audio_data: None,
     main_loop_audio_data: include_bytes!("../../assets/audio/background_music_resow.ogg"),
+};
+
+pub const BACKGROUND_MUSIC_CATCHY: BackgroundMusic = BackgroundMusic {
+    id: BackgroundMusicId::new(6),
+    display_name: "Catchy",
+    creator: "Spring Spring",
+    intro_audio_data: None,
+    main_loop_audio_data: include_bytes!("../../assets/audio/background_music_catchy.ogg"),
 };
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
