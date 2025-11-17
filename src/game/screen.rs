@@ -102,7 +102,7 @@ impl Screen for ScreenStartMenu {
         console.set_cursor_pos(65, 20);
         console.draw_text("About: ");
         console.set_color(Color::LightRed, Color::Default);
-        console.draw_text("A");
+        console.draw_text("a");
 
         console.reset_color();
         console.set_cursor_pos(65, 21);
