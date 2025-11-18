@@ -19,61 +19,61 @@ async-task v4.7.1;Apache-2.0 OR MIT;https://github.com/smol-rs/async-task
 atomicow v1.1.0;MIT OR Apache-2.0;https://github.com/bevyengine/atomicow
 atomic-waker v1.1.2;Apache-2.0 OR MIT;https://github.com/smol-rs/atomic-waker
 base64 v0.22.1;MIT OR Apache-2.0;https://github.com/marshallpierce/rust-base64
-bevy_a11y v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_animation_macros v0.17.2 (proc-macro);MIT OR Apache-2.0;
-bevy_animation v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_anti_alias v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_app v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_asset_macros v0.17.2 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_asset v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_camera v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_color v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_core_pipeline v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_derive v0.17.2 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_diagnostic v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_ecs_macros v0.17.2 (proc-macro);MIT OR Apache-2.0;
-bevy_ecs v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_encase_derive v0.17.2 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_gilrs v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_gizmos_macros v0.17.2 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_gizmos v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_gltf v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_image v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_input_focus v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_input v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_internal v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_light v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_log v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_macro_utils v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_math v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_mesh v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_a11y v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_animation_macros v0.17.3 (proc-macro);MIT OR Apache-2.0;
+bevy_animation v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_anti_alias v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_app v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_asset_macros v0.17.3 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_asset v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_camera v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_color v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_core_pipeline v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_derive v0.17.3 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_diagnostic v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_ecs_macros v0.17.3 (proc-macro);MIT OR Apache-2.0;
+bevy_ecs v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_encase_derive v0.17.3 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_gilrs v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_gizmos_macros v0.17.3 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_gizmos v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_gltf v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_image v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_input_focus v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_input v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_internal v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_light v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_log v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_macro_utils v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_math v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_mesh v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_mikktspace v0.17.0-dev;Zlib AND (MIT OR Apache-2.0);https://github.com/bevyengine/bevy_mikktspace
-bevy_pbr v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_picking v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_platform v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_post_process v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_ptr v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_reflect_derive v0.17.2 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_reflect v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_render_macros v0.17.2 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_render v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_scene v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_shader v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_sprite_render v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_sprite v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_state_macros v0.17.2 (proc-macro);MIT OR Apache-2.0;
-bevy_state v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_tasks v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_text v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_time v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_transform v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_ui_render v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_ui v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_ui_widgets v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_utils v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_window v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_winit v0.17.2;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_pbr v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_picking v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_platform v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_post_process v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_ptr v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_reflect_derive v0.17.3 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_reflect v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_render_macros v0.17.3 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_render v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_scene v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_shader v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_sprite_render v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_sprite v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_state_macros v0.17.3 (proc-macro);MIT OR Apache-2.0;
+bevy_state v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_tasks v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_text v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_time v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_transform v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_ui_render v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_ui v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_ui_widgets v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_utils v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_window v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_winit v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bitflags v1.3.2;MIT/Apache-2.0;https://github.com/bitflags/bitflags
 bitflags v2.9.1;MIT OR Apache-2.0;https://github.com/bitflags/bitflags
 bit-set v0.8.0;Apache-2.0 OR MIT;https://github.com/contain-rs/bit-set
