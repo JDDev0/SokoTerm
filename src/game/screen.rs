@@ -1904,7 +1904,12 @@ impl Screen for ScreenSelectLevelPackEditor {
                 }
                 console.draw_text(" +");
             }else {
-                console.set_color(Color::Black, Color::Green);
+                console.set_color(Color::Black,  if game_state.editor_state.level_packs.get(i).
+                        unwrap().level_pack_best_moves_sum().is_some() {
+                    Color::Green
+                }else {
+                    Color::Yellow
+                });
                 console.draw_text(utils::number_to_string_leading_ascii(2, i as u32 + 1, false));
             }
 
@@ -2129,6 +2134,15 @@ impl Screen for ScreenSelectLevelPackEditor {
 
         #[cfg(feature = "steam")]
         if key == Key::U && game_state.editor_state.selected_level_pack_index != game_state.editor_state.get_level_pack_count() {
+            let level_stats = &game_state.editor_state.get_current_level_pack().unwrap();
+            if level_stats.level_pack_best_moves_sum().is_none() {
+                game_state.open_dialog(Box::new(DialogOk::new_error(
+                    "Level pack was not validated yet! All levels must be validated.",
+                )));
+
+                return;
+            }
+
             let ret = steam::prepare_workshop_upload_temp_data(
                 game_state.editor_state.get_current_level_pack().unwrap(),
             );
@@ -2470,7 +2484,12 @@ impl ScreenLevelPackEditor {
                 }
                 console.draw_text(" +");
             }else {
-                console.set_color(Color::Black, Color::Green);
+                console.set_color(Color::Black, if game_state.editor_state.get_current_level_pack().
+                        unwrap().levels()[i].best_moves().is_some() {
+                    Color::Green
+                }else {
+                    Color::Yellow
+                });
                 console.draw_text(utils::number_to_string_leading_ascii(2, i as u32 + 1, false));
             }
 
@@ -2558,8 +2577,23 @@ impl ScreenLevelPackEditor {
                 game_state.editor_state.get_current_level().unwrap().height(),
             ));
 
-            console.reset_color();
             console.set_cursor_pos(1, y + 3);
+            console.draw_text("Validation: ");
+            {
+                let level_stats = &game_state.editor_state.get_current_level_pack().unwrap().
+                        levels()[game_state.editor_state.selected_level_index];
+
+                if let Some(best_moves) = level_stats.best_moves() {
+                    console.set_color(Color::Green, Color::Default);
+                    console.draw_text(format!("Best moves: {best_moves}"));
+                }else {
+                    console.set_color(Color::Red, Color::Default);
+                    console.draw_text("You need to complete this level to validate it");
+                }
+            }
+
+            console.reset_color();
+            console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 26, y + 1);
             console.draw_text("Press ");
 
             console.set_color(Color::Red, Color::Default);
@@ -2889,7 +2923,10 @@ impl Screen for ScreenLevelPackEditor {
 
             if selection == DialogSelection::Yes {
                 let index = game_state.editor_state.selected_level_index;
-                game_state.editor_state.get_current_level_pack_mut().unwrap().levels_mut().remove(index);
+                let level_pack = game_state.editor_state.get_current_level_pack_mut().unwrap();
+                level_pack.levels_mut().remove(index);
+                level_pack.calculate_stats_sum();
+
                 if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
                     game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
                 }
@@ -2910,6 +2947,10 @@ pub struct ScreenLevelEditor {
     level: UndoHistory<Level>,
     is_vertical_input: bool,
     is_reverse_input: bool,
+    continue_flag: bool,
+    validation_result_history_index: usize,
+    //TODO best time
+    validation_best_moves: Option<u32>,
     playing_level: Option<UndoHistory<(Level, (usize, usize))>>,
     cursor_pos: (usize, usize),
 }
@@ -2923,12 +2964,20 @@ impl ScreenLevelEditor {
             level: UndoHistory::new(Self::UNDO_HISTORY_SIZE, Level::new(1, 1)),
             is_vertical_input: Default::default(),
             is_reverse_input: Default::default(),
+            continue_flag: false,
+            validation_result_history_index: 0,
+            //TODO best time
+            validation_best_moves: None,
             playing_level: Default::default(),
             cursor_pos: Default::default(),
         }
     }
 
     fn on_key_pressed_playing(&mut self, game_state: &mut GameState, key: Key) {
+        if self.continue_flag {
+            return;
+        }
+
         if let Some(level_history) = self.playing_level.as_mut() {
             if matches!(key, Key::Z | Key::Y) {
                 let is_undo = key == Key::Z;
@@ -3010,9 +3059,29 @@ impl ScreenLevelEditor {
                 //Set player to new position
                 level.set_tile(player_pos.0, player_pos.1, Tile::Player);
 
-                if player_pos != (x_from, y_from) {
+                let has_player_moved = player_pos != (x_from, y_from);
+                if has_player_moved {
                     level_history.commit_change((level, player_pos));
+                }
 
+                if has_won {
+                    self.continue_flag = true;
+
+                    //Update validation
+                    self.validation_result_history_index = self.level.current_index(); //Use current index of editor level history
+
+                    //TODO best time
+
+                    //Use current index of playing level history
+                    let moves = level_history.current_index() as u32;
+                    if self.validation_best_moves.is_none_or(|best_moves| moves < best_moves) {
+                        self.validation_best_moves = Some(moves);
+                    }
+
+                    game_state.play_sound_effect(audio::LEVEL_COMPLETE_EFFECT);
+                }
+
+                if has_player_moved {
                     game_state.play_sound_effect(audio::STEP_EFFECT);
                 }else {
                     game_state.play_sound_effect(audio::NO_PATH_EFFECT);
@@ -3275,6 +3344,11 @@ impl Screen for ScreenLevelEditor {
         if let Some(level_history) = &self.playing_level {
             console.draw_text("Playing");
 
+            if self.continue_flag {
+                console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 16) as f64 * 0.5) as usize, 0);
+                console.draw_text("Level validated!");
+            }
+
             console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 11) as f64 * 0.75) as usize, 0);
             console.draw_text(format!("Moves: {:04}", level_history.current_index()));
         }else {
@@ -3290,6 +3364,21 @@ impl Screen for ScreenLevelEditor {
 
             console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 14) as f64 * 0.5) as usize, 0);
             console.draw_text(format!("Cursor ({:02}:{:02})", self.cursor_pos.0 + 1, self.cursor_pos.1 + 1));
+
+            console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 14, 0);
+            console.draw_text("Validated: ");
+            {
+                let validated = self.validation_result_history_index == self.level.current_index() &&
+                        self.validation_best_moves.is_some();
+
+                if validated {
+                    console.set_color(Color::Green, Color::Default);
+                    console.draw_text("Yes");
+                }else {
+                    console.set_color(Color::Red, Color::Default);
+                    console.draw_text(" No");
+                }
+            }
         }
 
         let x_offset = ((Game::CONSOLE_MIN_WIDTH - self.level.current().width()) as f64 * 0.5) as usize;
@@ -3302,7 +3391,7 @@ impl Screen for ScreenLevelEditor {
 
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
         if key == Key::ESC {
-            game_state.open_dialog(Box::new(DialogYesCancelNo::new("Exiting (Save changes?)")));
+            game_state.open_dialog(Box::new(DialogYesCancelNo::new("Exiting (Save changes and level validation state?)")));
 
             return;
         }
@@ -3319,6 +3408,8 @@ impl Screen for ScreenLevelEditor {
 
                 None
             }else {
+                self.continue_flag = false;
+
                 let player_tile_count = self.level.current().tiles().iter().filter(|tile| **tile == Tile::Player).count();
                 if player_tile_count == 0 {
                     game_state.open_dialog(Box::new(DialogOk::new_error("Level does not contain a player tile!")));
@@ -3383,7 +3474,22 @@ impl Screen for ScreenLevelEditor {
 
     fn on_dialog_selection(&mut self, game_state: &mut GameState, selection: DialogSelection) {
         if selection == DialogSelection::Yes {
-            *game_state.editor_state.get_current_level_mut().unwrap() = self.level.current().clone();
+            let index = game_state.editor_state.selected_level_index;
+            let level_pack = game_state.editor_state.get_current_level_pack_mut().unwrap();
+            let level = level_pack.levels_mut().get_mut(index).unwrap();
+
+            *level.level_mut() = self.level.current().clone();
+
+            if self.validation_result_history_index == self.level.current_index() {
+                //TODO best time
+                level.set_best_moves(self.validation_best_moves);
+            }else {
+                //Reset validation if editor level current history index does not match validation history index
+                //TODO best time
+                level.set_best_moves(None);
+            }
+            level_pack.calculate_stats_sum();
+
             if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
                 game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
             }
@@ -3404,6 +3510,13 @@ impl Screen for ScreenLevelEditor {
         self.playing_level = None;
         self.cursor_pos = (0, 0);
 
-        self.level.clear_with_new_initial(game_state.editor_state.get_current_level().unwrap().clone());
+        let level = game_state.editor_state.get_current_level_pack().
+                unwrap().levels().get(game_state.editor_state.selected_level_index).unwrap();
+        self.level.clear_with_new_initial(level.level().clone());
+
+        //Validation is valid for first history element
+        self.validation_result_history_index = 0;
+        //TODO best time
+        self.validation_best_moves = level.best_moves();
     }
 }

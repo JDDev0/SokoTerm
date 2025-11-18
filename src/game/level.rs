@@ -423,6 +423,14 @@ impl LevelWithStats {
     pub fn best_moves(&self) -> Option<u32> {
         self.best_moves
     }
+
+    pub fn set_best_time(&mut self, best_time: Option<u64>) {
+        self.best_time = best_time;
+    }
+
+    pub fn set_best_moves(&mut self, best_moves: Option<u32>) {
+        self.best_moves = best_moves;
+    }
 }
 
 #[derive(Debug)]
@@ -907,7 +915,7 @@ impl LevelPack {
         self.calculate_stats_sum();
     }
 
-    fn calculate_stats_sum(&mut self) {
+    pub(super) fn calculate_stats_sum(&mut self) {
         if self.levels.is_empty() {
             self.level_pack_best_time_sum = None;
             self.level_pack_best_moves_sum = None;
