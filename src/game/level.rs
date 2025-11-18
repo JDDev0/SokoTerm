@@ -646,22 +646,28 @@ impl LevelPack {
             ))));
         }
 
+        let level_save_file_postfix = if editor_level_pack {
+            ".lvl.edit.sav"
+        }else {
+            ".lvl.sav"
+        };
+
         let mut save_game_file = Game::get_or_create_save_game_folder()?;
         {
             #[cfg(not(feature = "steam"))]
             {
                 save_game_file.push(&id);
-                save_game_file.push(".lvl.sav");
+                save_game_file.push(level_save_file_postfix);
             }
 
             #[cfg(feature = "steam")]
             if let Some(steam_workshop_id) = steam_workshop_id {
                 save_game_file.push("SteamWorkshop/");
                 save_game_file.push(steam_workshop_id.0.to_string());
-                save_game_file.push(".lvl.sav");
+                save_game_file.push(level_save_file_postfix);
             }else {
                 save_game_file.push(&id);
-                save_game_file.push(".lvl.sav");
+                save_game_file.push(level_save_file_postfix);
             }
         }
 
@@ -673,23 +679,25 @@ impl LevelPack {
 
                 let lines = save_game_data.lines().collect::<Vec<_>>();
                 if lines.is_empty() {
-                    //TODO add warning message (could not load save file '&id + ".lvl.sav"')
+                    //TODO add warning message (could not load save file '&id + level_save_file_postfix')
 
                     break 'read_save_game;
                 }
 
                 let line = lines.first().unwrap().trim();
 
-                min_level_not_completed = if let Ok(min_level_not_completed) = usize::from_str(line) {
-                    min_level_not_completed
-                }else {
-                    //TODO add warning message (could not load save file '&id + ".lvl.sav"')
+                if !editor_level_pack {
+                    min_level_not_completed = if let Ok(min_level_not_completed) = usize::from_str(line) {
+                        min_level_not_completed
+                    }else {
+                        //TODO add warning message (could not load save file '&id + level_save_file_postfix')
 
-                    break 'read_save_game;
-                };
+                        break 'read_save_game;
+                    };
+                }
 
                 for (i, mut line) in lines.iter().
-                        skip(1).
+                        skip(if editor_level_pack { 0 } else { 1 }).
                         take(Self::MAX_LEVEL_COUNT_PER_PACK).
                         map(|line| line.trim()).
                         enumerate() {
@@ -744,11 +752,15 @@ impl LevelPack {
         Ok(level_pack)
     }
 
+    /// This function is used for saving level pack editor state to the default save path, validation results are included
     pub fn save_editor_level_pack(&self) -> Result<(), Box<dyn Error>> {
-        self.save_editor_level_pack_to_path(&self.path)
+        self.export_editor_level_pack_to_path(&self.path)?;
+
+        self.save_save_game(true)
     }
 
-    pub fn save_editor_level_pack_to_path(&self, path: impl Into<OsString>) -> Result<(), Box<dyn Error>> {
+    /// This function is used for saving level pack editor state and exporting, validation results are not included
+    pub fn export_editor_level_pack_to_path(&self, path: impl Into<OsString>) -> Result<(), Box<dyn Error>> {
         let mut file = File::create(path.into())?;
 
         writeln!(file, "Name: {}", self.name)?;
@@ -768,32 +780,44 @@ impl LevelPack {
         Ok(())
     }
 
-    pub fn save_save_game(&self) -> Result<(), Box<dyn Error>> {
+    pub fn save_save_game(&self, editor_validation: bool) -> Result<(), Box<dyn Error>> {
+        let level_save_file_postfix = if editor_validation {
+            ".lvl.edit.sav"
+        }else {
+            ".lvl.sav"
+        };
+
         let mut save_game_file = Game::get_or_create_save_game_folder()?;
         {
             #[cfg(not(feature = "steam"))]
             {
                 save_game_file.push(&self.id);
-                save_game_file.push(".lvl.sav");
+                save_game_file.push(level_save_file_postfix);
             }
 
             #[cfg(feature = "steam")]
             if let Some(steam_workshop_id) = self.steam_workshop_id {
                 save_game_file.push("SteamWorkshop/");
                 save_game_file.push(steam_workshop_id.0.to_string());
-                save_game_file.push(".lvl.sav");
+                save_game_file.push(level_save_file_postfix);
             }else {
                 save_game_file.push(&self.id);
-                save_game_file.push(".lvl.sav");
+                save_game_file.push(level_save_file_postfix);
             }
         }
 
         let mut file = File::create(save_game_file)?;
 
-        writeln!(file, "{}", self.min_level_not_completed)?;
+        let level_score_count = if editor_validation {
+            self.levels.len()
+        }else {
+            writeln!(file, "{}", self.min_level_not_completed)?;
+
+            self.min_level_not_completed
+        };
 
         for level in self.levels.iter().
-                take(self.min_level_not_completed) {
+                take(level_score_count) {
             writeln!(
                 file, "ms{},{}",
                 level.best_time.map_or(-1, |best_time| best_time as i64),

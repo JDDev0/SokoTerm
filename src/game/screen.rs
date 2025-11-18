@@ -1759,7 +1759,7 @@ impl Screen for ScreenInGame {
                     }
                 }
 
-                if let Err(err) = level_pack.save_save_game() {
+                if let Err(err) = level_pack.save_save_game(false) {
                     game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
                 }
 
@@ -2246,7 +2246,7 @@ impl Screen for ScreenSelectLevelPackEditor {
                     return;
                 }
 
-                if let Err(err) = level_pack.save_editor_level_pack_to_path(path) {
+                if let Err(err) = level_pack.export_editor_level_pack_to_path(path) {
                     game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot export: {}", err))));
                 }else {
                     game_state.open_dialog(Box::new(DialogOk::new("The level pack was exported successfully")));

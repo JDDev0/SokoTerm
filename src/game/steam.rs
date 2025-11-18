@@ -56,7 +56,7 @@ pub fn prepare_workshop_upload_temp_data(level_pack: &LevelPack) -> Result<(), B
 
     tmp_upload_path.push("pack.lvl");
 
-    level_pack.save_editor_level_pack_to_path(tmp_upload_path)?;
+    level_pack.export_editor_level_pack_to_path(tmp_upload_path)?;
 
     Ok(())
 }

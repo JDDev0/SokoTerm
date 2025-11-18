@@ -245,7 +245,7 @@ impl GameState {
             )?;
 
             //Save immediately in order to keep secret level pack after game restart if not yet played
-            secret_level_pack.save_save_game()?;
+            secret_level_pack.save_save_game(false)?;
 
             self.level_packs.insert(4, secret_level_pack);
         }
