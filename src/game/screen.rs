@@ -3381,6 +3381,11 @@ impl Screen for ScreenLevelEditor {
             }
         }
 
+        console.reset_color();
+        console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 9) as f64 * 0.25) as usize, 0);
+        console.draw_text("Level: ");
+        console.draw_text(utils::number_to_string_leading_ascii(2, game_state.editor_state.selected_level_index as u32 + 1, true));
+
         let x_offset = ((Game::CONSOLE_MIN_WIDTH - self.level.current().width()) as f64 * 0.5) as usize;
         let y_offset = 1;
 
