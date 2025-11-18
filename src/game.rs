@@ -336,7 +336,7 @@ impl <'a> Game<'a> {
     pub fn get_or_create_save_game_folder() -> Result<OsString, Box<dyn Error>> {
         let mut directory = if cfg!(windows) {
             std::env::var_os("USERPROFILE").
-                    ok_or(GameError::new("%USERPROFILE%"))?
+                    ok_or(GameError::new("%USERPROFILE% is not set!"))?
         }else {
             std::env::var_os("HOME").
                     ok_or(GameError::new("$HOME not set!"))?
