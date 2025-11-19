@@ -9,10 +9,18 @@ use crate::startup::gui::steam_plugin::steam_workshop_upload_popup::SteamWorksho
 
 mod steam_workshop_upload_popup;
 
+#[cfg(unix)]
+mod linux_steam_overlay_info_popup;
+
 pub struct SteamPlugin;
 
 impl Plugin for SteamPlugin {
     fn build(&self, app: &mut App) {
+        #[cfg(unix)]
+        {
+            app.add_plugins(linux_steam_overlay_info_popup::LinuxSteamOverlayInfoPlugin);
+        }
+
         app.
                 add_plugins(SteamWorkshopUploadPopupPlugin).
 

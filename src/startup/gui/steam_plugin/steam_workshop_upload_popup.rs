@@ -386,14 +386,16 @@ fn process_and_update_upload_progress(
             };
 
             let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
-            let bold_text_font = TextFont {
-                font: font.clone(),
-                font_size: 1.0, //Dummy value
-                ..default()
-            };
             let text_font = TextFont {
                 font: font.clone(),
                 line_height: LineHeight::RelativeToFont(1.1),
+                font_size: 1.0, //Dummy value
+                ..default()
+            };
+
+            let font = asset_server.load("embedded://font/JetBrainsMono-Bold.ttf");
+            let bold_text_font = TextFont {
+                font: font.clone(),
                 font_size: 1.0, //Dummy value
                 ..default()
             };
@@ -1069,6 +1071,7 @@ fn on_open_steam_workshop_upload_popup(
         font_size: 1.0, //Dummy value
         ..default()
     };
+
     let font = asset_server.load("embedded://font/JetBrainsMono-Bold.ttf");
     let bold_text_font = TextFont {
         font: font.clone(),
