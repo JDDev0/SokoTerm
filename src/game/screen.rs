@@ -1266,8 +1266,7 @@ impl ScreenInGame {
                     console.set_cursor_pos(16, 8);
                     console.draw_text("Boxes (");
 
-                    console.set_color(Color::LightCyan, Color::Default);
-                    console.draw_text("@");
+                    Tile::Box.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(") must be placed on ");
@@ -1278,8 +1277,7 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(" goals (");
 
-                    console.set_color(Color::Red, Color::Default);
-                    console.draw_text("x");
+                    Tile::Goal.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(")");
@@ -1288,14 +1286,12 @@ impl ScreenInGame {
                     console.set_cursor_pos(14, 8);
                     console.draw_text("Some boxes (");
 
-                    console.set_color(Color::LightPink, Color::Default);
-                    console.draw_text("@");
+                    Tile::BoxInGoal.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(") might already be in a goal (");
 
-                    console.set_color(Color::Red, Color::Default);
-                    console.draw_text("x");
+                    Tile::Goal.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(")");
@@ -1304,14 +1300,12 @@ impl ScreenInGame {
                     console.set_cursor_pos(14, 8);
                     console.draw_text("Not all boxes (");
 
-                    console.set_color(Color::LightCyan, Color::Default);
-                    console.draw_text("@");
+                    Tile::Box.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(") must be in a goal (");
 
-                    console.set_color(Color::Red, Color::Default);
-                    console.draw_text("x");
+                    Tile::Goal.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(") to win");
@@ -1320,8 +1314,22 @@ impl ScreenInGame {
                     console.set_cursor_pos(5, 8);
                     console.draw_text("One-way doors (");
 
-                    console.set_color(Color::Blue, Color::Default);
-                    console.draw_text("< ^ > v");
+                    Tile::OneWayLeft.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(" ");
+
+                    Tile::OneWayUp.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(" ");
+
+                    Tile::OneWayRight.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(" ");
+
+                    Tile::OneWayDown.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(") can only be entered from the opened side");
@@ -1340,14 +1348,27 @@ impl ScreenInGame {
                         console.set_cursor_pos(8, 8);
                         console.draw_text("Boxes (");
 
-                        console.set_color(Color::LightCyan, Color::Default);
-                        console.draw_text("@");
+                        Tile::Box.draw(console, false, false);
 
                         console.reset_color();
                         console.draw_text(") cannot be moved through one-way doors (");
 
-                        console.set_color(Color::Blue, Color::Default);
-                        console.draw_text("< ^ > v");
+                        Tile::OneWayLeft.draw(console, false, false);
+
+                        console.reset_color();
+                        console.draw_text(" ");
+
+                        Tile::OneWayUp.draw(console, false, false);
+
+                        console.reset_color();
+                        console.draw_text(" ");
+
+                        Tile::OneWayRight.draw(console, false, false);
+
+                        console.reset_color();
+                        console.draw_text(" ");
+
+                        Tile::OneWayDown.draw(console, false, false);
 
                         console.reset_color();
                         console.draw_text(")");
@@ -1387,14 +1408,12 @@ impl ScreenInGame {
                     console.set_cursor_pos(18, 8);
                     console.draw_text("Keys (");
 
-                    console.set_color(Color::LightCyan, Color::Default);
-                    console.draw_text("*");
+                    Tile::Key.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(") can be used to open doors (");
 
-                    console.set_color(Color::Red, Color::Default);
-                    console.draw_text("=");
+                    Tile::LockedDoor.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(")");
@@ -1403,14 +1422,12 @@ impl ScreenInGame {
                     console.set_cursor_pos(19, 8);
                     console.draw_text("Every key (");
 
-                    console.set_color(Color::LightCyan, Color::Default);
-                    console.draw_text("*");
+                    Tile::Key.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(") can open any door (");
 
-                    console.set_color(Color::Red, Color::Default);
-                    console.draw_text("=");
+                    Tile::LockedDoor.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(")");
@@ -1419,14 +1436,12 @@ impl ScreenInGame {
                     console.set_cursor_pos(21, 8);
                     console.draw_text("Keys (");
 
-                    console.set_color(Color::LightPink, Color::Default);
-                    console.draw_text("*");
+                    Tile::KeyInGoal.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(") might be in a goal (");
 
-                    console.set_color(Color::Red, Color::Default);
-                    console.draw_text("x");
+                    Tile::Goal.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(")");
@@ -1435,8 +1450,7 @@ impl ScreenInGame {
                     console.set_cursor_pos(23, 8);
                     console.draw_text("Holes (");
 
-                    console.set_color(Color::LightBlue, Color::Default);
-                    console.draw_text("O");
+                    Tile::Hole.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(") cannot be crossed");
@@ -1445,8 +1459,7 @@ impl ScreenInGame {
                     console.set_cursor_pos(21, 8);
                     console.draw_text("Filled holes (");
 
-                    console.set_color(Color::Default, Color::LightBlue);
-                    console.draw_text("@");
+                    Tile::BoxInHole.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(") can be crossed");
@@ -1455,14 +1468,12 @@ impl ScreenInGame {
                     console.set_cursor_pos(23, 8);
                     console.draw_text("Boxes (");
 
-                    console.set_color(Color::LightCyan, Color::Default);
-                    console.draw_text("@");
+                    Tile::Box.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(") can fill holes (");
 
-                    console.set_color(Color::LightBlue, Color::Default);
-                    console.draw_text("O");
+                    Tile::Hole.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(")");
@@ -1471,14 +1482,12 @@ impl ScreenInGame {
                     console.set_cursor_pos(13, 8);
                     console.draw_text("Keys (");
 
-                    console.set_color(Color::LightCyan, Color::Default);
-                    console.draw_text("*");
+                    Tile::Key.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(") cannot fill holes (");
 
-                    console.set_color(Color::LightBlue, Color::Default);
-                    console.draw_text("O");
+                    Tile::Hole.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(") and will be lost");
