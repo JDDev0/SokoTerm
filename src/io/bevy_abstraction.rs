@@ -31,15 +31,15 @@ impl ConsoleDrawBuffer {
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum ConsoleBufferSelection {
-    PRIMARY,
-    SECONDARY,
+    Primary,
+    Secondary,
 }
 
 impl ConsoleBufferSelection {
     pub fn swap(self) -> Self {
         match self {
-            ConsoleBufferSelection::PRIMARY => ConsoleBufferSelection::SECONDARY,
-            ConsoleBufferSelection::SECONDARY => ConsoleBufferSelection::PRIMARY,
+            ConsoleBufferSelection::Primary => ConsoleBufferSelection::Secondary,
+            ConsoleBufferSelection::Secondary => ConsoleBufferSelection::Primary,
         }
     }
 }
@@ -62,7 +62,7 @@ impl ConsoleState {
             curser_pos: (0, 0),
             current_color_pair: (Color::White, Color::Black),
 
-            buffer_selection: ConsoleBufferSelection::PRIMARY,
+            buffer_selection: ConsoleBufferSelection::Primary,
             primary_buffer: ConsoleDrawBuffer::new::<W, H>(),
             secondary_buffer: ConsoleDrawBuffer::new::<W, H>(),
 
@@ -89,15 +89,15 @@ impl ConsoleState {
 
     pub fn current_buffer(&self) -> &ConsoleDrawBuffer {
         match self.buffer_selection {
-            ConsoleBufferSelection::PRIMARY => &self.primary_buffer,
-            ConsoleBufferSelection::SECONDARY => &self.secondary_buffer,
+            ConsoleBufferSelection::Primary => &self.primary_buffer,
+            ConsoleBufferSelection::Secondary => &self.secondary_buffer,
         }
     }
 
     fn current_buffer_mut(&mut self) -> &mut ConsoleDrawBuffer {
         match self.buffer_selection {
-            ConsoleBufferSelection::PRIMARY => &mut self.primary_buffer,
-            ConsoleBufferSelection::SECONDARY => &mut self.secondary_buffer,
+            ConsoleBufferSelection::Primary => &mut self.primary_buffer,
+            ConsoleBufferSelection::Secondary => &mut self.secondary_buffer,
         }
     }
 
