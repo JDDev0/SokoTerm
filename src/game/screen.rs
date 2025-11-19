@@ -3197,16 +3197,18 @@ impl ScreenLevelEditor {
                 if has_won {
                     self.continue_flag = true;
 
-                    //Update validation
-                    self.validation_result_history_index = self.level.current_index(); //Use current index of editor level history
-
                     //TODO best time
 
                     //Use current index of playing level history
                     let moves = level_history.current_index() as u32;
-                    if self.validation_best_moves.is_none_or(|best_moves| moves < best_moves) {
+                    if self.validation_best_moves.is_none_or(|best_moves| moves < best_moves) ||
+                            self.validation_result_history_index != self.level.current_index() {
+                        //Always update best moves of validation if level was changed
                         self.validation_best_moves = Some(moves);
                     }
+
+                    //Update validation
+                    self.validation_result_history_index = self.level.current_index(); //Use current index of editor level history
 
                     game_state.play_sound_effect(audio::LEVEL_COMPLETE_EFFECT);
                 }
