@@ -2570,6 +2570,31 @@ impl ScreenLevelPackEditor {
             let selected_level = game_state.editor_state.selected_level_index;
             console.draw_text(format!("{:03}", selected_level as u32 + 1));
 
+            if game_state.editor_state.get_current_level_pack().unwrap().
+                    thumbnail_level_index().is_some_and(|index| index == game_state.editor_state.selected_level_index) {
+                console.draw_text(" [Thumbnail]");
+
+                console.reset_color();
+                console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 38, y + 2);
+                console.draw_text("Press ");
+
+                console.set_color(Color::Red, Color::Default);
+                console.draw_text("t");
+
+                console.reset_color();
+                console.draw_text(" to unset level pack thumbnail");
+            }else {
+                console.reset_color();
+                console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 36, y + 2);
+                console.draw_text("Press ");
+
+                console.set_color(Color::Red, Color::Default);
+                console.draw_text("t");
+
+                console.reset_color();
+                console.draw_text(" to set level pack thumbnail");
+            }
+
             console.set_cursor_pos(1, y + 2);
             console.draw_text(format!(
                 "Size: {} x {}",
@@ -2886,6 +2911,24 @@ impl Screen for ScreenLevelPackEditor {
 
                         //Set selected level
                         game_state.set_screen(ScreenId::LevelEditor);
+                    }
+                },
+
+                Key::T => {
+                    let selected_level_index = game_state.editor_state.selected_level_index;
+                    if selected_level_index != game_state.editor_state.get_current_level_pack().unwrap().level_count() {
+                        game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
+
+                        if game_state.editor_state.get_current_level_pack().unwrap().
+                                thumbnail_level_index().is_some_and(|index| index == selected_level_index) {
+                            game_state.editor_state.get_current_level_pack_mut().unwrap().set_thumbnail_level_index(None);
+                        }else {
+                            game_state.editor_state.get_current_level_pack_mut().unwrap().set_thumbnail_level_index(Some(selected_level_index));
+                        }
+
+                        if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
+                            game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
+                        }
                     }
                 },
 

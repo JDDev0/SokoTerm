@@ -439,6 +439,7 @@ pub struct LevelPack {
     id: String,
     path: String,
 
+    thumbnail_level_index: Option<usize>,
     background_music_id: Option<BackgroundMusicId>,
 
     levels: Vec<LevelWithStats>,
@@ -465,6 +466,7 @@ impl LevelPack {
             path: path.into(),
             levels: vec![],
 
+            thumbnail_level_index: None,
             background_music_id: None,
 
             min_level_not_completed: Default::default(),
@@ -486,6 +488,7 @@ impl LevelPack {
         let id = id.into();
         let path = path.into();
 
+        let mut pack_thumbnail_level_index = None;
         let mut pack_background_music_id = None;
 
         let lvl_data = lvl_data.into();
@@ -511,6 +514,24 @@ impl LevelPack {
                 }
 
                 lvl_name = Some(name);
+
+                let next_line = lines.next();
+                let Some(next_line) = next_line else {
+                    return Err(Box::new(LevelLoadingError::new(format!(
+                        "The level pack file \"{path}\" does not contain level count!"
+                    ))));
+                };
+                line = next_line.trim();
+            }
+
+            if let Some(thumbnail_level) = line.strip_prefix("Thumbnail Level: ") {
+                let Ok(thumbnail_level_index) = usize::from_str(thumbnail_level.trim()) else {
+                    return Err(Box::new(LevelLoadingError::new(format!(
+                        "The thumbnail level index \"{line}\" is invalid in the level pack file \"{path}\"!"
+                    ))));
+                };
+
+                pack_thumbnail_level_index = Some(thumbnail_level_index);
 
                 let next_line = lines.next();
                 let Some(next_line) = next_line else {
@@ -567,6 +588,12 @@ impl LevelPack {
                     "The level count \"{line}\" is invalid in the level pack file \"{path}\"!"
                 ))));
             };
+
+            if let Some(index) = pack_thumbnail_level_index && level_count <= index {
+                return Err(Box::new(LevelLoadingError::new(format!(
+                    "The thumbnail level index {index} is out of bounds (Should be less then {level_count}) in the level pack file \"{path}\"!"
+                ))));
+            }
 
             let mut line_iter = lines.
                     filter(|line| !line.trim().is_empty());
@@ -744,6 +771,7 @@ impl LevelPack {
             id,
             path,
 
+            thumbnail_level_index: pack_thumbnail_level_index,
             background_music_id: pack_background_music_id,
 
             levels,
@@ -772,6 +800,10 @@ impl LevelPack {
         let mut file = File::create(path.into())?;
 
         writeln!(file, "Name: {}", self.name)?;
+
+        if let Some(thumbnail_level_index) = self.thumbnail_level_index {
+            writeln!(file, "Thumbnail Level: {}", thumbnail_level_index)?;
+        }
 
         if let Some(background_music_id) = self.background_music_id {
             writeln!(file, "Background Music: {}", background_music_id.id())?;
@@ -851,6 +883,14 @@ impl LevelPack {
 
     pub fn path(&self) -> &str {
         &self.path
+    }
+
+    pub fn thumbnail_level_index(&self) -> Option<usize> {
+        self.thumbnail_level_index
+    }
+
+    pub fn set_thumbnail_level_index(&mut self, thumbnail_level_index: Option<usize>) {
+        self.thumbnail_level_index = thumbnail_level_index;
     }
 
     pub fn background_music_id(&self) -> Option<BackgroundMusicId> {

@@ -823,8 +823,8 @@ impl <'a> Game<'a> {
         self.console.repaint();
 
         if let Some(level_pack) = self.game_state.editor_state.get_current_level_pack() {
-            //TODO replace if thumbnail level [default: first level]
-            if let Some(level) = level_pack.levels().first() {
+            let level_index = level_pack.thumbnail_level_index().unwrap_or(0);
+            if let Some(level) = level_pack.levels().get(level_index) {
                 let level = level.level();
 
                 //Always draw to top left: Screenshot will be trimmed to the level size
