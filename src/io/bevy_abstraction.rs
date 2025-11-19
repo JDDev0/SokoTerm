@@ -85,7 +85,7 @@ pub const DEFAULT_COLOR_SCHEME: ColorScheme = color_scheme! {
     LightWhite: (255, 255, 255),
 };
 
-pub const MUTED_COLOR_THEME: ColorScheme = color_scheme! {
+pub const MUTED_COLOR_SCHEME: ColorScheme = color_scheme! {
     Default: (40, 42, 46),
 
     Black: (40, 42, 46),
@@ -96,7 +96,7 @@ pub const MUTED_COLOR_THEME: ColorScheme = color_scheme! {
     Pink: (133, 103, 143),
     Yellow: (222, 147, 95),
     White: (208, 207, 204),
-    LightBlack: (55, 59, 65),
+    LightBlack: (120, 120, 120),
     LightBlue: (129, 162, 190),
     LightGreen: (181, 189, 104),
     LightCyan: (138, 190, 183),
@@ -129,7 +129,7 @@ pub const DARK_COLOR_SCHEME: ColorScheme = color_scheme! {
 
 pub const COLOR_SCHEMES: [ColorScheme; 3] = [
     DEFAULT_COLOR_SCHEME,
-    MUTED_COLOR_THEME,
+    MUTED_COLOR_SCHEME,
     DARK_COLOR_SCHEME,
 ];
 
