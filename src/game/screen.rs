@@ -847,6 +847,7 @@ impl Screen for ScreenSelectLevelPack {
         if row == 0 {
             return;
         }
+
         //Include Level Pack Editor entry (And Steam Workshop entry on steam build)
         let entry_count = game_state.get_level_pack_count() + if cfg!(feature = "steam") { 2 } else { 1 };
 
@@ -1142,12 +1143,34 @@ impl Screen for ScreenSelectLevel {
     }
 
     fn on_mouse_pressed(&mut self, game_state: &mut GameState, column: usize, row: usize) {
+        if self.level_preview {
+            if row == 0 {
+                let center_text_start = ((Game::CONSOLE_MIN_WIDTH - 23) as f64 * 0.5) as usize;
+
+                if column < 11 {
+                    self.on_key_pressed(game_state, Key::LEFT);
+                }else if column >= center_text_start && column < center_text_start + 23 {
+                    self.on_key_pressed(game_state, Key::ENTER);
+                }else if column > Game::CONSOLE_MIN_WIDTH - 12 {
+                    self.on_key_pressed(game_state, Key::RIGHT);
+                }
+            }
+
+            return;
+        }
+
         if row == 0 {
             return;
         }
 
+        let level_count = game_state.get_current_level_pack().as_ref().unwrap().level_count();
+        let y = 4 + ((level_count - 1)/24)*2;
+        if row == y + 1 && (29..54).contains(&column) {
+            self.level_preview = true;
+        }
+
         let level_index = column/3 + (row - 1)/2*24;
-        if level_index < game_state.get_current_level_pack().as_ref().unwrap().level_count() {
+        if level_index < level_count {
             self.selected_level = level_index;
             self.on_key_pressed(game_state, Key::ENTER);
         }
@@ -2233,6 +2256,7 @@ impl Screen for ScreenSelectLevelPackEditor {
         if row == 0 {
             return;
         }
+
         //Include Level Pack Editor entry
         let entry_count = game_state.editor_state.get_level_pack_count() + 1;
 
@@ -2946,12 +2970,40 @@ impl Screen for ScreenLevelPackEditor {
     }
 
     fn on_mouse_pressed(&mut self, game_state: &mut GameState, column: usize, row: usize) {
+        if self.level_preview {
+            if row == 0 {
+                let center_text_start = ((Game::CONSOLE_MIN_WIDTH - 23) as f64 * 0.5) as usize;
+
+                if column < 11 {
+                    self.on_key_pressed(game_state, Key::LEFT);
+                }else if column >= center_text_start && column < center_text_start + 23 {
+                    self.on_key_pressed(game_state, Key::ENTER);
+                }else if column > Game::CONSOLE_MIN_WIDTH - 12 {
+                    self.on_key_pressed(game_state, Key::RIGHT);
+                }
+
+                let selected_level = game_state.editor_state.get_level_index();
+                if game_state.editor_state.get_current_level_pack().unwrap().level_count() > 0 &&
+                        selected_level == game_state.editor_state.get_current_level_pack().unwrap().level_count() - 1 &&
+                        column > Game::CONSOLE_MIN_WIDTH - 17 {
+                    self.on_key_pressed(game_state, Key::RIGHT);
+                }
+            }
+
+            return;
+        }
+
         if row == 0 {
             return;
         }
 
         //Include create Level entry
         let entry_count = game_state.editor_state.get_current_level_pack().unwrap().level_count() + 1;
+
+        let y = 4 + ((entry_count - 1)/24)*2;
+        if row == y + 1 && (Game::CONSOLE_MIN_WIDTH - 26..Game::CONSOLE_MIN_WIDTH - 1).contains(&column) {
+            self.level_preview = true;
+        }
 
         let level_pack_index = column/3 + (row - 1)/2*24;
         if level_pack_index < entry_count {
