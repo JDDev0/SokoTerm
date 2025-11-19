@@ -221,6 +221,11 @@ impl HelpPage {
                     console.reset_color();
                     console.draw_text(": Open help menu");
                 }, #[cfg(feature = "gui")] |console| {
+                    console.set_color(Color::LightRed, Color::Default);
+                    console.draw_text("F10");
+                    console.reset_color();
+                    console.draw_text(": Cycle through color scheme");
+                }, #[cfg(feature = "gui")] |console| {
                    console.set_color(Color::LightRed, Color::Default);
                    console.draw_text("F11");
                    console.reset_color();
@@ -254,6 +259,11 @@ impl HelpPage {
                     console.draw_text("ENTER");
                     console.reset_color();
                     console.draw_text(": Start game/Next Level");
+                }, |console| {
+                    console.set_color(Color::LightRed, Color::Default);
+                    console.draw_text("s");
+                    console.reset_color();
+                    console.draw_text(": Open settings page");
                 }, |console| {
                     console.set_color(Color::LightRed, Color::Default);
                     console.draw_text("a");

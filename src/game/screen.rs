@@ -21,6 +21,7 @@ pub mod utils;
 pub enum ScreenId {
     StartMenu,
     About,
+    Settings,
 
     SelectLevelPack,
     SelectLevel,
@@ -99,6 +100,12 @@ impl Screen for ScreenStartMenu {
         console.draw_text("JDDev0");
 
         console.reset_color();
+        console.set_cursor_pos(62, 19);
+        console.draw_text("Settings: ");
+        console.set_color(Color::LightRed, Color::Default);
+        console.draw_text("s");
+
+        console.reset_color();
         console.set_cursor_pos(65, 20);
         console.draw_text("About: ");
         console.set_color(Color::LightRed, Color::Default);
@@ -141,6 +148,12 @@ impl Screen for ScreenStartMenu {
             return;
         }
 
+        if key == Key::S {
+            game_state.set_screen(ScreenId::Settings);
+
+            return;
+        }
+
         if key == Key::ENTER {
             game_state.play_sound_effect_ui_select();
 
@@ -159,6 +172,10 @@ impl Screen for ScreenStartMenu {
 
         if row == 20 && column > 64 && column < 73 {
             game_state.set_screen(ScreenId::About);
+        }
+
+        if row == 19 && column > 61 && column < 73 {
+            game_state.set_screen(ScreenId::Settings);
         }
     }
 
@@ -588,6 +605,84 @@ impl Screen for ScreenAbout {
             ).floor() as usize
                     + if scrollbar_y_coord == 0 { 0 } else { 1 };
         }
+    }
+}
+
+pub struct ScreenSettings {}
+
+impl ScreenSettings {
+    pub fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Screen for ScreenSettings {
+    fn draw(&self, _game_state: &GameState, console: &Console) {
+        console.set_color(Color::Yellow, Color::Default);
+        console.set_underline(true);
+        console.draw_text("Settings menu");
+        console.set_underline(false);
+
+        //Draw color scheme
+        console.reset_color();
+        console.set_cursor_pos(0, 2);
+        if cfg!(feature = "gui") {
+            console.draw_text("Color scheme (Toggle with ");
+
+            console.set_color(Color::Red, Color::Default);
+            console.draw_text("F10");
+
+            console.reset_color();
+            console.draw_text("):");
+        }else {
+            console.draw_text("Color scheme:");
+        }
+
+        console.set_cursor_pos(0, 3);
+        console.set_color(Color::Default, Color::Black);
+        console.draw_text("   ");
+        console.set_color(Color::Default, Color::Red);
+        console.draw_text("   ");
+        console.set_color(Color::Default, Color::Green);
+        console.draw_text("   ");
+        console.set_color(Color::Default, Color::Yellow);
+        console.draw_text("   ");
+        console.set_color(Color::Default, Color::Blue);
+        console.draw_text("   ");
+        console.set_color(Color::Default, Color::Pink);
+        console.draw_text("   ");
+        console.set_color(Color::Default, Color::Cyan);
+        console.draw_text("   ");
+        console.set_color(Color::Default, Color::White);
+        console.draw_text("   ");
+
+        console.set_cursor_pos(0, 4);
+        console.set_color(Color::Default, Color::LightBlack);
+        console.draw_text("   ");
+        console.set_color(Color::Default, Color::LightRed);
+        console.draw_text("   ");
+        console.set_color(Color::Default, Color::LightGreen);
+        console.draw_text("   ");
+        console.set_color(Color::Default, Color::LightYellow);
+        console.draw_text("   ");
+        console.set_color(Color::Default, Color::LightBlue);
+        console.draw_text("   ");
+        console.set_color(Color::Default, Color::LightPink);
+        console.draw_text("   ");
+        console.set_color(Color::Default, Color::LightCyan);
+        console.draw_text("   ");
+        console.set_color(Color::Default, Color::LightWhite);
+        console.draw_text("   ");
+    }
+
+    fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
+        if key == Key::ESC {
+            game_state.set_screen(ScreenId::StartMenu);
+        }
+    }
+
+    fn on_mouse_pressed(&mut self, _game_state: &mut GameState, _column: usize, _row: usize) {
+        //TODO
     }
 }
 

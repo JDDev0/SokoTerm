@@ -4,6 +4,135 @@ use std::marker::PhantomData;
 use std::sync::{Arc, Mutex};
 use smol_str::SmolStr;
 
+#[derive(Debug, Clone)]
+pub struct ColorScheme {
+    color_mapping: [bevy::color::Color; 17],
+}
+
+impl ColorScheme {
+    const fn new(color_mapping: [bevy::color::Color; 17]) -> Self {
+        Self { color_mapping }
+    }
+
+     fn convert_console_color_to_bevy_color(&self, color: Color) -> bevy::color::Color {
+        let index = color as i8;
+
+        self.color_mapping[(index + 1) as usize]
+    }
+}
+
+macro_rules! color_scheme {
+    {
+        Default: ($cdr:literal, $cdg:literal, $cdb:literal),
+        Black: ($c0r:literal, $c0g:literal, $c0b:literal),
+        Blue: ($c1r:literal, $c1g:literal, $c1b:literal),
+        Green: ($c2r:literal, $c2g:literal, $c2b:literal),
+        Cyan: ($c3r:literal, $c3g:literal, $c3b:literal),
+        Red: ($c4r:literal, $c4g:literal, $c4b:literal),
+        Pink: ($c5r:literal, $c5g:literal, $c5b:literal),
+        Yellow: ($c6r:literal, $c6g:literal, $c6b:literal),
+        White: ($c7r:literal, $c7g:literal, $c7b:literal),
+        LightBlack: ($c8r:literal, $c8g:literal, $c8b:literal),
+        LightBlue: ($c9r:literal, $c9g:literal, $c9b:literal),
+        LightGreen: ($c10r:literal, $c10g:literal, $c10b:literal),
+        LightCyan: ($c11r:literal, $c11g:literal, $c11b:literal),
+        LightRed: ($c12r:literal, $c12g:literal, $c12b:literal),
+        LightPink: ($c13r:literal, $c13g:literal, $c13b:literal),
+        LightYellow: ($c14r:literal, $c14g:literal, $c14b:literal),
+        LightWhite: ($c15r:literal, $c15g:literal, $c15b:literal),
+    } => {
+        ColorScheme::new([
+            bevy::color::Color::srgb_u8($cdr, $cdg, $cdb),
+
+            bevy::color::Color::srgb_u8($c0r, $c0g, $c0b),
+            bevy::color::Color::srgb_u8($c1r, $c1g, $c1b),
+            bevy::color::Color::srgb_u8($c2r, $c2g, $c2b),
+            bevy::color::Color::srgb_u8($c3r, $c3g, $c3b),
+            bevy::color::Color::srgb_u8($c4r, $c4g, $c4b),
+            bevy::color::Color::srgb_u8($c5r, $c5g, $c5b),
+            bevy::color::Color::srgb_u8($c6r, $c6g, $c6b),
+            bevy::color::Color::srgb_u8($c7r, $c7g, $c7b),
+            bevy::color::Color::srgb_u8($c8r, $c8g, $c8b),
+            bevy::color::Color::srgb_u8($c9r, $c9g, $c9b),
+            bevy::color::Color::srgb_u8($c10r, $c10g, $c10b),
+            bevy::color::Color::srgb_u8($c11r, $c11g, $c11b),
+            bevy::color::Color::srgb_u8($c12r, $c12g, $c12b),
+            bevy::color::Color::srgb_u8($c13r, $c13g, $c13b),
+            bevy::color::Color::srgb_u8($c14r, $c14g, $c14b),
+            bevy::color::Color::srgb_u8($c15r, $c15g, $c15b),
+        ])
+    };
+}
+
+pub const DEFAULT_COLOR_SCHEME: ColorScheme = color_scheme! {
+    Default: (23, 20, 33),
+
+    Black: (23, 20, 33),
+    Blue: (18, 72, 139),
+    Green: (38, 162, 105),
+    Cyan: (42, 161, 179),
+    Red: (192, 28, 40),
+    Pink: (163, 71, 186),
+    Yellow: (162, 115, 76),
+    White: (208, 207, 204),
+    LightBlack: (94, 92, 100),
+    LightBlue: (42, 123, 222),
+    LightGreen: (51, 218, 122),
+    LightCyan: (51, 199, 222),
+    LightRed: (246, 97, 81),
+    LightPink: (192, 97, 203),
+    LightYellow: (233, 173, 12),
+    LightWhite: (255, 255, 255),
+};
+
+pub const MUTED_COLOR_THEME: ColorScheme = color_scheme! {
+    Default: (40, 42, 46),
+
+    Black: (40, 42, 46),
+    Blue: (95, 129, 157),
+    Green: (140, 148, 64),
+    Cyan: (94, 141, 135),
+    Red: (165, 66, 66),
+    Pink: (133, 103, 143),
+    Yellow: (222, 147, 95),
+    White: (208, 207, 204),
+    LightBlack: (55, 59, 65),
+    LightBlue: (129, 162, 190),
+    LightGreen: (181, 189, 104),
+    LightCyan: (138, 190, 183),
+    LightRed: (204, 102, 102),
+    LightPink: (178, 148, 187),
+    LightYellow: (240, 198, 116),
+    LightWhite: (255, 255, 255),
+};
+
+pub const DARK_COLOR_SCHEME: ColorScheme = color_scheme! {
+    Default: (16, 16, 16),
+
+    Black: (16, 16, 16),
+    Blue: (16, 16, 100),
+    Green: (16, 100, 16),
+    Cyan: (16, 100, 100),
+    Red: (100, 16, 16),
+    Pink: (100, 16, 100),
+    Yellow: (100, 100, 16),
+    White: (192, 192, 192),
+    LightBlack: (128, 128, 128),
+    LightBlue: (32, 32, 200),
+    LightGreen: (32, 200, 32),
+    LightCyan: (32, 200, 200),
+    LightRed: (200, 32, 32),
+    LightPink: (200, 32, 200),
+    LightYellow: (200, 200, 32),
+    LightWhite: (240, 240, 240),
+};
+
+pub const COLOR_SCHEMES: [ColorScheme; 3] = [
+    DEFAULT_COLOR_SCHEME,
+    MUTED_COLOR_THEME,
+    DARK_COLOR_SCHEME,
+];
+
 #[derive(Clone)]
 pub struct ConsoleDrawBuffer {
     text_buffer: Box<[u8]>,
@@ -521,27 +650,14 @@ pub enum Color {
     Default = -1
 }
 
+impl Color {
+    pub fn into_bevy_color(self, color_scheme: &ColorScheme) -> bevy::color::Color {
+        color_scheme.convert_console_color_to_bevy_color(self)
+    }
+}
+
 impl From<Color> for bevy::color::Color {
     fn from(value: Color) -> Self {
-        match value {
-            Color::Black => bevy::color::Color::srgb_u8(23, 20, 33),
-            Color::Red => bevy::color::Color::srgb_u8(192, 28, 40),
-            Color::Green => bevy::color::Color::srgb_u8(38, 162, 105),
-            Color::Yellow => bevy::color::Color::srgb_u8(162, 115, 76),
-            Color::Blue => bevy::color::Color::srgb_u8(18, 72, 139),
-            Color::Pink => bevy::color::Color::srgb_u8(163, 71, 186),
-            Color::Cyan => bevy::color::Color::srgb_u8(42, 161, 179),
-            Color::White => bevy::color::Color::srgb_u8(208, 207, 204),
-            Color::LightBlack => bevy::color::Color::srgb_u8(94, 92, 100),
-            Color::LightRed => bevy::color::Color::srgb_u8(246, 97, 81),
-            Color::LightGreen => bevy::color::Color::srgb_u8(51, 218, 122),
-            Color::LightYellow => bevy::color::Color::srgb_u8(233, 173, 12),
-            Color::LightBlue => bevy::color::Color::srgb_u8(42, 123, 222),
-            Color::LightPink => bevy::color::Color::srgb_u8(192, 97, 203),
-            Color::LightCyan => bevy::color::Color::srgb_u8(51, 199, 222),
-            Color::LightWhite => bevy::color::Color::srgb_u8(255, 255, 255),
-
-            Color::Default => bevy::color::Color::srgb_u8(23, 20, 33),
-        }
+        DEFAULT_COLOR_SCHEME.convert_console_color_to_bevy_color(value)
     }
 }

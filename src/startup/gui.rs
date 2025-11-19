@@ -9,7 +9,7 @@ use bevy::input::mouse::MouseButtonInput;
 use bevy::window::{PrimaryWindow, WindowMode, WindowResized};
 use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use crate::game::Game;
-use crate::io::bevy_abstraction::{ConsoleState, Key};
+use crate::io::bevy_abstraction::{ConsoleState, Key, COLOR_SCHEMES};
 use crate::io::Console;
 
 #[cfg(feature = "steam")]
@@ -47,6 +47,9 @@ struct CharacterScaling {
     x_offset: f32,
     y_offset: f32,
 }
+
+#[derive(Debug, Default, Clone, Copy, Resource)]
+struct CurrentColorSchemeIndex(usize);
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone, Default, States)]
 enum AppState {
@@ -137,8 +140,9 @@ pub fn run_game() -> ExitCode {
             init_state::<AppState>().
 
             insert_resource(Time::<Fixed>::from_seconds(0.040)). //Run FixedUpdate every 40ms
-            insert_resource(ClearColor(Color::srgb_u8(23, 20, 33))).
+            insert_resource(ClearColor(crate::io::bevy_abstraction::Color::Default.into())).
             insert_resource(CharacterScaling::default()).
+            insert_resource(CurrentColorSchemeIndex::default()).
 
             add_systems(Startup, spawn_camera).
             add_systems(Startup, update_text_entities).
@@ -147,6 +151,7 @@ pub fn run_game() -> ExitCode {
             add_systems(FixedUpdate, update_game.run_if(in_state(AppState::InGame))).
 
             add_systems(Update, draw_console_text.run_if(in_state(AppState::InGame))).
+            add_systems(Update, cycle_through_color_schemes.run_if(in_state(AppState::InGame)).before(draw_console_text)).
             add_systems(Update, (on_resize, toggle_fullscreen));
 
     #[cfg(feature = "steam")]
@@ -192,6 +197,7 @@ fn update_text_entities(
 
     asset_server: Res<AssetServer>,
     mut character_scaling: ResMut<CharacterScaling>,
+    current_color_scheme_index: Res<CurrentColorSchemeIndex>,
 ) {
     for entity in console_text_characters.iter() {
         commands.entity(entity).despawn();
@@ -215,6 +221,8 @@ fn update_text_entities(
     let text_buffer = buffer.text_buffer();
     let text_color_buffer = buffer.text_color_buffer();
 
+    let color_scheme = &COLOR_SCHEMES[current_color_scheme_index.0];
+
     let mut iter = text_buffer.iter().copied().zip(text_color_buffer.iter().copied());
     for y in 0..23 {
         for x in 0..74 {
@@ -227,8 +235,8 @@ fn update_text_entities(
                 Text2d::new(String::from_utf8_lossy(&[character])),
                 text_font.clone(),
                 Transform::from_translation(Vec3::new(screen_x, screen_y, 0.0)),
-                TextColor(fg.into()),
-                TextBackgroundColor(bg.into()),
+                TextColor(fg.into_bevy_color(color_scheme)),
+                TextBackgroundColor(bg.into_bevy_color(color_scheme)),
                 ConsoleTextCharacter { x, y },
             ));
         }
@@ -259,7 +267,8 @@ fn update_game(
                 continue;
             }
 
-            if event.logical_key == bevy::input::keyboard::Key::F11 {
+            if event.logical_key == bevy::input::keyboard::Key::F10 ||
+                    event.logical_key == bevy::input::keyboard::Key::F11 {
                 continue;
             }
 
@@ -313,6 +322,7 @@ fn on_resize(
 
     asset_server: Res<AssetServer>,
     character_scaling: ResMut<CharacterScaling>,
+    current_color_scheme_index: Res<CurrentColorSchemeIndex>,
 
     mut resize_reader: MessageReader<WindowResized>,
 ) {
@@ -326,6 +336,7 @@ fn on_resize(
 
             asset_server,
             character_scaling,
+            current_color_scheme_index,
         );
     }
 }
@@ -347,8 +358,22 @@ fn toggle_fullscreen(
     }
 }
 
+fn cycle_through_color_schemes(
+    mut commands: Commands,
+
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut current_color_scheme_index: ResMut<CurrentColorSchemeIndex>,
+) {
+    if keyboard_input.just_pressed(KeyCode::F10) {
+        current_color_scheme_index.0 = (current_color_scheme_index.0 + 1) % COLOR_SCHEMES.len();
+        commands.insert_resource(ClearColor(crate::io::bevy_abstraction::Color::Default.into_bevy_color(&COLOR_SCHEMES[current_color_scheme_index.0])));
+    }
+}
+
 fn draw_console_text(
     mut console_text_characters: Query<(&mut Text2d, &mut TextColor, &mut TextBackgroundColor, &ConsoleTextCharacter)>,
+
+    current_color_scheme_index: Res<CurrentColorSchemeIndex>,
 ) {
     //TODO optimize repaint logic
 
@@ -357,6 +382,8 @@ fn draw_console_text(
     let buffer = state.primary_buffer();
     let text_buffer = buffer.text_buffer();
     let text_color_buffer = buffer.text_color_buffer();
+
+    let color_scheme = &COLOR_SCHEMES[current_color_scheme_index.0];
 
     for (
         ref mut text,
@@ -368,8 +395,8 @@ fn draw_console_text(
         let (fg, bg) = text_color_buffer[x + y * 74];
 
         text.0 = String::from_utf8_lossy(&[character]).into();
-        fg_color.0 = fg.into();
-        bg_color.0 = bg.into();
+        fg_color.0 = fg.into_bevy_color(color_scheme);
+        bg_color.0 = bg.into_bevy_color(color_scheme);
     }
 }
 

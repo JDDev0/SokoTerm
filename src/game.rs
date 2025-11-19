@@ -375,6 +375,7 @@ impl <'a> Game<'a> {
         let screens = HashMap::from_iter([
             (ScreenId::StartMenu, Box::new(ScreenStartMenu::new()) as Box<dyn Screen>),
             (ScreenId::About, Box::new(ScreenAbout::new()) as Box<dyn Screen>),
+            (ScreenId::Settings, Box::new(ScreenSettings::new()) as Box<dyn Screen>),
 
             (ScreenId::SelectLevelPack, Box::new(ScreenSelectLevelPack::new()) as Box<dyn Screen>),
             (ScreenId::SelectLevel, Box::new(ScreenSelectLevel::new()) as Box<dyn Screen>),
