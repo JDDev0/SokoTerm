@@ -581,14 +581,22 @@ impl Screen for ScreenAbout {
     }
 
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
-        if key == Key::UP && self.scroll_position_row > 0 {
-            self.scroll_position_row -= 1;
-        }else if key == Key::DOWN && self.scroll_position_row < self.scroll_position_row_max {
-            self.scroll_position_row += 1;
+        if key == Key::F1 {
+            game_state.open_help_page();
+
+            return;
         }
 
         if key == Key::ESC {
             game_state.set_screen(ScreenId::StartMenu);
+
+            return;
+        }
+
+        if key == Key::UP && self.scroll_position_row > 0 {
+            self.scroll_position_row -= 1;
+        }else if key == Key::DOWN && self.scroll_position_row < self.scroll_position_row_max {
+            self.scroll_position_row += 1;
         }
     }
 
@@ -676,6 +684,12 @@ impl Screen for ScreenSettings {
     }
 
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
+        if key == Key::F1 {
+            game_state.open_help_page();
+
+            return;
+        }
+
         if key == Key::ESC {
             game_state.set_screen(ScreenId::StartMenu);
         }
@@ -2496,6 +2510,12 @@ impl Screen for ScreenSelectLevelPackBackgroundMusic {
     }
 
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
+        if key == Key::F1 {
+            game_state.open_help_page();
+
+            return;
+        }
+
         let current_background_music_id = game_state.current_background_music_id();
         let mut current_selected_music_index = current_background_music_id.
                 map(|id| id.id()).
