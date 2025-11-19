@@ -149,7 +149,7 @@ impl Screen for ScreenStartMenu {
     }
 
     fn on_mouse_pressed(&mut self, game_state: &mut GameState, column: usize, row: usize) {
-        if row == 16 && column > 26 && column < 32 {
+        if row == 16 && (21..51).contains(&column) {
             self.on_key_pressed(game_state, Key::ENTER);
         }
 
