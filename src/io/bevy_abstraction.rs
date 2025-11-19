@@ -1,16 +1,56 @@
-use std::cmp;
+use std::{cmp, mem};
 use std::collections::VecDeque;
 use std::marker::PhantomData;
 use std::sync::{Arc, Mutex};
 use smol_str::SmolStr;
 
+#[derive(Clone)]
+pub struct ConsoleDrawBuffer {
+    text_buffer: Box<[u8]>,
+    text_color_buffer: Box<[(Color, Color)]>,
+    //TODO: underline
+}
+
+impl ConsoleDrawBuffer {
+    pub fn new<const W: usize, const H: usize>() -> Self {
+        Self {
+            text_buffer: vec![b' '; W * H].into_boxed_slice(),
+            text_color_buffer: vec![(Color::White, Color::Black); W * H].into_boxed_slice(),
+            //TODO: underline
+        }
+    }
+
+    pub fn text_buffer(&self) -> &[u8] {
+        &self.text_buffer
+    }
+
+    pub fn text_color_buffer(&self) -> &[(Color, Color)] {
+        &self.text_color_buffer
+    }
+}
+
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub enum ConsoleBufferSelection {
+    PRIMARY,
+    SECONDARY,
+}
+
+impl ConsoleBufferSelection {
+    pub fn swap(self) -> Self {
+        match self {
+            ConsoleBufferSelection::PRIMARY => ConsoleBufferSelection::SECONDARY,
+            ConsoleBufferSelection::SECONDARY => ConsoleBufferSelection::PRIMARY,
+        }
+    }
+}
+
 pub struct ConsoleState {
     curser_pos: (usize, usize),
     current_color_pair: (Color, Color),
 
-    text_buffer: Box<[u8]>,
-    text_color_buffer: Box<[(Color, Color)]>,
-    //TODO: underline
+    buffer_selection: ConsoleBufferSelection,
+    primary_buffer: ConsoleDrawBuffer,
+    secondary_buffer: ConsoleDrawBuffer,
 
     input_queue_keyboard: VecDeque<Key>,
     input_queue_mouse: VecDeque<(usize, usize)>,
@@ -22,9 +62,9 @@ impl ConsoleState {
             curser_pos: (0, 0),
             current_color_pair: (Color::White, Color::Black),
 
-            text_buffer: vec![b' '; W * H].into_boxed_slice(),
-            text_color_buffer: vec![(Color::White, Color::Black); W * H].into_boxed_slice(),
-            //TODO: underline
+            buffer_selection: ConsoleBufferSelection::PRIMARY,
+            primary_buffer: ConsoleDrawBuffer::new::<W, H>(),
+            secondary_buffer: ConsoleDrawBuffer::new::<W, H>(),
 
             input_queue_keyboard: VecDeque::default(),
             input_queue_mouse: VecDeque::default(),
@@ -34,17 +74,39 @@ impl ConsoleState {
     pub fn clear_screen(&mut self) {
         self.curser_pos = (0, 0);
 
-        self.text_buffer.fill(b' ');
-        self.text_color_buffer.fill((Color::White, Color::Black));
+        self.current_buffer_mut().text_buffer.fill(b' ');
+        self.current_buffer_mut().text_color_buffer.fill((Color::White, Color::Black));
         //TODO: underline
     }
 
-    pub fn text_buffer(&self) -> &[u8] {
-        &self.text_buffer
+    pub fn primary_buffer(&self) -> &ConsoleDrawBuffer {
+        &self.primary_buffer
     }
 
-    pub fn text_color_buffer(&self) -> &[(Color, Color)] {
-        &self.text_color_buffer
+    pub fn secondary_buffer(&self) -> &ConsoleDrawBuffer {
+        &self.secondary_buffer
+    }
+
+    pub fn current_buffer(&self) -> &ConsoleDrawBuffer {
+        match self.buffer_selection {
+            ConsoleBufferSelection::PRIMARY => &self.primary_buffer,
+            ConsoleBufferSelection::SECONDARY => &self.secondary_buffer,
+        }
+    }
+
+    fn current_buffer_mut(&mut self) -> &mut ConsoleDrawBuffer {
+        match self.buffer_selection {
+            ConsoleBufferSelection::PRIMARY => &mut self.primary_buffer,
+            ConsoleBufferSelection::SECONDARY => &mut self.secondary_buffer,
+        }
+    }
+
+    pub fn swap_buffer_selection(&mut self) {
+        self.buffer_selection = self.buffer_selection.swap();
+    }
+
+    pub fn swap_buffer(&mut self) {
+        mem::swap(&mut self.secondary_buffer, &mut self.primary_buffer);
     }
 
     pub fn input_queue_keyboard_mut(&mut self) -> &mut VecDeque<Key> {
@@ -131,8 +193,8 @@ impl <'a> Console<'a> {
                 let line = &line.as_bytes()[..len];
                 let color = state.current_color_pair;
 
-                state.text_buffer[start_index..start_index + len].copy_from_slice(line);
-                state.text_color_buffer[start_index..start_index + len].fill(color);
+                state.current_buffer_mut().text_buffer[start_index..start_index + len].copy_from_slice(line);
+                state.current_buffer_mut().text_color_buffer[start_index..start_index + len].fill(color);
             }
 
             cursor_pos_x_before_newline = state.curser_pos.0 + len;

@@ -818,6 +818,26 @@ impl <'a> Game<'a> {
     }
 
     #[cfg(feature = "steam")]
+    #[must_use]
+    pub fn draw_level_pack_thumbnail_screenshot(&self) -> Option<(usize, usize)> {
+        self.console.repaint();
+
+        if let Some(level_pack) = self.game_state.editor_state.get_current_level_pack() {
+            //TODO replace if thumbnail level [default: first level]
+            if let Some(level) = level_pack.levels().first() {
+                let level = level.level();
+
+                //Always draw to top left: Screenshot will be trimmed to the level size
+                level.draw(self.console, 0, 0, false, None);
+
+                return Some((level.width(), level.height()))
+            }
+        }
+
+        None
+    }
+
+    #[cfg(feature = "steam")]
     pub fn game_state(&self) -> &GameState {
         &self.game_state
     }

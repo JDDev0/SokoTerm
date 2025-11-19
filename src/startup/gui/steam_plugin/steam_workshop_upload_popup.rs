@@ -1,6 +1,8 @@
 use std::error::Error;
+use std::ops::Deref;
 use std::path::Path;
 use std::sync::{Arc, LazyLock, Mutex};
+use bevy::camera::visibility::RenderLayers;
 use bevy::input::ButtonState;
 use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::input_focus::{AutoFocus, InputDispatchPlugin, InputFocus};
@@ -8,13 +10,16 @@ use bevy::input_focus::tab_navigation::{TabGroup, TabIndex, TabNavigationPlugin}
 use bevy::picking::hover::Hovered;
 use bevy::ui_widgets::{checkbox_self_update, observe, Activate, Button, Checkbox, RadioButton, RadioGroup, UiWidgetsPlugins, ValueChange};
 use bevy::prelude::*;
+use bevy::render::render_resource::TextureFormat;
+use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
 use bevy::text::LineHeight;
 use bevy::ui::Checked;
 use bevy::window::{CursorIcon, PrimaryWindow, SystemCursorIcon};
 use bevy_steamworks::*;
 use crate::game::{audio, steam, Game, GameError};
 use crate::game::steam::achievement::Achievement;
-use crate::startup::gui::AppState;
+use crate::startup::gui;
+use crate::startup::gui::{AppState, CONSOLE_STATE};
 use crate::startup::gui::steam_plugin::{handle_recoverable_error, on_resize_popup_text, PlaySoundEffect, ResizableNodeDimension, ResizableText};
 use crate::utils;
 
@@ -47,9 +52,11 @@ impl Plugin for SteamWorkshopUploadPopupPlugin {
                     on_validate_and_start_upload,
                     on_set_upload_progress_title.pipe(handle_recoverable_error),
                     on_set_upload_progress_content.pipe(handle_recoverable_error),
+                    handle_thumbnail_screenshot,
                 ).run_if(in_state(AppState::SteamWorkshopUploadPopup))).
 
                 add_systems(OnEnter(AppState::SteamWorkshopUploadPopup), on_open_steam_workshop_upload_popup).
+                add_systems(OnEnter(AppState::SteamWorkshopUploadPopup), create_level_pack_thumbnail.after(on_open_steam_workshop_upload_popup)).
                 add_systems(OnEnter(AppState::SteamWorkshopUploadPopup), on_resize_popup_text.after(on_open_steam_workshop_upload_popup)).
 
                 add_systems(OnExit(AppState::SteamWorkshopUploadPopup), on_close_steam_workshop_upload_popup);
@@ -136,6 +143,15 @@ enum GameplayTag {
     Tricky,
     Weird,
 }
+
+#[derive(Debug, Component)]
+struct LevelPackThumbnailCamera;
+
+#[derive(Debug, Component)]
+struct LevelPackThumbnail;
+
+#[derive(Debug, Clone, Resource)]
+struct LevelPackThumbnailImageHandle(Handle<Image>);
 
 #[expect(clippy::too_many_arguments)]
 fn process_and_update_upload_progress(
@@ -228,12 +244,17 @@ fn process_and_update_upload_progress(
             let mut tmp_upload_path = Game::get_or_create_save_game_folder()?;
             tmp_upload_path.push("SteamWorkshop/UploadTemp/");
 
+            let mut tmp_thumbnail_path = tmp_upload_path.clone();
+            tmp_thumbnail_path.push("thumbnail.png");
+
+            tmp_upload_path.push("Data/");
+
             let handle = steam_client.ugc().start_item_update(steam::APP_ID, id).
                     visibility(PublishedFileVisibility::Private).
                     title(level_pack_name).
                     description(level_pack_description).
                     content_path(Path::new(&tmp_upload_path)).
-                    //TODO preview
+                    preview_path(Path::new(&tmp_thumbnail_path)).
                     tags(tags, false).
                     submit(Some("<Initial Release>"), move |ret| {
                         *STEAM_WORKSHOP_UPLOAD_WORKING_DATA.lock().unwrap() = SteamWorkshopUploadWorkingData::SubmitItemResult(match ret {
@@ -1358,6 +1379,150 @@ fn on_open_steam_workshop_upload_popup(
             )],
         )],
     ));
+}
+
+fn create_level_pack_thumbnail(
+    mut commands: Commands,
+
+    game: NonSend<Game>,
+
+    asset_server: Res<AssetServer>,
+
+    mut images: ResMut<Assets<Image>>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+) {
+    //Screenshot is written to secondary buffer
+    CONSOLE_STATE.lock().unwrap().swap_buffer_selection();
+    let dimensions = game.draw_level_pack_thumbnail_screenshot();
+    CONSOLE_STATE.lock().unwrap().swap_buffer_selection();
+
+    let Some((level_width, level_height)) = dimensions else {
+        //TODO error -> Could not create screenshot
+
+        return;
+    };
+
+    let image = Image::new_target_texture(1920, 1080, TextureFormat::bevy_default());
+
+    let window_width = image.width() as f32;
+    let window_height = image.height() as f32;
+
+    let character_scaling = gui::calculate_character_scaling(
+        window_width, window_height,
+
+        level_width, level_height,
+    );
+
+    let image_handle = images.add(image);
+
+    let render_layer = RenderLayers::layer(1);
+
+    commands.spawn((
+        Camera2d,
+        LevelPackThumbnailCamera,
+        Camera {
+            order: -1,
+            target: image_handle.clone().into(),
+            ..default()
+        },
+        RenderLayers::layer(0).with(1),
+    ));
+
+    commands.spawn((
+        Mesh2d(meshes.add(Rectangle::new(window_width, window_height))),
+        MeshMaterial2d(materials.add(Color::srgb_u8(23, 20, 33))),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
+        LevelPackThumbnail,
+        render_layer.clone(),
+    ));
+
+    let font = asset_server.load("embedded://font/JetBrainsMono-Bold.ttf");
+    let text_font = TextFont {
+        font: font.clone(),
+        font_size: character_scaling.font_size,
+        ..default()
+    };
+
+    let state = CONSOLE_STATE.lock().unwrap();
+    //Screenshot was saved to secondary buffer
+    let buffer = state.secondary_buffer();
+    let text_buffer = buffer.text_buffer();
+    let text_color_buffer = buffer.text_color_buffer();
+
+    let mut iter = text_buffer.iter().copied().zip(text_color_buffer.iter().copied());
+    for y in 0..level_height {
+        for x in 0..level_width {
+            let (character, (fg, bg)) = iter.next().unwrap();
+
+            let screen_x = character_scaling.x_offset + x as f32 * character_scaling.char_width - window_width * 0.5;
+            let screen_y = window_height * 0.5 - (character_scaling.y_offset + y as f32 * character_scaling.char_height);
+
+            commands.spawn((
+                Text2d::new(String::from_utf8_lossy(&[character])),
+                text_font.clone(),
+                Transform::from_translation(Vec3::new(screen_x, screen_y, 1.0)),
+                TextColor(fg.into()),
+                TextBackgroundColor(bg.into()),
+                LevelPackThumbnail,
+                render_layer.clone(),
+            ));
+        }
+
+        //Skip empty characters in this row
+        for _ in 0..(74 - level_width) {
+            let _ = iter.next();
+        }
+    }
+
+    commands.insert_resource(LevelPackThumbnailImageHandle(image_handle));
+}
+
+fn handle_thumbnail_screenshot(
+    mut commands: Commands,
+
+    mut counter: Local<usize>,
+    level_pack_thumbnail_image_handle: If<Res<LevelPackThumbnailImageHandle>>,
+) {
+    //Delay screenshot for 10 frames
+    *counter += 1;
+    if *counter < 10 {
+        return;
+    }
+
+    //Reset delay for next screenshot
+    *counter = 0;
+
+    commands.remove_resource::<LevelPackThumbnailImageHandle>();
+
+    let image_handle = level_pack_thumbnail_image_handle.deref().0.clone();
+    commands.spawn(Screenshot::image(image_handle.clone())).observe(
+        #[expect(clippy::type_complexity)]
+        move |screenshot_captured: On<ScreenshotCaptured>,
+
+              mut commands: Commands,
+
+              thumbnail_entity_query: Query<
+                  Entity,
+                  Or<(With<LevelPackThumbnailCamera>, With<LevelPackThumbnail>)>,
+              >| -> Result<(), Box<dyn Error>> {
+            for entity in thumbnail_entity_query.iter() {
+                commands.entity(entity).despawn();
+            }
+
+            let image = screenshot_captured.image.clone();
+
+            let image = image.try_into_dynamic()?;
+            let image = image.to_rgb8();
+
+            let mut tmp_thumbnail_path = Game::get_or_create_save_game_folder()?;
+            tmp_thumbnail_path.push("SteamWorkshop/UploadTemp/thumbnail.png");
+
+            image.save(Path::new(&tmp_thumbnail_path))?;
+
+            Ok(())
+        }.pipe(handle_recoverable_error),
+    );
 }
 
 fn on_close_steam_workshop_upload_popup(

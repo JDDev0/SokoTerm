@@ -51,7 +51,9 @@ pub fn prepare_workshop_upload_temp_data(level_pack: &LevelPack) -> Result<(), B
         std::fs::remove_dir_all(&tmp_upload_path)?;
     }
 
+    tmp_upload_path.push("/Data");
     std::fs::create_dir_all(&tmp_upload_path)?;
+
     tmp_upload_path.push("/");
 
     tmp_upload_path.push("pack.lvl");

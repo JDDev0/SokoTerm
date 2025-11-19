@@ -201,52 +201,27 @@ fn update_text_entities(
     let window_width = window.width();
     let window_height = window.height();
 
-    let gameplay_width = window_width - 2.0 * BORDER_WIDTH as f32;
-    let gameplay_height = window_height - 2.0 * BORDER_WIDTH as f32;
-
-    let max_char_width = gameplay_width / 74.0;
-    let max_char_height = gameplay_height / 23.0;
-
-    let max_font_size_by_width = max_char_width / 60.0 * 100.0;
-    let max_font_size_by_height = max_char_height / 120.0 * 100.0;
-
-    let font_size = cmp::min((max_font_size_by_width * 100.0) as u32, (max_font_size_by_height * 100.0) as u32) as f32 * 0.01;
-    character_scaling.font_size = font_size;
-
-    let char_width = font_size * 60.0 / 100.0;
-    let char_height = font_size * 120.0 / 100.0;
-    character_scaling.char_width = char_width;
-    character_scaling.char_height = char_height;
-
-    let console_width = char_width * 74.0;
-    let console_height = char_height * 23.0;
-
-    let padding_x = (gameplay_width - console_width) * 0.5;
-    let padding_y = (gameplay_height - console_height) * 0.5;
-
-    let x_offset = BORDER_WIDTH as f32 + padding_x + char_width * 0.5;
-    let y_offset = BORDER_WIDTH as f32 + padding_y + char_height * 0.5;
-    character_scaling.x_offset = x_offset;
-    character_scaling.y_offset = y_offset;
+    *character_scaling = calculate_character_scaling(window_width, window_height, 74, 23);
 
     let font = asset_server.load("embedded://font/JetBrainsMono-Bold.ttf");
     let text_font = TextFont {
         font: font.clone(),
-        font_size,
+        font_size: character_scaling.font_size,
         ..default()
     };
 
     let state = CONSOLE_STATE.lock().unwrap();
-    let text_buffer = state.text_buffer();
-    let text_color_buffer = state.text_color_buffer();
+    let buffer = state.primary_buffer();
+    let text_buffer = buffer.text_buffer();
+    let text_color_buffer = buffer.text_color_buffer();
 
     let mut iter = text_buffer.iter().copied().zip(text_color_buffer.iter().copied());
     for y in 0..23 {
         for x in 0..74 {
             let (character, (fg, bg)) = iter.next().unwrap();
 
-            let screen_x = x_offset + x as f32 * char_width - window_width * 0.5;
-            let screen_y = window_height * 0.5 - (y_offset + y as f32 * char_height);
+            let screen_x = character_scaling.x_offset + x as f32 * character_scaling.char_width - window_width * 0.5;
+            let screen_y = window_height * 0.5 - (character_scaling.y_offset + y as f32 * character_scaling.char_height);
 
             commands.spawn((
                 Text2d::new(String::from_utf8_lossy(&[character])),
@@ -379,8 +354,9 @@ fn draw_console_text(
 
     let state = CONSOLE_STATE.lock().unwrap();
 
-    let text_buffer = state.text_buffer();
-    let text_color_buffer = state.text_color_buffer();
+    let buffer = state.primary_buffer();
+    let text_buffer = buffer.text_buffer();
+    let text_color_buffer = buffer.text_color_buffer();
 
     for (
         ref mut text,
@@ -394,5 +370,46 @@ fn draw_console_text(
         text.0 = String::from_utf8_lossy(&[character]).into();
         fg_color.0 = fg.into();
         bg_color.0 = bg.into();
+    }
+}
+
+fn calculate_character_scaling(
+    window_width: f32,
+    window_height: f32,
+
+    columns: usize,
+    rows: usize,
+) -> CharacterScaling {
+    let gameplay_width = window_width - 2.0 * BORDER_WIDTH as f32;
+    let gameplay_height = window_height - 2.0 * BORDER_WIDTH as f32;
+
+    let max_char_width = gameplay_width / columns as f32;
+    let max_char_height = gameplay_height / rows as f32;
+
+    let max_font_size_by_width = max_char_width / 60.0 * 100.0;
+    let max_font_size_by_height = max_char_height / 120.0 * 100.0;
+
+    let font_size = cmp::min((max_font_size_by_width * 100.0) as u32, (max_font_size_by_height * 100.0) as u32) as f32 * 0.01;
+
+    let char_width = font_size * 60.0 / 100.0;
+    let char_height = font_size * 120.0 / 100.0;
+
+    let console_width = char_width * columns as f32;
+    let console_height = char_height * rows as f32;
+
+    let padding_x = (gameplay_width - console_width) * 0.5;
+    let padding_y = (gameplay_height - console_height) * 0.5;
+
+    let x_offset = BORDER_WIDTH as f32 + padding_x + char_width * 0.5;
+    let y_offset = BORDER_WIDTH as f32 + padding_y + char_height * 0.5;
+
+    CharacterScaling {
+        font_size,
+
+        char_width,
+        char_height,
+
+        x_offset,
+        y_offset
     }
 }
