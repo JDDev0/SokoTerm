@@ -3017,6 +3017,10 @@ impl Screen for ScreenLevelPackEditor {
             self.level_preview = true;
         }
 
+        if row == y + 2 && (Game::CONSOLE_MIN_WIDTH - 38..Game::CONSOLE_MIN_WIDTH - 1).contains(&column) {
+            self.on_key_pressed(game_state, Key::T);
+        }
+
         let level_pack_index = column/3 + (row - 1)/2*24;
         if level_pack_index < entry_count {
             game_state.editor_state.selected_level_index = level_pack_index;
