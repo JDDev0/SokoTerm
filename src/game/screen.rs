@@ -3067,6 +3067,7 @@ pub struct ScreenLevelEditor {
     level: UndoHistory<Level>,
     is_vertical_input: bool,
     is_reverse_input: bool,
+    should_exit_after_save: bool,
     continue_flag: bool,
     validation_result_history_index: usize,
     //TODO best time
@@ -3084,6 +3085,7 @@ impl ScreenLevelEditor {
             level: UndoHistory::new(Self::UNDO_HISTORY_SIZE, Level::new(1, 1)),
             is_vertical_input: Default::default(),
             is_reverse_input: Default::default(),
+            should_exit_after_save: false,
             continue_flag: false,
             validation_result_history_index: 0,
             //TODO best time
@@ -3095,6 +3097,14 @@ impl ScreenLevelEditor {
 
     fn on_key_pressed_playing(&mut self, game_state: &mut GameState, key: Key) {
         if self.continue_flag {
+            if key == Key::ENTER {
+                self.continue_flag = false;
+                self.playing_level = None;
+
+                game_state.open_dialog(Box::new(DialogYesNo::new("Save changes and level validation state?")));
+                self.should_exit_after_save = false;
+            }
+
             return;
         }
 
@@ -3517,6 +3527,7 @@ impl Screen for ScreenLevelEditor {
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
         if key == Key::ESC {
             game_state.open_dialog(Box::new(DialogYesCancelNo::new("Exiting (Save changes and level validation state?)")));
+            self.should_exit_after_save = true;
 
             return;
         }
@@ -3618,14 +3629,14 @@ impl Screen for ScreenLevelEditor {
             if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
                 game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
             }
+        }
 
-            self.level.clear();
-            game_state.set_screen(ScreenId::LevelPackEditor);
-        }else if selection == DialogSelection::No {
+        if self.should_exit_after_save && (selection == DialogSelection::Yes || selection == DialogSelection::No) {
             self.level.clear();
             game_state.set_screen(ScreenId::LevelPackEditor);
         }
 
+        //No (should not exit): Close dialog without doing anything
         //Cancel: Close dialog without doing anything
     }
 
