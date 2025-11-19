@@ -602,7 +602,7 @@ impl <'a> Game<'a> {
             console,
 
             screens,
-            help_page: HelpPage::new(),
+            help_page: HelpPage::new(Self::CONSOLE_MIN_WIDTH, Self::CONSOLE_MIN_HEIGHT),
 
             game_state,
         })
@@ -802,7 +802,7 @@ impl <'a> Game<'a> {
         self.console.repaint();
 
         if self.game_state.is_help {
-            self.help_page.draw(self.console, Self::CONSOLE_MIN_WIDTH, Self::CONSOLE_MIN_HEIGHT);
+            self.help_page.draw(self.console);
 
             return;
         }
