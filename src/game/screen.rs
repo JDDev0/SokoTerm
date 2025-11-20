@@ -46,6 +46,7 @@ pub trait Screen {
 
     fn on_dialog_selection(&mut self, game_state: &mut GameState, selection: DialogSelection) {}
 
+    fn on_pause(&mut self, game_state: &mut GameState) {}
     fn on_continue(&mut self, game_state: &mut GameState) {}
     fn on_set_screen(&mut self, game_state: &mut GameState) {}
 }
@@ -129,12 +130,6 @@ impl Screen for ScreenStartMenu {
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
         if key == Key::ESC {
             game_state.open_dialog(Box::new(DialogYesNo::new("Exit game?")));
-
-            return;
-        }
-
-        if key == Key::F1 {
-            game_state.open_help_page();
 
             return;
         }
@@ -580,12 +575,6 @@ impl Screen for ScreenAbout {
     }
 
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
-        if key == Key::F1 {
-            game_state.open_help_page();
-
-            return;
-        }
-
         if key == Key::ESC {
             game_state.play_sound_effect_ui_select();
 
@@ -684,12 +673,6 @@ impl Screen for ScreenSettings {
     }
 
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
-        if key == Key::F1 {
-            game_state.open_help_page();
-
-            return;
-        }
-
         if key == Key::ESC {
             game_state.play_sound_effect_ui_select();
 
@@ -866,12 +849,6 @@ impl Screen for ScreenSelectLevelPack {
             game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
 
             game_state.set_screen(ScreenId::StartMenu);
-
-            return;
-        }
-
-        if key == Key::F1 {
-            game_state.open_help_page();
 
             return;
         }
@@ -1180,12 +1157,6 @@ impl Screen for ScreenSelectLevel {
             }else {
                 game_state.set_screen(ScreenId::SelectLevelPack);
             }
-
-            return;
-        }
-
-        if key == Key::F1 {
-            game_state.open_help_page();
 
             return;
         }
@@ -1690,14 +1661,6 @@ impl Screen for ScreenInGame {
             return;
         }
 
-        if key == Key::F1 {
-            self.time_start_in_menu = Some(SystemTime::now());
-
-            game_state.open_help_page();
-
-            return;
-        }
-
         #[cfg(feature = "steam")]
         let steam_client = game_state.steam_client.clone();
 
@@ -1939,6 +1902,10 @@ impl Screen for ScreenInGame {
         }else if selection == DialogSelection::No {
             self.on_continue(game_state);
         }
+    }
+
+    fn on_pause(&mut self, _: &mut GameState) {
+        self.time_start_in_menu = Some(SystemTime::now());
     }
 
     fn on_continue(&mut self, _: &mut GameState) {
@@ -2242,12 +2209,6 @@ impl Screen for ScreenSelectLevelPackEditor {
             return;
         }
 
-        if key == Key::F1 {
-            game_state.open_help_page();
-
-            return;
-        }
-
         if key == Key::S && game_state.editor_state.selected_level_pack_index != game_state.editor_state.get_level_pack_count() {
             game_state.play_sound_effect_ui_dialog_open();
 
@@ -2502,12 +2463,6 @@ impl Screen for ScreenSelectLevelPackBackgroundMusic {
     }
 
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
-        if key == Key::F1 {
-            game_state.open_help_page();
-
-            return;
-        }
-
         let current_background_music_id = game_state.current_background_music_id();
         let mut current_selected_music_index = current_background_music_id.
                 map(|id| id.id()).
@@ -2993,12 +2948,6 @@ impl Screen for ScreenLevelPackEditor {
             }else {
                 game_state.set_screen(ScreenId::SelectLevelPackEditor);
             }
-
-            return;
-        }
-
-        if key == Key::F1 {
-            game_state.open_help_page();
 
             return;
         }
@@ -3639,12 +3588,6 @@ impl Screen for ScreenLevelEditor {
         if key == Key::ESC {
             game_state.open_dialog(Box::new(DialogYesCancelNo::new("Exiting (Save changes and level validation state?)")));
             self.should_exit_after_save = true;
-
-            return;
-        }
-
-        if key == Key::F1 {
-            game_state.open_help_page();
 
             return;
         }

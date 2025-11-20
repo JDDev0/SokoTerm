@@ -763,7 +763,13 @@ impl <'a> Game<'a> {
             return;
         }
 
-        if let Some(screen) = screen {
+        if key == Key::F1 {
+            self.game_state.open_help_page();
+
+            if let Some(screen) = screen {
+                screen.on_pause(&mut self.game_state);
+            }
+        }else if let Some(screen) = screen {
             screen.on_key_pressed(&mut self.game_state, key);
         }
     }
