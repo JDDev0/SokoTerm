@@ -140,12 +140,16 @@ impl Screen for ScreenStartMenu {
         }
 
         if key == Key::A {
+            game_state.play_sound_effect_ui_select();
+
             game_state.set_screen(ScreenId::About);
 
             return;
         }
 
         if key == Key::S {
+            game_state.play_sound_effect_ui_select();
+
             game_state.set_screen(ScreenId::Settings);
 
             return;
@@ -583,6 +587,8 @@ impl Screen for ScreenAbout {
         }
 
         if key == Key::ESC {
+            game_state.play_sound_effect_ui_select();
+
             game_state.set_screen(ScreenId::StartMenu);
 
             return;
@@ -685,6 +691,8 @@ impl Screen for ScreenSettings {
         }
 
         if key == Key::ESC {
+            game_state.play_sound_effect_ui_select();
+
             game_state.set_screen(ScreenId::StartMenu);
         }
     }
