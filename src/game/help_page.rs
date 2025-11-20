@@ -208,18 +208,20 @@ pub struct HelpPage {
 }
 
 impl HelpPage {
-    pub fn new(width: usize, height: usize) -> Self {
+    fn build_sections() -> Box<[Section]> {
         let mut section_label_builder = SectionLabelBuilder::new();
 
-        let mut sections = vec![
+        fn empty_line(_: &Console) {}
+
+        vec![
             Section::new(
-                section_label_builder.new_section("Controls"), &[],
+                section_label_builder.new_section("Basic controls"), &[],
             ),
             Section::new(
                 section_label_builder.new_sub_section("Keyboard"), &[|console| {
                     console.draw_key_input_text("F1");
                     console.reset_color();
-                    console.draw_text(": Open help menu");
+                    console.draw_text(": Open/close help menu");
                 }, |console| {
                     console.draw_key_input_text("F9");
                     console.reset_color();
@@ -230,54 +232,30 @@ impl HelpPage {
                     console.draw_text(": Cycle through color scheme");
                 }, #[cfg(feature = "gui")] |console| {
                     console.draw_key_input_text("F11");
-                   console.reset_color();
-                   console.draw_text(": Toggle Fullscreen");
-                }],
-            ),
-            Section::new(
-                section_label_builder.new_sub_sub_section("Help menu"), &[|console| {
-                    console.draw_key_input_text("ESC");
                     console.reset_color();
-                    console.draw_text("/");
-                    console.draw_key_input_text("F1");
-                    console.reset_color();
-                    console.draw_text(": Exit help menu");
-                }, |console| {
-                    console.draw_key_input_text("UP");
-                    console.reset_color();
-                    console.draw_text("/");
-                    console.draw_key_input_text("DOWN");
-                    console.reset_color();
-                    console.draw_text(": Switch page");
-                }],
-            ),
-            Section::new(
-                section_label_builder.new_sub_sub_section("Start menu"), &[|console| {
-                    console.draw_key_input_text("ENTER");
-                    console.reset_color();
-                    console.draw_text(": Start game/Next Level");
-                }, |console| {
-                    console.draw_key_input_text("s");
-                    console.reset_color();
-                    console.draw_text(": Open settings page");
-                }, |console| {
-                    console.draw_key_input_text("a");
-                    console.reset_color();
-                    console.draw_text(": Open about page");
-                }, |console| {
-                    console.draw_key_input_text("ESC");
-                    console.reset_color();
-                    console.draw_text(": Exit game");
-                }],
-            ),
-            Section::new(
-                section_label_builder.new_sub_sub_section("About page"), &[|console| {
+                    console.draw_text(": Toggle Fullscreen");
+                }, empty_line, |console| {
                     console.draw_key_input_text("UP");
                     console.reset_color();
                     console.draw_text("/");
                     console.draw_key_input_text("DOWN");
                     console.reset_color();
                     console.draw_text(": Scroll up/down");
+                }, |console| {
+                    console.draw_key_input_text("ESC");
+                    console.reset_color();
+                    console.draw_text(": Cancel/Exit/Go back to last screen");
+                }],
+            ),
+            Section::new(
+                section_label_builder.new_sub_sub_section("Level (pack) selection"), &[|console| {
+                    console.draw_key_input_text("Arrow keys");
+                    console.reset_color();
+                    console.draw_text(": Move level (pack) selection cursor");
+                }, |console| {
+                    console.draw_key_input_text("p");
+                    console.reset_color();
+                    console.draw_text(": Level preview");
                 }],
             ),
             Section::new(
@@ -320,6 +298,54 @@ impl HelpPage {
                     console.draw_text("M");
                     console.reset_color();
                     console.draw_text("] \"Position\"");
+                }, empty_line, |console| {
+                    console.reset_color();
+                    console.draw_text("[");
+                    console.set_color(Color::Default, Color::Yellow);
+                    console.draw_text("L");
+                    console.reset_color();
+                    console.draw_text("] Almost anywhere with ");
+                    console.draw_key_input_text("key input label");
+                    console.reset_color();
+                    console.draw_text(" text");
+                }],
+            ),
+            Section::new(
+                section_label_builder.new_sub_sub_section("Level (pack) selection"), &[|console| {
+                    console.reset_color();
+                    console.draw_text("[");
+                    console.set_color(Color::Default, Color::Yellow);
+                    console.draw_text("L");
+                    console.reset_color();
+                    console.draw_text("] Level pack selection number tiles");
+                }, |console| {
+                    console.reset_color();
+                    console.draw_text("[");
+                    console.set_color(Color::Default, Color::Yellow);
+                    console.draw_text("L");
+                    console.reset_color();
+                    console.draw_text("] Level selection number tiles");
+                }, |console| {
+                    console.reset_color();
+                    console.draw_text("[");
+                    console.set_color(Color::Default, Color::Yellow);
+                    console.draw_text("L");
+                    console.reset_color();
+                    console.draw_text("] Level pack editor selection number tiles");
+                }, |console| {
+                    console.reset_color();
+                    console.draw_text("[");
+                    console.set_color(Color::Default, Color::Yellow);
+                    console.draw_text("L");
+                    console.reset_color();
+                    console.draw_text("] Level editor selection number tiles");
+                }, |console| {
+                    console.reset_color();
+                    console.draw_text("[");
+                    console.set_color(Color::Default, Color::Yellow);
+                    console.draw_text("L");
+                    console.reset_color();
+                    console.draw_text("] Level pack editor background music selection");
                 }],
             ),
             Section::new(
@@ -339,50 +365,7 @@ impl HelpPage {
                     console.set_color(Color::Default, Color::Yellow);
                     console.draw_text("L");
                     console.reset_color();
-                    console.draw_text("] Table of contents: Goto page");
-                }],
-            ),
-            Section::new(
-                section_label_builder.new_sub_sub_section("Start menu"), &[|console| {
-                    console.reset_color();
-                    console.draw_text("[");
-                    console.set_color(Color::Default, Color::Yellow);
-                    console.draw_text("L");
-                    console.reset_color();
-                    console.draw_text("] \"ENTER\": Start game (The same as ");
-                    console.draw_key_input_text("ENTER");
-                    console.reset_color();
-                    console.draw_text(")");
-                }, |console| {
-                    console.reset_color();
-                    console.draw_text("[");
-                    console.set_color(Color::Default, Color::Yellow);
-                    console.draw_text("L");
-                    console.reset_color();
-                    console.draw_text("] \"About: a\": Open about page (The same as ");
-                    console.draw_key_input_text("a");
-                    console.reset_color();
-                    console.draw_text(")");
-                }, |console| {
-                    console.reset_color();
-                    console.draw_text("[");
-                    console.set_color(Color::Default, Color::Yellow);
-                    console.draw_text("L");
-                    console.reset_color();
-                    console.draw_text("] \"Help: F1\": Open help menu (The same as ");
-                    console.draw_key_input_text("F1");
-                    console.reset_color();
-                    console.draw_text(")");
-                }],
-            ),
-
-            Section::new(
-                section_label_builder.new_section("Command-line arguments"), &[|console| {
-                    console.reset_color();
-                    console.draw_text("1) No arguments");
-                }, |console| {
-                    console.reset_color();
-                    console.draw_text("2) \"Path to level pack 1\" \"Path to level pack 2\" ...");
+                    console.draw_text("] Table of contents");
                 }],
             ),
 
@@ -393,7 +376,7 @@ impl HelpPage {
                 }],
             ),
             Section::new(
-                section_label_builder.new_sub_section("Game screen"), &[|console| {
+                section_label_builder.new_sub_section("Gameplay elements"), &[|console| {
                     Tile::Empty.draw(console, false, false);
 
                     console.reset_color();
@@ -486,7 +469,7 @@ impl HelpPage {
                 section_label_builder.new_sub_sub_section("Level pack selection"), &[|console| {
                     console.draw_key_input_text("ENTER");
                     console.reset_color();
-                    console.draw_text(": Selects or creates a level pack");
+                    console.draw_text(": Select or create a level pack");
                 }, |console| {
                     console.draw_key_input_text("s");
                     console.reset_color();
@@ -494,7 +477,7 @@ impl HelpPage {
                 }, |console| {
                     console.draw_key_input_text("e");
                     console.reset_color();
-                    console.draw_text(": Exports the selected level pack to the current directory");
+                    console.draw_text(": Export the selected level pack to the current directory");
                 }, #[cfg(feature = "steam")] |console| {
                     console.draw_key_input_text("u");
                     console.reset_color();
@@ -502,18 +485,18 @@ impl HelpPage {
                 }, |console| {
                     console.draw_key_input_text("DELETE");
                     console.reset_color();
-                    console.draw_text(": Deletes the selected level pack");
+                    console.draw_text(": Delete the selected level pack");
                 }, |console| {
                     console.draw_key_input_text("ESC");
                     console.reset_color();
-                    console.draw_text(": Cancels the creation of a new level pack");
+                    console.draw_text(": Cancel the creation of a new level pack");
                 }],
             ),
             Section::new(
                 section_label_builder.new_sub_sub_section("Level selection"), &[|console| {
                     console.draw_key_input_text("ENTER");
                     console.reset_color();
-                    console.draw_text(": Selects or creates a level");
+                    console.draw_text(": Select or creates a level");
                 }, |console| {
                     console.draw_key_input_text("t");
                     console.reset_color();
@@ -521,18 +504,18 @@ impl HelpPage {
                 }, |console| {
                     console.draw_key_input_text("DELETE");
                     console.reset_color();
-                    console.draw_text(": Deletes the selected level");
+                    console.draw_text(": Delete the selected level");
                 }, |console| {
                     console.draw_key_input_text("ESC");
                     console.reset_color();
-                    console.draw_text(": Cancels the creation of a new level");
+                    console.draw_text(": Cancel the creation of a new level");
                 }],
             ),
             Section::new(
                 section_label_builder.new_sub_sub_section("Level editor (Playing mode)"), &[|console| {
                     console.draw_key_input_text("Arrow keys");
                     console.reset_color();
-                    console.draw_text(": Moves the player");
+                    console.draw_text(": Move player");
                 }, |console| {
                     console.draw_key_input_text("z");
                     console.reset_color();
@@ -544,26 +527,26 @@ impl HelpPage {
                 }, |console| {
                     console.draw_key_input_text("r");
                     console.reset_color();
-                    console.draw_text(": Switches to editing mode");
+                    console.draw_text(": Switch to editing mode");
                 }],
             ),
             Section::new(
                 section_label_builder.new_sub_sub_section("Level editor (Editing mode)"), &[|console| {
                     console.draw_key_input_text("Arrow keys");
                     console.reset_color();
-                    console.draw_text(": Moves the cursor");
+                    console.draw_text(": Move cursor");
                 }, |console| {
                     console.draw_key_input_text("w a s d");
                     console.reset_color();
-                    console.draw_text(": Sets the direction of the cursor");
+                    console.draw_text(": Set the direction of the cursor");
                 }, |console| {
                     console.draw_key_input_text("i");
                     console.reset_color();
-                    console.draw_text(": Inserts a row or column in the cursor direction");
+                    console.draw_text(": Insert a row or column in the cursor direction");
                 }, |console| {
                     console.draw_key_input_text("c");
                     console.reset_color();
-                    console.draw_text(": Copies the current row or column in the cursor direction");
+                    console.draw_text(": Copy the current row or column in the cursor direction");
                 }, |console| {
                     console.draw_key_input_text("z");
                     console.reset_color();
@@ -575,77 +558,96 @@ impl HelpPage {
                 }, |console| {
                     console.draw_key_input_text("r");
                     console.reset_color();
-                    console.draw_text(": Switches to playing mode");
+                    console.draw_text(": Switch to playing mode");
+                }, empty_line, |console| {
+                    console.reset_color();
+                    console.draw_text("[");
+                    console.set_color(Color::Default, Color::Yellow);
+                    console.draw_text("L");
+                    console.reset_color();
+                    console.draw_text("] Press on any tile to set the cursor position");
                 }],
             ),
             Section::new(
                 section_label_builder.new_sub_sub_section("Level editor (Editing mode - Tiles)"), &[|console| {
                     console.draw_key_input_text("SPACE");
                     console.reset_color();
-                    console.draw_text(": Moves the cursor in cursor direction");
+                    console.draw_text(": Move the cursor in cursor direction");
                 }, |console| {
                     console.draw_key_input_text("-");
                     console.reset_color();
-                    console.draw_text(": Inserts an empty tile");
+                    console.draw_text(": Insert an empty tile");
                 }, |console| {
                     console.draw_key_input_text("< ^ > v");
                     console.reset_color();
-                    console.draw_text(": Inserts an one-way door tile");
+                    console.draw_text(": Insert an one-way door tile");
                 }, |console| {
                     console.draw_key_input_text("#");
                     console.reset_color();
-                    console.draw_text(": Inserts a wall tile");
+                    console.draw_text(": Insert a wall tile");
                 }, |console| {
                     console.draw_key_input_text("p");
                     console.reset_color();
-                    console.draw_text(": Inserts a player tile");
+                    console.draw_text(": Insert a player tile");
                 }, |console| {
                     console.draw_key_input_text("*");
                     console.reset_color();
-                    console.draw_text(": Inserts a key tile");
+                    console.draw_text(": Insert a key tile");
                 }, |console| {
                     console.draw_key_input_text("~");
                     console.reset_color();
-                    console.draw_text(": Inserts a key in goal tile");
+                    console.draw_text(": Insert a key in goal tile");
                 }, |console| {
                     console.draw_key_input_text("=");
                     console.reset_color();
-                    console.draw_text(": Inserts a locked door tile");
+                    console.draw_text(": Insert a locked door tile");
                 }, |console| {
                     console.draw_key_input_text("@");
                     console.reset_color();
-                    console.draw_text(": Inserts a box tile");
+                    console.draw_text(": Insert a box tile");
                 }, |console| {
                     console.draw_key_input_text("+");
                     console.reset_color();
-                    console.draw_text(": Inserts a box in goal tile");
+                    console.draw_text(": Insert a box in goal tile");
                 }, |console| {
                     console.draw_key_input_text("x");
                     console.reset_color();
-                    console.draw_text(": Inserts a goal tile");
+                    console.draw_text(": Insert a goal tile");
                 }, |console| {
                     console.draw_key_input_text("o");
                     console.reset_color();
-                    console.draw_text(": Inserts a hole tile");
+                    console.draw_text(": Insert a hole tile");
                 }, |console| {
                     console.draw_key_input_text(".");
                     console.reset_color();
-                    console.draw_text(": Inserts a box in hole tile");
+                    console.draw_text(": Insert a box in hole tile");
                 }],
             ),
             Section::new(
                 section_label_builder.new_sub_sub_section("Level editor (Editing mode - Decoration tiles)"), &[|console| {
                     console.reset_color();
                     console.draw_text("Decoration tiles act like wall tiles.");
-                }, |_console| {
-                    //Empty line
-                }, |console| {
+                }, empty_line, |console| {
                     console.draw_key_input_text("b");
                     console.reset_color();
-                    console.draw_text(": Inserts a blank decoration tile");
+                    console.draw_text(": Insert a blank decoration tile");
                 }],
             ),
-        ];
+
+            Section::new(
+                section_label_builder.new_section("Command-line arguments"), &[|console| {
+                    console.reset_color();
+                    console.draw_text("1) No arguments");
+                }, |console| {
+                    console.reset_color();
+                    console.draw_text("2) \"Path to level pack 1\" \"Path to level pack 2\" ...");
+                }],
+            ),
+        ].into_boxed_slice()
+    }
+
+    pub fn new(width: usize, height: usize) -> Self {
+        let mut sections = Self::build_sections();
 
         let page_height = height - 4;
         let table_of_contents_page_count = (sections.len() - 1) / page_height + 1;
@@ -682,7 +684,7 @@ impl HelpPage {
 
         Self {
             table_of_contents,
-            sections: sections.into_boxed_slice(),
+            sections,
             page_to_section_start_index_and_count,
 
             width, height,
