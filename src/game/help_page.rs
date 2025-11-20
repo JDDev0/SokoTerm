@@ -220,6 +220,10 @@ impl HelpPage {
                     console.draw_key_input_text("F1");
                     console.reset_color();
                     console.draw_text(": Open help menu");
+                }, |console| {
+                    console.draw_key_input_text("F9");
+                    console.reset_color();
+                    console.draw_text(": Enable/Disable background music");
                 }, #[cfg(feature = "gui")] |console| {
                     console.draw_key_input_text("F10");
                     console.reset_color();

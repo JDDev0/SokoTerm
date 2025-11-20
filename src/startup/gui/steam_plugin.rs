@@ -4,7 +4,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 use bevy::prelude::*;
 use bevy_steamworks::*;
 use crate::game::Game;
-use crate::startup::gui::{on_resize, CharacterScaling};
+use crate::startup::gui::{handle_recoverable_error, on_resize, CharacterScaling};
 use crate::startup::gui::steam_plugin::steam_workshop_upload_popup::SteamWorkshopUploadPopupPlugin;
 
 mod steam_workshop_upload_popup;
@@ -56,17 +56,6 @@ enum ResizableNodeDimension {
 #[derive(Debug, Message)]
 struct PlaySoundEffect {
     sound_effect: &'static [u8],
-}
-
-fn handle_recoverable_error(
-    In(result): In<Result<(), Box<dyn Error>>>,
-) {
-    let Err(err) = result else {
-        return;
-    };
-
-    //TODO show popup with ok button
-    error!("An error occurred: {err}");
 }
 
 fn on_resize_popup_text(

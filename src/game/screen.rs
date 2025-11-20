@@ -615,7 +615,7 @@ impl ScreenSettings {
 }
 
 impl Screen for ScreenSettings {
-    fn draw(&self, _game_state: &GameState, console: &Console) {
+    fn draw(&self, game_state: &GameState, console: &Console) {
         console.set_color(Color::Yellow, Color::Default);
         console.set_underline(true);
         console.draw_text("Settings menu");
@@ -670,6 +670,27 @@ impl Screen for ScreenSettings {
         console.draw_text("   ");
         console.set_color(Color::Default, Color::LightWhite);
         console.draw_text("   ");
+
+        //Draw color scheme
+        console.reset_color();
+        console.set_cursor_pos(0, 6);
+        console.draw_text("Background Music: ");
+
+        if game_state.settings.background_music {
+            console.set_color(Color::Green, Color::Default);
+            console.draw_text("Enabled");
+        }else {
+            console.set_color(Color::Red, Color::Default);
+            console.draw_text("Disabled");
+        }
+
+        console.reset_color();
+        console.draw_text(" (Toggle with ");
+
+        console.draw_key_input_text("F9");
+
+        console.reset_color();
+        console.draw_text(")");
     }
 
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {

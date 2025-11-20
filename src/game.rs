@@ -4,16 +4,17 @@ use std::ffi::OsString;
 use std::fmt::{Debug, Display, Formatter};
 use std::mem;
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::Path;
+use std::str::FromStr;
 use crate::game::audio::{AudioHandler, BackgroundMusic, BackgroundMusicId};
 use crate::game::help_page::HelpPage;
 use crate::game::level::{Level, LevelPack};
 use crate::game::screen::*;
-use crate::game::screen::dialog::{Dialog, DialogType};
+use crate::game::screen::dialog::{Dialog, DialogOk, DialogType};
 use crate::io::{Console, Key};
 
-#[cfg(feature = "steam")]
+#[cfg(feature = "gui")]
 use bevy::prelude::*;
 #[cfg(feature = "steam")]
 use bevy_steamworks::*;
@@ -83,6 +84,126 @@ impl EditorState {
     }
 }
 
+pub struct GameSettings {
+    color_scheme_index: usize,
+
+    background_music: bool,
+}
+
+impl GameSettings {
+    pub fn new() -> GameSettings {
+        Self {
+            color_scheme_index: 0,
+
+            background_music: true,
+        }
+    }
+
+    pub fn read_from_file() -> Result<Self, Box<dyn Error>> {
+        let mut settings_save_file = Game::get_or_create_save_game_folder()?;
+        settings_save_file.push("settings.sav");
+
+        let mut settings = GameSettings::new();
+
+        if std::fs::exists(&settings_save_file)? {
+            let settings_data = std::fs::read_to_string(&settings_save_file)?;
+            for line in settings_data.split("\n").
+                    filter(|line| !line.trim().is_empty()) {
+                let mut tokens = line.splitn(2, " = ");
+
+                let key = tokens.next();
+                let value = tokens.next();
+
+                if let Some(key) = key && let Some(value) = value {
+                    match key {
+                        "color_scheme_index" => {
+                            let Ok(value) = usize::from_str(value) else {
+                                #[cfg(feature = "gui")]
+                                {
+                                    warn!("\"settings.sav\" contains invalid value for option \"{key}\": \"{value}\": Using default");
+                                }
+
+                                //TODO warning in cli version
+
+                                continue;
+                            };
+
+                            #[cfg(feature = "gui")]
+                            {
+                                settings.color_scheme_index = value % crate::io::bevy_abstraction::COLOR_SCHEMES.len();
+                            }
+
+                            #[cfg(feature = "cli")]
+                            {
+                                //Not used in CLI build, but keep value as is for saving (CLI and GUI builds might both be played)
+                                settings.color_scheme_index = value;
+                            }
+                        },
+
+                        "background_music" => {
+                            let Ok(value) = bool::from_str(value) else {
+                                #[cfg(feature = "gui")]
+                                {
+                                    warn!("\"settings.sav\" contains invalid value for option \"{key}\": \"{value}\": Using default");
+                                }
+
+                                //TODO warning in cli version
+
+                                continue;
+                            };
+
+                            settings.background_music = value;
+                        },
+
+                        _ => {
+                            #[cfg(feature = "gui")]
+                            {
+                                warn!("\"settings.sav\" contains invalid settings option: \"{key}\" with value \"{value}\": Ignoring");
+                            }
+
+                            //TODO warning in cli version
+                        }
+                    }
+                }else {
+                    #[cfg(feature = "gui")]
+                    {
+                        warn!("\"settings.sav\" contains invalid data: \"{line}\": Ignoring");
+                    }
+
+                    //TODO warning in cli version
+                }
+            }
+        }
+
+        Ok(settings)
+    }
+
+    pub fn save_to_file(&self) -> Result<(), Box<dyn Error>> {
+        let mut settings_save_file = Game::get_or_create_save_game_folder()?;
+        settings_save_file.push("settings.sav");
+        let mut file = File::create(settings_save_file)?;
+
+        writeln!(file, "color_scheme_index = {}", self.color_scheme_index)?;
+        writeln!(file, "background_music = {}", self.background_music)?;
+
+        Ok(())
+    }
+
+    pub fn color_scheme_index(&self) -> usize {
+        self.color_scheme_index
+    }
+
+    pub fn background_music(&self) -> bool {
+        self.background_music
+    }
+}
+
+impl Default for GameSettings {
+    fn default() -> Self {
+        GameSettings::new()
+    }
+}
+
 pub struct GameState {
     current_screen_id: ScreenId,
     should_call_on_set_screen: bool,
@@ -103,6 +224,7 @@ pub struct GameState {
     should_exit: bool,
 
     editor_state: EditorState,
+    settings: GameSettings,
 
     audio_handler: Option<AudioHandler>,
     current_background_music_id: Option<BackgroundMusicId>,
@@ -116,6 +238,8 @@ pub struct GameState {
 impl GameState {
     fn new(
         level_packs: Vec<LevelPack>, editor_level_packs: Vec<LevelPack>,
+
+        settings: GameSettings,
 
         #[cfg(feature = "steam")]
         steam_client: Client,
@@ -139,6 +263,7 @@ impl GameState {
 
             should_exit: Default::default(),
 
+            settings,
             editor_state: EditorState::new(editor_level_packs),
 
             audio_handler: AudioHandler::new().ok(),
@@ -288,6 +413,10 @@ impl GameState {
     }
 
     pub fn set_background_music_loop(&mut self, background_music: &BackgroundMusic) {
+        if !self.settings.background_music {
+            return;
+        }
+
         if let Some(audio_handler) = &self.audio_handler &&
                 self.current_background_music_id.is_none_or(|id| background_music.id() != id) {
             self.current_background_music_id = Some(background_music.id());
@@ -299,9 +428,33 @@ impl GameState {
         }
     }
 
-    #[cfg(feature = "steam")]
+    pub fn settings(&self) -> &GameSettings {
+        &self.settings
+    }
+
     pub fn editor_state(&self) -> &EditorState {
         &self.editor_state
+    }
+
+    pub fn set_and_save_color_scheme_index(&mut self, color_scheme_index: usize) -> Result<(), Box<dyn Error>> {
+        self.settings.color_scheme_index = color_scheme_index;
+        self.settings.save_to_file()?;
+
+        Ok(())
+    }
+
+    pub fn set_and_save_background_music_enabled(&mut self, background_music: bool) -> Result<(), Box<dyn Error>> {
+        self.settings.background_music = background_music;
+
+        if background_music {
+            self.set_background_music_loop(&audio::BACKGROUND_MUSIC_FIELDS_OF_ICE);
+        }else {
+            self.stop_background_music();
+        }
+
+        self.settings.save_to_file()?;
+
+        Ok(())
     }
 }
 
@@ -585,8 +738,12 @@ impl <'a> Game<'a> {
         
         editor_level_packs.sort_by_key(|level_pack| level_pack.id().to_string());
 
+        let settings = GameSettings::read_from_file()?;
+
         let mut game_state = GameState::new(
             level_packs, editor_level_packs,
+
+            settings,
 
             #[cfg(feature = "steam")]
             steam_client,
@@ -733,6 +890,16 @@ impl <'a> Game<'a> {
     }
 
     fn update_key(&mut self, key: Key) {
+        if key == Key::F9 {
+            self.game_state.play_sound_effect_ui_select();
+
+            if let Err(err) = self.game_state.set_and_save_background_music_enabled(!self.game_state.settings.background_music) {
+                self.game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save settings: {}", err))));
+            }
+
+            return;
+        }
+
         let screen = self.screens.get_mut(&self.game_state.current_screen_id);
         if self.game_state.is_help {
             if key == Key::F1 || key == Key::ESC {
@@ -845,12 +1012,10 @@ impl <'a> Game<'a> {
         None
     }
 
-    #[cfg(feature = "steam")]
     pub fn game_state(&self) -> &GameState {
         &self.game_state
     }
 
-    #[cfg(feature = "steam")]
     pub fn game_state_mut(&mut self) -> &mut GameState {
         &mut self.game_state
     }

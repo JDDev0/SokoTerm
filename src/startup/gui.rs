@@ -1,4 +1,5 @@
 use std::cmp;
+use std::error::Error;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::{Arc, LazyLock, Mutex};
@@ -97,6 +98,8 @@ pub fn run_game() -> ExitCode {
         },
     };
 
+    let settings = game.game_state().settings();
+
     #[cfg(feature = "steam")]
     {
         let subscribed_items_count = steam_client.ugc().subscribed_items(false).len();
@@ -140,9 +143,9 @@ pub fn run_game() -> ExitCode {
             init_state::<AppState>().
 
             insert_resource(Time::<Fixed>::from_seconds(0.040)). //Run FixedUpdate every 40ms
-            insert_resource(ClearColor(crate::io::bevy_abstraction::Color::Default.into())).
+            insert_resource(ClearColor(crate::io::bevy_abstraction::Color::Default.into_bevy_color(&COLOR_SCHEMES[settings.color_scheme_index()]))).
             insert_resource(CharacterScaling::default()).
-            insert_resource(CurrentColorSchemeIndex::default()).
+            insert_resource(CurrentColorSchemeIndex(settings.color_scheme_index())).
 
             add_systems(Startup, spawn_camera).
             add_systems(Startup, update_text_entities).
@@ -151,7 +154,10 @@ pub fn run_game() -> ExitCode {
             add_systems(FixedUpdate, update_game.run_if(in_state(AppState::InGame))).
 
             add_systems(Update, draw_console_text.run_if(in_state(AppState::InGame))).
-            add_systems(Update, cycle_through_color_schemes.run_if(in_state(AppState::InGame)).before(draw_console_text)).
+            add_systems(Update, cycle_through_color_schemes.
+                    pipe(handle_recoverable_error).
+                    run_if(in_state(AppState::InGame)).
+                    before(draw_console_text)).
             add_systems(Update, (on_resize, toggle_fullscreen));
 
     #[cfg(feature = "steam")]
@@ -181,6 +187,17 @@ pub fn run_game() -> ExitCode {
         AppExit::Success => ExitCode::SUCCESS,
         AppExit::Error(code) => ExitCode::from(code.get()),
     }
+}
+
+fn handle_recoverable_error(
+    In(result): In<Result<(), Box<dyn Error>>>,
+) {
+    let Err(err) = result else {
+        return;
+    };
+
+    //TODO show popup with ok button
+    error!("An error occurred: {err}");
 }
 
 fn spawn_camera(
@@ -363,11 +380,18 @@ fn cycle_through_color_schemes(
 
     keyboard_input: Res<ButtonInput<KeyCode>>,
     mut current_color_scheme_index: ResMut<CurrentColorSchemeIndex>,
-) {
+
+    mut game: NonSendMut<Game>,
+) -> Result<(), Box<dyn Error>> {
     if keyboard_input.just_pressed(KeyCode::F10) {
         current_color_scheme_index.0 = (current_color_scheme_index.0 + 1) % COLOR_SCHEMES.len();
+        game.game_state_mut().set_and_save_color_scheme_index(current_color_scheme_index.0)?;
+        game.game_state().play_sound_effect_ui_select();
+
         commands.insert_resource(ClearColor(crate::io::bevy_abstraction::Color::Default.into_bevy_color(&COLOR_SCHEMES[current_color_scheme_index.0])));
     }
+
+    Ok(())
 }
 
 fn draw_console_text(
