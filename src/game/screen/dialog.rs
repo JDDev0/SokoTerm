@@ -213,7 +213,7 @@ impl Dialog for DialogOk {
     }
 
     fn on_key_pressed(&self, _: usize, _: usize, key: Key) -> Option<DialogSelection> {
-        if key == Key::O || key == Key::ENTER {
+        if key == Key::O || key == Key::ENTER || key == Key::ESC {
             return Some(DialogSelection::Ok);
         }
 
@@ -306,7 +306,7 @@ impl Dialog for DialogYesCancelNo {
     fn on_key_pressed(&self, _: usize, _: usize, key: Key) -> Option<DialogSelection> {
         if key == Key::Y {
             return Some(DialogSelection::Yes);
-        }else if key == Key::C {
+        }else if key == Key::C || key == Key::ESC  {
             return Some(DialogSelection::Cancel);
         }else if key == Key::N {
             return Some(DialogSelection::No);
