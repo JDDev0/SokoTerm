@@ -22,6 +22,7 @@ pub mod level;
 mod screen;
 mod help_page;
 pub mod audio;
+pub mod console_extension;
 
 #[cfg(feature = "steam")]
 pub mod steam;

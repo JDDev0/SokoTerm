@@ -7,6 +7,7 @@ use crate::game::{audio, Game, GameState};
 use crate::game::level::{Level, LevelPack, Tile};
 use crate::game::screen::dialog::{DialogOk, DialogSelection, DialogYesCancelNo};
 use crate::collections::UndoHistory;
+use crate::game::console_extension::ConsoleExtension;
 use crate::io::{Color, Console, Key};
 
 #[cfg(feature = "steam")]
@@ -89,8 +90,7 @@ impl Screen for ScreenStartMenu {
 
         console.set_cursor_pos(21, 16);
         console.draw_text("Press ");
-        console.set_color(Color::LightRed, Color::Default);
-        console.draw_text("ENTER");
+        console.draw_key_input_text("ENTER");
         console.reset_color();
         console.draw_text(" to start the game!");
 
@@ -102,20 +102,17 @@ impl Screen for ScreenStartMenu {
         console.reset_color();
         console.set_cursor_pos(62, 19);
         console.draw_text("Settings: ");
-        console.set_color(Color::LightRed, Color::Default);
-        console.draw_text("s");
+        console.draw_key_input_text("s");
 
         console.reset_color();
         console.set_cursor_pos(65, 20);
         console.draw_text("About: ");
-        console.set_color(Color::LightRed, Color::Default);
-        console.draw_text("a");
+        console.draw_key_input_text("a");
 
         console.reset_color();
         console.set_cursor_pos(65, 21);
         console.draw_text("Help: ");
-        console.set_color(Color::LightRed, Color::Default);
-        console.draw_text("F1");
+        console.draw_key_input_text("F1");
 
         //Draw border
         console.set_color(Color::White, Color::Blue);
@@ -289,13 +286,11 @@ impl ScreenAbout {
             console.draw_text("|");
         }
 
-        console.set_color(Color::Red, Color::Default);
         console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 1, 2);
-        console.draw_text("^");
+        console.draw_key_input_text("^");
 
-        console.set_color(Color::Red, Color::Default);
         console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 1, Game::CONSOLE_MIN_HEIGHT - 1);
-        console.draw_text("v");
+        console.draw_key_input_text("v");
 
         let scrollbar_indicator_y_pos = (self.scroll_position_row as f64
                 / self.scroll_position_row_max as f64
@@ -637,8 +632,7 @@ impl Screen for ScreenSettings {
         if cfg!(feature = "gui") {
             console.draw_text("Color scheme (Toggle with ");
 
-            console.set_color(Color::Red, Color::Default);
-            console.draw_text("F10");
+            console.draw_key_input_text("F10");
 
             console.reset_color();
             console.draw_text("):");
@@ -829,8 +823,7 @@ impl Screen for ScreenSelectLevelPack {
             if game_state.level_packs().get(game_state.get_level_pack_index()).unwrap().steam_workshop_id().is_some() {
                 console.draw_text(" [");
 
-                console.set_color(Color::Red, Color::Default);
-                console.draw_text("o");
+                console.draw_key_input_text("o");
 
                 console.reset_color();
                 console.draw_text(": open Steam Workshop]");
@@ -1099,8 +1092,7 @@ impl ScreenSelectLevel {
         console.set_cursor_pos(29, y + 1);
         console.draw_text("Press ");
 
-        console.set_color(Color::Red, Color::Default);
-        console.draw_text("p");
+        console.draw_key_input_text("p");
 
         console.reset_color();
         console.draw_text(" for level preview");
@@ -1108,8 +1100,7 @@ impl ScreenSelectLevel {
 
     fn draw_level_preview(&self, game_state: &GameState, console: &Console) {
         if self.selected_level > 0 {
-            console.set_color(Color::Red, Color::Default);
-            console.draw_text("<");
+            console.draw_key_input_text("<");
 
             console.reset_color();
             console.draw_text(format!(" Level {:03}", self.selected_level));
@@ -1120,16 +1111,14 @@ impl ScreenSelectLevel {
             console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 11, 0);
             console.draw_text(format!("Level {:03} ", self.selected_level + 2));
 
-            console.set_color(Color::Red, Color::Default);
-            console.draw_text(">");
+            console.draw_key_input_text(">");
         }
 
         console.reset_color();
         console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 23) as f64 * 0.5) as usize, 0);
         console.draw_text("Preview (");
 
-        console.set_color(Color::Red, Color::Default);
-        console.draw_text("p");
+        console.draw_key_input_text("p");
 
         console.reset_color();
         console.draw_text(format!(") [Level {:03}]", self.selected_level + 1));
@@ -1361,8 +1350,7 @@ impl ScreenInGame {
                         console.set_cursor_pos(18, 8);
                         console.draw_text("Press ");
 
-                        console.set_color(Color::Red, Color::Default);
-                        console.draw_text("ENTER");
+                        console.draw_key_input_text("ENTER");
 
                         console.reset_color();
                         console.draw_text(" to go to the next level...");
@@ -1380,7 +1368,7 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(") must be placed on ");
 
-                    console.set_color(Color::Red, Color::Default);
+                    console.set_color(Color::LightRed, Color::Default);
                     console.draw_text("all");
 
                     console.reset_color();
@@ -1448,8 +1436,7 @@ impl ScreenInGame {
                         console.set_cursor_pos(12, 8);
                         console.draw_text("Press ");
 
-                        console.set_color(Color::Red, Color::Default);
-                        console.draw_text("ESC");
+                        console.draw_key_input_text("ESC");
 
                         console.reset_color();
                         console.draw_text(" to go back to the level selection screen");
@@ -1491,21 +1478,18 @@ impl ScreenInGame {
                 let start_y = if game_state.current_level_index < 2 { 8 } else { 11 };
 
                 console.set_cursor_pos(29, start_y);
-                console.set_color(Color::Red, Color::Default);
-                console.draw_text("z");
+                console.draw_key_input_text("z");
 
                 console.reset_color();
                 console.draw_text(": Undo, ");
 
-                console.set_color(Color::Red, Color::Default);
-                console.draw_text("y");
+                console.draw_key_input_text("y");
 
                 console.reset_color();
                 console.draw_text(": Redo");
 
                 console.set_cursor_pos(29, start_y + 1);
-                console.set_color(Color::Red, Color::Default);
-                console.draw_text("r");
+                console.draw_key_input_text("r");
 
                 console.reset_color();
                 console.draw_text(": Restart Level");
@@ -2144,18 +2128,16 @@ impl Screen for ScreenSelectLevelPackEditor {
                 },
             }
 
-            console.set_color(Color::Red, Color::Default);
             console.set_cursor_pos(46, y + 1);
-            console.draw_text("s");
+            console.draw_key_input_text("s");
 
             console.reset_color();
             console.draw_text(":  Select background music");
 
             #[cfg(feature = "steam")]
             {
-                console.set_color(Color::Red, Color::Default);
                 console.set_cursor_pos(46, y + 2);
-                console.draw_text("u");
+                console.draw_key_input_text("u");
 
                 console.reset_color();
                 console.draw_text(": Upload to Steam Workshop");
@@ -2463,16 +2445,14 @@ impl Screen for ScreenSelectLevelPackBackgroundMusic {
         console.draw_text("Select the background music for the level pack:");
         console.set_underline(false);
 
-        console.set_color(Color::Red, Color::Default);
         console.set_cursor_pos(0, 1);
-        console.draw_text("ENTER");
+        console.draw_key_input_text("ENTER");
 
         console.reset_color();
         console.draw_text(": Save selection");
 
-        console.set_color(Color::Red, Color::Default);
         console.set_cursor_pos(0, 2);
-        console.draw_text("ESC");
+        console.draw_key_input_text("ESC");
 
         console.reset_color();
         console.draw_text(": Cancel");
@@ -2738,8 +2718,7 @@ impl ScreenLevelPackEditor {
                 console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 38, y + 2);
                 console.draw_text("Press ");
 
-                console.set_color(Color::Red, Color::Default);
-                console.draw_text("t");
+                console.draw_key_input_text("t");
 
                 console.reset_color();
                 console.draw_text(" to unset level pack thumbnail");
@@ -2748,8 +2727,7 @@ impl ScreenLevelPackEditor {
                 console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 36, y + 2);
                 console.draw_text("Press ");
 
-                console.set_color(Color::Red, Color::Default);
-                console.draw_text("t");
+                console.draw_key_input_text("t");
 
                 console.reset_color();
                 console.draw_text(" to set level pack thumbnail");
@@ -2781,8 +2759,7 @@ impl ScreenLevelPackEditor {
             console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 26, y + 1);
             console.draw_text("Press ");
 
-            console.set_color(Color::Red, Color::Default);
-            console.draw_text("p");
+            console.draw_key_input_text("p");
 
             console.reset_color();
             console.draw_text(" for level preview");
@@ -2793,8 +2770,7 @@ impl ScreenLevelPackEditor {
         let selected_level = game_state.editor_state.get_level_index();
 
         if selected_level > 0 {
-            console.set_color(Color::Red, Color::Default);
-            console.draw_text("<");
+            console.draw_key_input_text("<");
 
             console.reset_color();
             console.draw_text(format!(" Level {:03}", selected_level));
@@ -2806,8 +2782,7 @@ impl ScreenLevelPackEditor {
             console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 11, 0);
             console.draw_text(format!("Level {:03} ", selected_level + 2));
 
-            console.set_color(Color::Red, Color::Default);
-            console.draw_text(">");
+            console.draw_key_input_text(">");
         }
 
         if game_state.editor_state.get_current_level_pack().unwrap().level_count() > 0 &&
@@ -2816,8 +2791,7 @@ impl ScreenLevelPackEditor {
             console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 16, 0);
             console.draw_text("Create a level ");
 
-            console.set_color(Color::Red, Color::Default);
-            console.draw_text(">");
+            console.draw_key_input_text(">");
         }
 
         if selected_level == game_state.editor_state.get_current_level_pack().unwrap().level_count() {
@@ -2827,8 +2801,7 @@ impl ScreenLevelPackEditor {
             console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 11) as f64 * 0.5) as usize, 0);
             console.draw_text("Preview (");
 
-            console.set_color(Color::Red, Color::Default);
-            console.draw_text("p");
+            console.draw_key_input_text("p");
 
             console.reset_color();
             console.draw_text(")");
@@ -2866,8 +2839,7 @@ impl ScreenLevelPackEditor {
             console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 23) as f64 * 0.5) as usize, 0);
             console.draw_text("Preview (");
 
-            console.set_color(Color::Red, Color::Default);
-            console.draw_text("p");
+            console.draw_key_input_text("p");
 
             console.reset_color();
             console.draw_text(format!(") [Level {:03}]", selected_level + 1));
