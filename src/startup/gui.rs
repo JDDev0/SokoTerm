@@ -350,7 +350,7 @@ fn toggle_fullscreen(
 
     if keyboard_input.just_pressed(KeyCode::F11) {
         if window.mode == WindowMode::Windowed {
-            window.mode = WindowMode::BorderlessFullscreen(MonitorSelection::Primary);
+            window.mode = WindowMode::BorderlessFullscreen(MonitorSelection::Current);
         }else {
             window.mode = WindowMode::Windowed;
             window.position = WindowPosition::Centered(MonitorSelection::Current);
