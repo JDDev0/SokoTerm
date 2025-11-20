@@ -406,21 +406,29 @@ impl GameState {
     }
 
     pub fn stop_background_music(&mut self) {
+        self.current_background_music_id = None;
+
+        self.stop_background_music_internal();
+    }
+
+    fn stop_background_music_internal(&mut self) {
         if let Some(audio_handler) = &self.audio_handler {
-            self.current_background_music_id = None;
             audio_handler.stop_background_music();
         }
     }
 
     pub fn set_background_music_loop(&mut self, background_music: &BackgroundMusic) {
+        if self.current_background_music_id.is_some_and(|id| background_music.id() == id) {
+            return;
+        }
+
+        self.current_background_music_id = Some(background_music.id());
+
         if !self.settings.background_music {
             return;
         }
 
-        if let Some(audio_handler) = &self.audio_handler &&
-                self.current_background_music_id.is_none_or(|id| background_music.id() != id) {
-            self.current_background_music_id = Some(background_music.id());
-
+        if let Some(audio_handler) = &self.audio_handler {
             let _ = audio_handler.set_background_music_loop(
                 background_music.intro_audio_data(),
                 background_music.main_loop_audio_data(),
@@ -447,9 +455,13 @@ impl GameState {
         self.settings.background_music = background_music;
 
         if background_music {
-            self.set_background_music_loop(&audio::BACKGROUND_MUSIC_FIELDS_OF_ICE);
+            if let Some(current_background_music_id) = self.current_background_music_id {
+                //Force restart current background music
+                self.stop_background_music();
+                self.set_background_music_loop(audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(current_background_music_id));
+            }
         }else {
-            self.stop_background_music();
+            self.stop_background_music_internal();
         }
 
         self.settings.save_to_file()?;
