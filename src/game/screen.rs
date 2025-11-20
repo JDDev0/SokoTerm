@@ -172,11 +172,11 @@ impl Screen for ScreenStartMenu {
         }
 
         if row == 20 && column > 64 && column < 73 {
-            game_state.set_screen(ScreenId::About);
+            self.on_key_pressed(game_state, Key::A);
         }
 
         if row == 19 && column > 61 && column < 73 {
-            game_state.set_screen(ScreenId::Settings);
+            self.on_key_pressed(game_state, Key::S);
         }
     }
 
@@ -879,6 +879,8 @@ impl Screen for ScreenSelectLevelPack {
         #[cfg(feature = "steam")]
         if key == Key::O && game_state.get_level_pack_index() < game_state.get_level_pack_count() &&
                 let Some(id) = game_state.level_packs().get(game_state.get_level_pack_index()).unwrap().steam_workshop_id() {
+            game_state.play_sound_effect_ui_dialog_open();
+
             game_state.steam_client.friends().activate_game_overlay_to_web_page(&format!("steam://url/CommunityFilePage/{}", id.0));
         }
 
@@ -1189,7 +1191,7 @@ impl Screen for ScreenSelectLevel {
         }
 
         if key == Key::P {
-            game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
+            game_state.play_sound_effect_ui_select();
 
             self.level_preview = !self.level_preview;
 
@@ -1272,7 +1274,7 @@ impl Screen for ScreenSelectLevel {
         let level_count = game_state.get_current_level_pack().as_ref().unwrap().level_count();
         let y = 4 + ((level_count - 1)/24)*2;
         if row == y + 1 && (29..54).contains(&column) {
-            self.level_preview = true;
+            self.on_key_pressed(game_state, Key::P);
         }
 
         let level_index = column/3 + (row - 1)/2*24;
@@ -2247,6 +2249,8 @@ impl Screen for ScreenSelectLevelPackEditor {
         }
 
         if key == Key::S && game_state.editor_state.selected_level_pack_index != game_state.editor_state.get_level_pack_count() {
+            game_state.play_sound_effect_ui_dialog_open();
+
             match game_state.editor_state.get_current_level_pack().unwrap().
                     background_music_id().
                     map(|background_music_id| audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(background_music_id)) {
@@ -2510,8 +2514,12 @@ impl Screen for ScreenSelectLevelPackBackgroundMusic {
                 unwrap_or(0);
 
         if key == Key::UP && current_selected_music_index > 0 {
+            game_state.play_sound_effect_ui_select();
+
             current_selected_music_index -= 1;
         }else if key == Key::DOWN && current_selected_music_index < audio::BACKGROUND_MUSIC_TRACKS.tracks().len() {
+            game_state.play_sound_effect_ui_select();
+
             current_selected_music_index += 1;
         }
 
@@ -2532,6 +2540,8 @@ impl Screen for ScreenSelectLevelPackBackgroundMusic {
         }
 
         if key == Key::ENTER || key == Key::ESC {
+            game_state.play_sound_effect_ui_select();
+
             game_state.set_screen(ScreenId::SelectLevelPackEditor);
         }
     }
@@ -2553,8 +2563,12 @@ impl Screen for ScreenSelectLevelPackBackgroundMusic {
         }
 
         if background_music_selection_index == 0 {
+            game_state.play_sound_effect_ui_select();
+
             game_state.stop_background_music();
         }else {
+            game_state.play_sound_effect_ui_select();
+
             game_state.set_background_music_loop(audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(
                 audio::BACKGROUND_MUSIC_TRACKS.check_id(background_music_selection_index).unwrap(),
             ));
@@ -2990,7 +3004,7 @@ impl Screen for ScreenLevelPackEditor {
         }
 
         if key == Key::P {
-            game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
+            game_state.play_sound_effect_ui_select();
 
             self.level_preview = !self.level_preview;
 
@@ -3118,7 +3132,7 @@ impl Screen for ScreenLevelPackEditor {
 
         let y = 4 + ((entry_count - 1)/24)*2;
         if row == y + 1 && (Game::CONSOLE_MIN_WIDTH - 26..Game::CONSOLE_MIN_WIDTH - 1).contains(&column) {
-            self.level_preview = true;
+            self.on_key_pressed(game_state, Key::P);
         }
 
         if row == y + 2 && (Game::CONSOLE_MIN_WIDTH - 38..Game::CONSOLE_MIN_WIDTH - 1).contains(&column) {
