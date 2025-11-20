@@ -127,10 +127,32 @@ pub const DARK_COLOR_SCHEME: ColorScheme = color_scheme! {
     LightWhite: (240, 240, 240),
 };
 
-pub const COLOR_SCHEMES: [ColorScheme; 3] = [
+pub const HIGH_CONTRAST_COLOR_SCHEME: ColorScheme = color_scheme! {
+    Default: (0, 0, 0),
+
+    Black: (0, 0, 0),
+    Blue: (128, 128, 128),
+    Green: (128, 128, 128),
+    Cyan: (80, 80, 80),
+    Red: (160, 160, 160),
+    Pink: (192, 192, 192),
+    Yellow: (240, 240, 240),
+    White: (240, 240, 240),
+    LightBlack: (0, 0, 0),
+    LightBlue: (128, 128, 128),
+    LightGreen: (128, 128, 128),
+    LightCyan: (80, 80, 80),
+    LightRed: (160, 160, 160),
+    LightPink: (192, 192, 192),
+    LightYellow: (240, 240, 240),
+    LightWhite: (240, 240, 240),
+};
+
+pub const COLOR_SCHEMES: [ColorScheme; 4] = [
     DEFAULT_COLOR_SCHEME,
     MUTED_COLOR_SCHEME,
     DARK_COLOR_SCHEME,
+    HIGH_CONTRAST_COLOR_SCHEME,
 ];
 
 #[derive(Clone)]
