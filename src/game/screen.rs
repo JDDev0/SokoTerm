@@ -3154,6 +3154,7 @@ pub struct ScreenLevelEditor {
     is_vertical_input: bool,
     is_reverse_input: bool,
     should_exit_after_save: bool,
+    last_saved_history_index: usize,
     continue_flag: bool,
     validation_result_history_index: usize,
     //TODO best time
@@ -3172,6 +3173,7 @@ impl ScreenLevelEditor {
             is_vertical_input: Default::default(),
             is_reverse_input: Default::default(),
             should_exit_after_save: false,
+            last_saved_history_index: 0,
             continue_flag: false,
             validation_result_history_index: 0,
             //TODO best time
@@ -3524,6 +3526,11 @@ impl ScreenLevelEditor {
                 }
             },
 
+            Key::ENTER => {
+                game_state.open_dialog(Box::new(DialogYesNo::new("Save changes and level validation state?")));
+                self.should_exit_after_save = false;
+            },
+
             key if key.is_ascii() => {
                 if let Ok(tile_input) = Tile::from_ascii(key.to_ascii().unwrap()) && tile_input != Tile::Secret {
                     let mut level = self.level.current().clone();
@@ -3583,7 +3590,18 @@ impl Screen for ScreenLevelEditor {
             console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 14) as f64 * 0.5) as usize, 0);
             console.draw_text(format!("Cursor ({:02}:{:02})", self.cursor_pos.0 + 1, self.cursor_pos.1 + 1));
 
+            console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 10) as f64 * 0.75) as usize, 0);
+            console.draw_text("Saved: ");
+            if self.last_saved_history_index == self.level.current_index() {
+                console.set_color(Color::Green, Color::Default);
+                console.draw_text("Yes");
+            }else {
+                console.set_color(Color::Red, Color::Default);
+                console.draw_text(" No");
+            }
+
             console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 14, 0);
+            console.reset_color();
             console.draw_text("Validated: ");
             {
                 let validated = self.validation_result_history_index == self.level.current_index() &&
@@ -3616,13 +3634,6 @@ impl Screen for ScreenLevelEditor {
         if key == Key::ESC {
             game_state.open_dialog(Box::new(DialogYesCancelNo::new("Exiting (Save changes and level validation state?)")));
             self.should_exit_after_save = true;
-
-            return;
-        }
-
-        if key == Key::ENTER {
-            game_state.open_dialog(Box::new(DialogYesNo::new("Save changes and level validation state?")));
-            self.should_exit_after_save = false;
 
             return;
         }
@@ -3717,6 +3728,8 @@ impl Screen for ScreenLevelEditor {
 
             if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
                 game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
+            }else {
+                self.last_saved_history_index = self.level.current_index();
             }
         }
 
@@ -3738,6 +3751,8 @@ impl Screen for ScreenLevelEditor {
         let level = game_state.editor_state.get_current_level_pack().
                 unwrap().levels().get(game_state.editor_state.selected_level_index).unwrap();
         self.level.clear_with_new_initial(level.level().clone());
+
+        self.last_saved_history_index = 0;
 
         //Validation is valid for first history element
         self.validation_result_history_index = 0;
