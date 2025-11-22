@@ -101,7 +101,7 @@ impl GameSettings {
 
     pub fn read_from_file() -> Result<Self, Box<dyn Error>> {
         let mut settings_save_file = Game::get_or_create_save_game_folder()?;
-        settings_save_file.push("settings.sav");
+        settings_save_file.push("settings.data");
 
         let mut settings = GameSettings::new();
 
@@ -120,7 +120,7 @@ impl GameSettings {
                             let Ok(value) = usize::from_str(value) else {
                                 #[cfg(feature = "gui")]
                                 {
-                                    warn!("\"settings.sav\" contains invalid value for option \"{key}\": \"{value}\": Using default");
+                                    warn!("\"settings.data\" contains invalid value for option \"{key}\": \"{value}\": Using default");
                                 }
 
                                 //TODO warning in cli version
@@ -144,7 +144,7 @@ impl GameSettings {
                             let Ok(value) = bool::from_str(value) else {
                                 #[cfg(feature = "gui")]
                                 {
-                                    warn!("\"settings.sav\" contains invalid value for option \"{key}\": \"{value}\": Using default");
+                                    warn!("\"settings.data\" contains invalid value for option \"{key}\": \"{value}\": Using default");
                                 }
 
                                 //TODO warning in cli version
@@ -158,7 +158,7 @@ impl GameSettings {
                         _ => {
                             #[cfg(feature = "gui")]
                             {
-                                warn!("\"settings.sav\" contains invalid settings option: \"{key}\" with value \"{value}\": Ignoring");
+                                warn!("\"settings.data\" contains invalid settings option: \"{key}\" with value \"{value}\": Ignoring");
                             }
 
                             //TODO warning in cli version
@@ -167,7 +167,7 @@ impl GameSettings {
                 }else {
                     #[cfg(feature = "gui")]
                     {
-                        warn!("\"settings.sav\" contains invalid data: \"{line}\": Ignoring");
+                        warn!("\"settings.data\" contains invalid data: \"{line}\": Ignoring");
                     }
 
                     //TODO warning in cli version
@@ -180,7 +180,7 @@ impl GameSettings {
 
     pub fn save_to_file(&self) -> Result<(), Box<dyn Error>> {
         let mut settings_save_file = Game::get_or_create_save_game_folder()?;
-        settings_save_file.push("settings.sav");
+        settings_save_file.push("settings.data");
         let mut file = File::create(settings_save_file)?;
 
         writeln!(file, "color_scheme_index = {}", self.color_scheme_index)?;
