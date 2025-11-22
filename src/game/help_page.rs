@@ -270,10 +270,14 @@ impl HelpPage {
                 }, |console| {
                     console.draw_key_input_text("z");
                     console.reset_color();
-                    console.draw_text(" / ");
+                    console.draw_text("/");
+                    console.draw_key_input_text("u");
+                    console.reset_color();
+                    console.draw_text(": Undo");
+                }, |console| {
                     console.draw_key_input_text("y");
                     console.reset_color();
-                    console.draw_text(": Undo / Redo");
+                    console.draw_text(": Redo");
                 }],
             ),
 
@@ -519,6 +523,9 @@ impl HelpPage {
                 }, |console| {
                     console.draw_key_input_text("z");
                     console.reset_color();
+                    console.draw_text("/");
+                    console.draw_key_input_text("u");
+                    console.reset_color();
                     console.draw_text(": Undo");
                 }, |console| {
                     console.draw_key_input_text("y");
@@ -557,6 +564,9 @@ impl HelpPage {
                     console.draw_text(": Copy the current row or column in the cursor direction");
                 }, |console| {
                     console.draw_key_input_text("z");
+                    console.reset_color();
+                    console.draw_text("/");
+                    console.draw_key_input_text("u");
                     console.reset_color();
                     console.draw_text(": Undo");
                 }, |console| {

@@ -1486,8 +1486,11 @@ impl ScreenInGame {
             if game_state.current_level_index < 3 {
                 let start_y = if game_state.current_level_index < 2 { 8 } else { 11 };
 
-                console.set_cursor_pos(29, start_y);
+                console.set_cursor_pos(28, start_y);
                 console.draw_key_input_text("z");
+                console.reset_color();
+                console.draw_text("/");
+                console.draw_key_input_text("u");
 
                 console.reset_color();
                 console.draw_text(": Undo, ");
@@ -1738,7 +1741,7 @@ impl Screen for ScreenInGame {
             return;
         }
 
-        if key == Key::Z {
+        if key == Key::U || key == Key::Z {
             let level = self.level.as_mut().unwrap().undo();
             if level.is_some() {
                 game_state.play_sound_effect(audio::UNDO_REDO_EFFECT);
@@ -3144,13 +3147,13 @@ impl ScreenLevelEditor {
         }
 
         if let Some(level_history) = self.playing_level.as_mut() {
-            if matches!(key, Key::Z | Key::Y) {
-                let is_undo = key == Key::Z;
+            if matches!(key, Key::U | Key::Z | Key::Y) {
+                let is_redo = key == Key::Y;
 
-                let level = if is_undo {
-                    level_history.undo()
-                }else {
+                let level = if is_redo {
                     level_history.redo()
+                }else {
+                    level_history.undo()
                 };
 
                 if level.is_some() {
@@ -3400,13 +3403,13 @@ impl ScreenLevelEditor {
                 }
             },
 
-            Key::Z | Key::Y => {
-                let is_undo = key == Key::Z;
+            Key::U | Key::Z | Key::Y => {
+                let is_redo = key == Key::Y;
 
-                let level = if is_undo {
-                    self.level.undo()
-                }else {
+                let level = if is_redo {
                     self.level.redo()
+                }else {
+                    self.level.undo()
                 };
 
                 if let Some(level) = level {
