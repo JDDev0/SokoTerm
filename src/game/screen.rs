@@ -3620,6 +3620,13 @@ impl Screen for ScreenLevelEditor {
             return;
         }
 
+        if key == Key::ENTER {
+            game_state.open_dialog(Box::new(DialogYesNo::new("Save changes and level validation state?")));
+            self.should_exit_after_save = false;
+
+            return;
+        }
+
         if key == Key::R {
             self.playing_level = if self.playing_level.is_some() {
                 game_state.play_sound_effect(audio::LEVEL_RESET);

@@ -532,6 +532,14 @@ impl HelpPage {
             ),
             Section::new(
                 section_label_builder.new_sub_sub_section("Level editor (Editing mode)"), &[|console| {
+                    console.draw_key_input_text("ESC");
+                    console.reset_color();
+                    console.draw_text(": Save and exit editor");
+                }, |console| {
+                    console.draw_key_input_text("ENTER");
+                    console.reset_color();
+                    console.draw_text(": Save without exiting editor");
+                }, |console| {
                     console.draw_key_input_text("Arrow keys");
                     console.reset_color();
                     console.draw_text(": Move cursor");
