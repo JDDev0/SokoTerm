@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::time::SystemTime;
 use dialog::DialogYesNo;
 use crate::game::{audio, Game, GameState};
-use crate::game::level::{Level, LevelPack, Tile};
+use crate::game::level::{Direction, Level, LevelPack, MoveResult, Tile};
 use crate::game::screen::dialog::{DialogOk, DialogSelection, DialogYesCancelNo};
 use crate::collections::UndoHistory;
 use crate::game::console_extension::ConsoleExtension;
@@ -1757,142 +1757,89 @@ impl Screen for ScreenInGame {
         if key.is_arrow_key() {
             let (mut level, mut player_pos) = self.level.as_ref().unwrap().current().clone();
 
-            let width = level.width();
-            let height = level.height();
-
-            let (x_from, y_from) = player_pos;
-
-            let x_to = match key {
-                Key::LEFT => if x_from == 0 {
-                    width - 1
-                }else {
-                    x_from - 1
-                },
-                Key::RIGHT => if x_from == width - 1 {
-                    0
-                }else {
-                    x_from + 1
-                },
-                _ => x_from,
+            let direction = match key {
+                Key::LEFT => Direction::Left,
+                Key::UP => Direction::Up,
+                Key::RIGHT => Direction::Right,
+                Key::DOWN => Direction::Down,
+                _ => unreachable!("Invalid arrow key"),
             };
-            let y_to = match key {
-                Key::UP => if y_from == 0 {
-                    height - 1
-                }else {
-                    y_from - 1
-                },
-                Key::DOWN => if y_from == height - 1 {
-                    0
-                }else {
-                    y_from + 1
-                },
-                _ => y_from,
-            };
+            let move_result = level.move_player(
+                level_pack.levels()[current_level_index].level(),
 
-            let one_way_door_tile = match key {
-                Key::LEFT => Tile::OneWayLeft,
-                Key::UP => Tile::OneWayUp,
-                Key::RIGHT => Tile::OneWayRight,
-                Key::DOWN => Tile::OneWayDown,
-                _ => return, //Should never happen
-            };
+                &mut player_pos, direction,
+            );
 
-            //Set players old position to old level data
-            let mut tile = level_pack.levels()[current_level_index].level().get_tile(x_from, y_from).unwrap().clone();
-            if tile == Tile::Player || tile == Tile::Box || tile == Tile::Key || tile == Tile::LockedDoor {
-                tile = Tile::Empty;
-            }else if tile == Tile::BoxInGoal || tile == Tile::KeyInGoal {
-                tile = Tile::Goal;
-            }else if tile == Tile::Hole || tile == Tile::BoxInHole {
-                tile = Tile::BoxInHole;
-            }
+            if let MoveResult::Valid { has_won, secret_found } = move_result {
+                self.time_start.get_or_insert_with(SystemTime::now);
 
-            level.set_tile(x_from, y_from, tile);
-
-            self.time_start.get_or_insert_with(SystemTime::now);
-
-            let mut has_won = false;
-            let tile = level.get_tile(x_to, y_to).unwrap().clone();
-            if matches!(tile, Tile::Empty | Tile::Goal | Tile::Secret | Tile::BoxInHole) || tile == one_way_door_tile ||
-                    matches!(tile, Tile::Box | Tile::BoxInGoal | Tile::Key | Tile::KeyInGoal if level.move_box_or_key(
-                        level_pack.levels().get(current_level_index).unwrap().level(), &mut has_won, x_from, y_from, x_to, y_to)) {
-                if tile == Tile::Secret {
+                if secret_found {
                     self.game_over_flag = true;
                     self.secret_found_flag = true;
                 }
 
-                player_pos = (x_to, y_to);
-            }
-
-            //Set player to new position
-            level.set_tile(player_pos.0, player_pos.1, Tile::Player);
-
-            let has_player_moved = player_pos != (x_from, y_from);
-            if has_player_moved {
                 self.level.as_mut().unwrap().commit_change((level, player_pos));
-            }
 
-            if has_won {
-                self.continue_flag = true;
+                if has_won {
+                    self.continue_flag = true;
 
-                //Update best scores
-                let time = self.time_millis as u64 + 1000 * self.time_sec as u64 + 60000 * self.time_min as u64;
-                let moves = self.level.as_ref().unwrap().current_index() as u32;
+                    //Update best scores
+                    let time = self.time_millis as u64 + 1000 * self.time_sec as u64 + 60000 * self.time_min as u64;
+                    let moves = self.level.as_ref().unwrap().current_index() as u32;
 
-                level_pack.update_stats(current_level_index, time, moves);
+                    level_pack.update_stats(current_level_index, time, moves);
 
-                if current_level_index >= level_pack.min_level_not_completed() {
-                    level_pack.set_min_level_not_completed(current_level_index + 1);
-                }
-
-                #[cfg(feature = "steam")]
-                if level_pack.id() == "main" && current_level_index == 95 && moves < 160 {
-                    Achievement::LEVEL_PACK_MAIN_LEVEL_96_COMPLETED.unlock(steam_client.clone());
-                }
-
-                #[cfg(feature = "steam")]
-                if level_pack.level_pack_best_moves_sum().is_some() && level_pack.level_pack_best_time_sum().is_some() {
-                    match level_pack.id() {
-                        "tutorial" => {
-                            Achievement::LEVEL_PACK_TUTORIAL_COMPLETED.unlock(steam_client.clone());
-
-                            if level_pack.level_pack_best_time_sum().unwrap() < 4000 {
-                                Achievement::LEVEL_PACK_TUTORIAL_FAST.unlock(steam_client.clone());
-                            }
-                        },
-
-                        "main" => {
-                            Achievement::LEVEL_PACK_MAIN_COMPLETED.unlock(steam_client.clone());
-                        },
-
-                        "special" => {
-                            Achievement::LEVEL_PACK_SPECIAL_COMPLETED.unlock(steam_client.clone());
-                        },
-
-                        "demon" => {
-                            Achievement::LEVEL_PACK_DEMON_COMPLETED.unlock(steam_client.clone());
-                        },
-
-                        "secret" => {
-                            Achievement::LEVEL_PACK_SECRET_COMPLETED.unlock(steam_client.clone());
-                        },
-
-                        _ => {},
+                    if current_level_index >= level_pack.min_level_not_completed() {
+                        level_pack.set_min_level_not_completed(current_level_index + 1);
                     }
 
-                    if level_pack.steam_workshop_id().is_some() {
-                        Achievement::STEAM_WORKSHOP_LEVEL_PACK_COMPLETED.unlock(steam_client.clone());
+                    #[cfg(feature = "steam")]
+                    if level_pack.id() == "main" && current_level_index == 95 && moves < 160 {
+                        Achievement::LEVEL_PACK_MAIN_LEVEL_96_COMPLETED.unlock(steam_client.clone());
                     }
+
+                    #[cfg(feature = "steam")]
+                    if level_pack.level_pack_best_moves_sum().is_some() && level_pack.level_pack_best_time_sum().is_some() {
+                        match level_pack.id() {
+                            "tutorial" => {
+                                Achievement::LEVEL_PACK_TUTORIAL_COMPLETED.unlock(steam_client.clone());
+
+                                if level_pack.level_pack_best_time_sum().unwrap() < 4000 {
+                                    Achievement::LEVEL_PACK_TUTORIAL_FAST.unlock(steam_client.clone());
+                                }
+                            },
+
+                            "main" => {
+                                Achievement::LEVEL_PACK_MAIN_COMPLETED.unlock(steam_client.clone());
+                            },
+
+                            "special" => {
+                                Achievement::LEVEL_PACK_SPECIAL_COMPLETED.unlock(steam_client.clone());
+                            },
+
+                            "demon" => {
+                                Achievement::LEVEL_PACK_DEMON_COMPLETED.unlock(steam_client.clone());
+                            },
+
+                            "secret" => {
+                                Achievement::LEVEL_PACK_SECRET_COMPLETED.unlock(steam_client.clone());
+                            },
+
+                            _ => {},
+                        }
+
+                        if level_pack.steam_workshop_id().is_some() {
+                            Achievement::STEAM_WORKSHOP_LEVEL_PACK_COMPLETED.unlock(steam_client.clone());
+                        }
+                    }
+
+                    if let Err(err) = level_pack.save_save_game(false) {
+                        game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
+                    }
+
+                    game_state.play_sound_effect(audio::LEVEL_COMPLETE_EFFECT);
                 }
 
-                if let Err(err) = level_pack.save_save_game(false) {
-                    game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
-                }
-
-                game_state.play_sound_effect(audio::LEVEL_COMPLETE_EFFECT);
-            }
-
-            if has_player_moved {
                 game_state.play_sound_effect(audio::STEP_EFFECT);
             }else {
                 game_state.play_sound_effect(audio::NO_PATH_EFFECT);
@@ -3214,94 +3161,41 @@ impl ScreenLevelEditor {
             if key.is_arrow_key() {
                 let (mut level, mut player_pos) = level_history.current().clone();
 
-                let width = level.width();
-                let height = level.height();
-
-                let (x_from, y_from) = player_pos;
-
-                let x_to = match key {
-                    Key::LEFT => if x_from == 0 {
-                        width - 1
-                    }else {
-                        x_from - 1
-                    },
-                    Key::RIGHT => if x_from == width - 1 {
-                        0
-                    }else {
-                        x_from + 1
-                    },
-                    _ => x_from,
+                let direction = match key {
+                    Key::LEFT => Direction::Left,
+                    Key::UP => Direction::Up,
+                    Key::RIGHT => Direction::Right,
+                    Key::DOWN => Direction::Down,
+                    _ => unreachable!("Invalid arrow key"),
                 };
-                let y_to = match key {
-                    Key::UP => if y_from == 0 {
-                        height - 1
-                    }else {
-                        y_from - 1
-                    },
-                    Key::DOWN => if y_from == height - 1 {
-                        0
-                    }else {
-                        y_from + 1
-                    },
-                    _ => y_from,
-                };
+                let move_result = level.move_player(
+                    self.level.current(),
 
-                let one_way_door_tile = match key {
-                    Key::LEFT => Tile::OneWayLeft,
-                    Key::UP => Tile::OneWayUp,
-                    Key::RIGHT => Tile::OneWayRight,
-                    Key::DOWN => Tile::OneWayDown,
-                    _ => return, //Should never happen
-                };
+                    &mut player_pos, direction,
+                );
 
-                //Set players old position to old level data
-                let mut tile = self.level.current().get_tile(x_from, y_from).unwrap().clone();
-                if tile == Tile::Player || tile == Tile::Box || tile == Tile::Key || tile == Tile::LockedDoor {
-                    tile = Tile::Empty;
-                }else if tile == Tile::BoxInGoal || tile == Tile::KeyInGoal {
-                    tile = Tile::Goal;
-                }else if tile == Tile::Hole || tile == Tile::BoxInHole {
-                    tile = Tile::BoxInHole;
-                }
-
-                level.set_tile(x_from, y_from, tile);
-
-                let mut has_won = false;
-                let tile = level.get_tile(x_to, y_to).unwrap().clone();
-                if matches!(tile, Tile::Empty | Tile::Goal | Tile::Secret | Tile::BoxInHole) || tile == one_way_door_tile ||
-                        matches!(tile, Tile::Box | Tile::BoxInGoal | Tile::Key | Tile::KeyInGoal if level.move_box_or_key(
-                            self.level.current(), &mut has_won, x_from, y_from, x_to, y_to)) {
-                    player_pos = (x_to, y_to);
-                }
-
-                //Set player to new position
-                level.set_tile(player_pos.0, player_pos.1, Tile::Player);
-
-                let has_player_moved = player_pos != (x_from, y_from);
-                if has_player_moved {
+                if let MoveResult::Valid { has_won, .. } = move_result {
                     level_history.commit_change((level, player_pos));
-                }
 
-                if has_won {
-                    self.continue_flag = true;
+                    if has_won {
+                        self.continue_flag = true;
 
-                    //TODO best time
+                        //TODO best time
 
-                    //Use current index of playing level history
-                    let moves = level_history.current_index() as u32;
-                    if self.validation_best_moves.is_none_or(|best_moves| moves < best_moves) ||
-                            self.validation_result_history_index != self.level.current_index() {
-                        //Always update best moves of validation if level was changed
-                        self.validation_best_moves = Some(moves);
+                        //Use current index of playing level history
+                        let moves = level_history.current_index() as u32;
+                        if self.validation_best_moves.is_none_or(|best_moves| moves < best_moves) ||
+                                self.validation_result_history_index != self.level.current_index() {
+                            //Always update best moves of validation if level was changed
+                            self.validation_best_moves = Some(moves);
+                        }
+
+                        //Update validation
+                        self.validation_result_history_index = self.level.current_index(); //Use current index of editor level history
+
+                        game_state.play_sound_effect(audio::LEVEL_COMPLETE_EFFECT);
                     }
 
-                    //Update validation
-                    self.validation_result_history_index = self.level.current_index(); //Use current index of editor level history
-
-                    game_state.play_sound_effect(audio::LEVEL_COMPLETE_EFFECT);
-                }
-
-                if has_player_moved {
                     game_state.play_sound_effect(audio::STEP_EFFECT);
                 }else {
                     game_state.play_sound_effect(audio::NO_PATH_EFFECT);

@@ -181,6 +181,37 @@ impl Tile {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Direction {
+    Left,
+    Up,
+    Right,
+    Down,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum MoveResult {
+    Valid {
+        has_won: bool,
+        secret_found: bool,
+    },
+    Invalid,
+}
+
+impl MoveResult {
+    pub fn is_valid(&self) -> bool {
+        matches!(self, MoveResult::Valid { .. })
+    }
+
+    pub fn has_won(&self) -> bool {
+        matches!(self, MoveResult::Valid {has_won: true, ..})
+    }
+
+    pub fn secret_found(&self) -> bool {
+        matches!(self, MoveResult::Valid {secret_found: true, ..})
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Level {
     width: usize,
@@ -227,7 +258,75 @@ impl Level {
         self.tiles[x + y * self.width] = tile;
     }
 
-    pub fn move_box_or_key(&mut self, level_original: &Level, has_won: &mut bool, from_pos_x: usize, from_pos_y: usize, to_pos_x: usize, to_pos_y: usize) -> bool {
+    pub fn move_player(&mut self, level_original: &Level, player_pos: &mut (usize, usize), direction: Direction) -> MoveResult {
+        let (x_from, y_from) = *player_pos;
+
+        let x_to = match direction {
+            Direction::Left => if x_from == 0 {
+                self.width() - 1
+            }else {
+                x_from - 1
+            },
+            Direction::Right => if x_from == self.width() - 1 {
+                0
+            }else {
+                x_from + 1
+            },
+            _ => x_from,
+        };
+        let y_to = match direction {
+            Direction::Up => if y_from == 0 {
+                self.height() - 1
+            }else {
+                y_from - 1
+            },
+            Direction::Down => if y_from == self.height() - 1 {
+                0
+            }else {
+                y_from + 1
+            },
+            _ => y_from,
+        };
+
+        let one_way_door_tile = match direction {
+            Direction::Left => Tile::OneWayLeft,
+            Direction::Up => Tile::OneWayUp,
+            Direction::Right => Tile::OneWayRight,
+            Direction::Down => Tile::OneWayDown,
+        };
+
+        //Set players old position to old level data
+        let mut tile = level_original.get_tile(x_from, y_from).unwrap().clone();
+        if matches!(tile, Tile::Player | Tile::Box | Tile::Key | Tile::LockedDoor) {
+            tile = Tile::Empty;
+        }else if matches!(tile, Tile::BoxInGoal | Tile::KeyInGoal) {
+            tile = Tile::Goal;
+        }else if matches!(tile, Tile::Hole | Tile::BoxInHole) {
+            tile = Tile::BoxInHole;
+        }
+
+        self.set_tile(x_from, y_from, tile);
+
+        let tile = self.get_tile(x_to, y_to).unwrap().clone();
+        let move_result = if matches!(tile, Tile::Empty | Tile::Goal | Tile::Secret | Tile::BoxInHole) || tile == one_way_door_tile {
+            MoveResult::Valid { has_won: false, secret_found: tile == Tile::Secret }
+        }else if matches!(tile, Tile::Box | Tile::BoxInGoal | Tile::Key | Tile::KeyInGoal) {
+            self.move_box_or_key(level_original, x_from, y_from, x_to, y_to)
+        }else {
+            MoveResult::Invalid
+        };
+
+        if move_result.is_valid() {
+            *player_pos = (x_to, y_to);
+        }
+
+        //Set player to new position
+        self.set_tile(player_pos.0, player_pos.1, Tile::Player);
+
+        move_result
+    }
+
+    fn move_box_or_key(&mut self, level_original: &Level, from_pos_x: usize, from_pos_y: usize, to_pos_x: usize, to_pos_y: usize) -> MoveResult {
         if self.width != level_original.width || self.height != level_original.height {
             panic!("Original level must have the same width and height as the modified level!");
         }
@@ -239,10 +338,10 @@ impl Level {
                 ((to_pos_y as isize + move_y + self.height as isize) % self.height as isize) as usize * self.width;
 
         let Some(tile_from) = self.tiles.get(index_from) else {
-            return false;
+            return MoveResult::Invalid;
         };
         let Some(tile_to) = self.tiles.get(index_to) else {
-            return false;
+            return MoveResult::Invalid;
         };
 
         let is_box = *tile_from == Tile::Box || *tile_from == Tile::BoxInGoal;
@@ -250,12 +349,14 @@ impl Level {
         let tile_from_new_value;
         let tile_to_new_value;
 
+        let mut has_won = false;
+
         if *tile_to == Tile::Empty ||*tile_to == Tile::Goal ||  *tile_to == Tile::BoxInHole ||
                 *tile_to == Tile::Hole || (!is_box && *tile_to == Tile::LockedDoor) {
             if is_box && *tile_to == Tile::Goal {
                 tile_to_new_value = Tile::BoxInGoal;
 
-                *has_won = true;
+                has_won = true;
                 for (index, tile) in self.tiles.iter().
                         enumerate() {
                     if index == index_to {
@@ -263,7 +364,7 @@ impl Level {
                     }
 
                     if *tile == Tile::Goal || *tile == Tile::KeyInGoal {
-                        *has_won = false;
+                        has_won = false;
 
                         break;
                     }
@@ -273,7 +374,7 @@ impl Level {
                     //If player is on GOAL -> check level field
                     if index == index_from && (*tile_original == Tile::Goal ||
                             *tile_original == Tile::BoxInGoal || *tile_original == Tile::KeyInGoal) {
-                        *has_won = false;
+                        has_won = false;
 
                         break;
                     }
@@ -307,10 +408,10 @@ impl Level {
             self.tiles[index_from] = tile_from_new_value;
             self.tiles[index_to] = tile_to_new_value;
 
-            return true;
+            return MoveResult::Valid { has_won, secret_found: false };
         }
 
-        false
+        MoveResult::Invalid
     }
 
     pub fn draw(&self, console: &Console, x_offset: usize, y_offset: usize, is_player_background: bool, cursor_pos: Option<(usize, usize)>) {
