@@ -490,7 +490,7 @@ impl <'a> Game<'a> {
 
     const PLAYER_BACKGROUND_DELAY: i32 = 12;
 
-    const SAVE_GAME_FOLDER: &'static str = "ConsoleSokoban";
+    const SAVE_GAME_FOLDER: &'static str = "SokoTerm";
 
     const MAP_TUTORIAL: &'static str = include_str!("../resources/tutorial.lvl");
     const MAP_MAIN: &'static str = include_str!("../resources/main.lvl");

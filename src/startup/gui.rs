@@ -127,7 +127,7 @@ pub fn run_game() -> ExitCode {
     app.
             add_plugins(DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
-                    title: format!("Console Sokoban (v{})", Game::VERSION),
+                    title: format!("SokoTerm (v{})", Game::VERSION),
                     resize_constraints: WindowResizeConstraints {
                         min_width: 480.0,
                         min_height: 360.0,

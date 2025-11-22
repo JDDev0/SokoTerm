@@ -1,9 +1,9 @@
-# ConsoleSokoban
+# SokoTerm
 
 A sokoban game for Linux terminal/TTY and with the Windows CMD and PowerShell.
 Since v3.0.0 there is also an GUI version available for Linux and Windows.
 
-Download on itch.io: [Console Sokoban](https://jddev0.itch.io/console-sokoban)
+Download on itch.io: [SokoTerm](https://jddev0.itch.io/sokoterm)
 
 ## Gameplay
 ![image](https://github.com/user-attachments/assets/4772dc3d-3258-4bf9-8ca5-86df9296a852)

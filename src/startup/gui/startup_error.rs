@@ -21,7 +21,7 @@ pub fn show_startup_error_dialog(app: &mut App, error_message: &str) {
     app.
             add_plugins(DefaultPlugins.set(WindowPlugin {
                 primary_window: Some(Window {
-                    title: format!("Console Sokoban (v{})", Game::VERSION),
+                    title: format!("SokoTerm (v{})", Game::VERSION),
                     resize_constraints: WindowResizeConstraints {
                         min_width: 480.0,
                         min_height: 360.0,
@@ -87,7 +87,7 @@ fn create_error_dialog_menu(
     error_text: Res<ErrorTextResource>,
     asset_server: Res<AssetServer>,
 ) {
-    error!(target: "ConsoleSokoban", "{}", &error_text.error_text);
+    error!(target: "SokoTerm", "{}", &error_text.error_text);
 
     let font = asset_server.load("embedded://font/JetBrainsMono-Bold.ttf");
     let text_font = TextFont {

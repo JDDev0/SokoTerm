@@ -71,18 +71,13 @@ impl Screen for ScreenStartMenu {
         console.set_color(Color::LightYellow, Color::Default);
         console.draw_text(
             r#"
-                 ----------------------------------------
-                 .---- .---. .   . .---- .---. .    .----
-                 |     |   | |\  | |     |   | |    |
-                 |     |   | | \ | '---. |   | |    +----
-                 |     |   | |  \|     | |   | |    |
-                 '---- '---' '   ' ----' '---' '--- '----
-                 ----------------------------------------
-                 .---- .---. .  . .---. .--.  .---. .   .
-                 |     |   | | /  |   | |   : |   | |\  |
-                 '---. |   | :{   |   | +--+  +---+ | \ |
-                     | |   | | \  |   | |   : |   | |  \|
-                 ----' '---' '  ' '---' '--'  '   ' '   '
+              ----------------------------------------------
+              .---- .---. .  . .---.  --+-- .---- .--. .   .
+              |     |   | | /  |   |    |   |     |  | |\ /|
+              '---. |   | :{   |   |    |   +---- +--' | ' |
+                  | |   | | \  |   |    |   |     | \  |   |
+              ----' '---' '  ' '---'    '   '---- '  ' '   '
+              ----------------------------------------------
             "#[1..].trim_end() /* Remove leading newline and trailing spaces */);
         console.set_cursor_pos(1, 13);
         console.draw_text("------------------------------------------------------------------------");
@@ -331,7 +326,7 @@ impl Screen for ScreenAbout {
     fn draw(&self, _game_state: &GameState, console: &Console) {
         console.reset_color();
         console.set_underline(true);
-        console.draw_text("About Console Sokoban:");
+        console.draw_text("About SokoTerm:");
         console.set_underline(false);
 
         self.draw_scrollbar(console);
@@ -339,7 +334,7 @@ impl Screen for ScreenAbout {
         let mut current_row = 2;
         if self.set_cursor_pos_if_visible(console, 0, current_row) {
             console.set_color(Color::LightYellow, Color::Default);
-            console.draw_text("Console Sokoban");
+            console.draw_text("SokoTerm");
 
             console.reset_color();
             console.draw_text(" is an open-source game (licensed under the GPLv3)!");
@@ -361,7 +356,7 @@ impl Screen for ScreenAbout {
         if self.set_cursor_pos_if_visible(console, 0, current_row) {
             console.set_color(Color::LightBlue, Color::Default);
             console.set_underline(true);
-            console.draw_text("https://github.com/JDDev0/ConsoleSokoban");
+            console.draw_text("https://github.com/JDDev0/SokoTerm");
             console.set_underline(false);
         }
 
@@ -574,7 +569,7 @@ impl Screen for ScreenAbout {
             console.draw_text("Thank you for playing ");
 
             console.set_color(Color::LightYellow, Color::Default);
-            console.draw_text("Console Sokoban");
+            console.draw_text("SokoTerm");
 
             console.reset_color();
             console.draw_text("!");

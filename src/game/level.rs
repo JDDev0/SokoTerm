@@ -654,7 +654,7 @@ impl LevelPack {
                 if pack_background_music_id.is_none() {
                     return Err(Box::new(LevelLoadingError::new(format!(
                         "The background music \"{background_music_id}\" from level pack file \"{path}\" does not exist \
-                        (Make sure that you are playing the latest version of Console Sokoban)!"
+                        (Make sure that you are playing the latest version of SokoTerm)!"
                     ))));
                 }
 
