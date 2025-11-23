@@ -386,6 +386,11 @@ impl HelpPage {
                     console.reset_color();
                     console.draw_text(": Empty");
                 }, |console| {
+                    Tile::FragileFloor.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(": Fragile Floor");
+                }, |console| {
                     Tile::OneWayLeft.draw(console, false, false);
 
                     console.reset_color();
@@ -596,6 +601,10 @@ impl HelpPage {
                     console.reset_color();
                     console.draw_text(": Insert an empty tile");
                 }, |console| {
+                    console.draw_key_input_text("~");
+                    console.reset_color();
+                    console.draw_text(": Insert a fragile floor tile");
+                }, |console| {
                     console.draw_key_input_text("< ^ > v");
                     console.reset_color();
                     console.draw_text(": Insert an one-way door tile");
@@ -608,13 +617,21 @@ impl HelpPage {
                     console.reset_color();
                     console.draw_text(": Insert a player tile");
                 }, |console| {
+                    console.draw_key_input_text(",");
+                    console.reset_color();
+                    console.draw_text(": Insert a player on fragile floor tile");
+                }, |console| {
                     console.draw_key_input_text("*");
                     console.reset_color();
                     console.draw_text(": Insert a key tile");
                 }, |console| {
-                    console.draw_key_input_text("~");
+                    console.draw_key_input_text(":");
                     console.reset_color();
                     console.draw_text(": Insert a key in goal tile");
+                }, |console| {
+                    console.draw_key_input_text(";");
+                    console.reset_color();
+                    console.draw_text(": Insert a key on fragile floor tile");
                 }, |console| {
                     console.draw_key_input_text("=");
                     console.reset_color();
@@ -627,6 +644,10 @@ impl HelpPage {
                     console.draw_key_input_text("+");
                     console.reset_color();
                     console.draw_text(": Insert a box in goal tile");
+                }, |console| {
+                    console.draw_key_input_text("!");
+                    console.reset_color();
+                    console.draw_text(": Insert a box on fragile floor tile");
                 }, |console| {
                     console.draw_key_input_text("x");
                     console.reset_color();

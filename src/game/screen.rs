@@ -3396,6 +3396,13 @@ impl ScreenLevelEditor {
 
             key if key.is_ascii() => {
                 if let Ok(tile_input) = Tile::from_ascii(key.to_ascii().unwrap()) && tile_input != Tile::Secret {
+                    //Swap input key for Key In Goal and Fragile Floor
+                    let tile_input = match tile_input {
+                        Tile::KeyInGoal => Tile::FragileFloor,
+                        Tile::FragileFloor => Tile::KeyInGoal,
+                        tile => tile,
+                    };
+
                     let mut level = self.level.current().clone();
                     let tile = level.get_tile_mut(self.cursor_pos.0, self.cursor_pos.1).unwrap();
 

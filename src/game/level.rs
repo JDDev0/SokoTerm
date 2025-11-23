@@ -15,6 +15,7 @@ use bevy_steamworks::*;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Tile {
     Empty,
+    FragileFloor,
 
     OneWayLeft,
     OneWayUp,
@@ -24,13 +25,16 @@ pub enum Tile {
     Wall,
 
     Player,
+    PlayerOnFragileFloor,
 
     Key,
     KeyInGoal,
+    KeyOnFragileFloor,
     LockedDoor,
 
     Box,
     BoxInGoal,
+    BoxOnFragileFloor,
     Goal,
 
     Hole,
@@ -45,6 +49,7 @@ impl Tile {
     pub fn from_ascii(a: u8) -> Result<Self, LevelLoadingError> {
         match a {
             b'-' => Ok(Tile::Empty),
+            b':' => Ok(Tile::FragileFloor),
 
             b'<' => Ok(Tile::OneWayLeft),
             b'^' => Ok(Tile::OneWayUp),
@@ -54,13 +59,16 @@ impl Tile {
             b'#' => Ok(Tile::Wall),
 
             b'p' | b'P' => Ok(Tile::Player),
+            b',' => Ok(Tile::PlayerOnFragileFloor),
 
             b'*' => Ok(Tile::Key),
             b'~' => Ok(Tile::KeyInGoal),
+            b';' => Ok(Tile::KeyOnFragileFloor),
             b'=' => Ok(Tile::LockedDoor),
 
             b'@' => Ok(Tile::Box),
             b'+' => Ok(Tile::BoxInGoal),
+            b'!' => Ok(Tile::BoxOnFragileFloor),
             b'x' | b'X' => Ok(Tile::Goal),
 
             b'o' | b'O' => Ok(Tile::Hole),
@@ -77,6 +85,7 @@ impl Tile {
     pub fn to_ascii(&self) -> u8 {
         match self {
             Tile::Empty => b'-',
+            Tile::FragileFloor => b':',
 
             Tile::OneWayLeft => b'<',
             Tile::OneWayUp => b'^',
@@ -86,13 +95,16 @@ impl Tile {
             Tile::Wall => b'#',
 
             Tile::Player => b'P',
+            Tile::PlayerOnFragileFloor => b',',
 
             Tile::Key => b'*',
             Tile::KeyInGoal => b'~',
+            Tile::KeyOnFragileFloor => b';',
             Tile::LockedDoor => b'=',
 
             Tile::Box => b'@',
             Tile::BoxInGoal => b'+',
+            Tile::BoxOnFragileFloor => b'!',
             Tile::Goal => b'x',
 
             Tile::Hole => b'o',
@@ -109,6 +121,10 @@ impl Tile {
             Tile::Empty => {
                 console.set_color_invertible(Color::LightBlue, Color::Default, inverted);
                 console.draw_text("-");
+            },
+            Tile::FragileFloor => {
+                console.set_color_invertible(Color::LightBlue, Color::Default, inverted);
+                console.draw_text("~");
             },
             Tile::OneWayLeft => {
                 console.set_color_invertible(Color::LightBlue, Color::Default, inverted);
@@ -130,7 +146,7 @@ impl Tile {
                 console.set_color_invertible(Color::LightGreen, Color::Default, inverted);
                 console.draw_text("#");
             },
-            Tile::Player => {
+            Tile::Player | Tile::PlayerOnFragileFloor => {
                 if is_player_background {
                     console.set_color_invertible(Color::Default, Color::Yellow, inverted);
                 }else {
@@ -138,7 +154,7 @@ impl Tile {
                 }
                 console.draw_text("P");
             },
-            Tile::Key => {
+            Tile::Key | Tile::KeyOnFragileFloor => {
                 console.set_color_invertible(Color::LightCyan, Color::Default, inverted);
                 console.draw_text("*");
             },
@@ -150,7 +166,7 @@ impl Tile {
                 console.set_color_invertible(Color::LightRed, Color::Default, inverted);
                 console.draw_text("=");
             },
-            Tile::Box => {
+            Tile::Box | Tile::BoxOnFragileFloor => {
                 console.set_color_invertible(Color::LightCyan, Color::Default, inverted);
                 console.draw_text("@");
             },
@@ -182,7 +198,7 @@ impl Tile {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Direction {
     Left,
     Up,
@@ -277,14 +293,14 @@ impl Level {
             return MoveResult::Invalid;
         };
 
-        let is_box = *tile_from == Tile::Box || *tile_from == Tile::BoxInGoal;
+        let is_box = *tile_from == Tile::Box || *tile_from == Tile::BoxInGoal || *tile_from == Tile::BoxOnFragileFloor;
 
         let tile_from_new_value;
         let tile_to_new_value;
 
         let mut has_won = false;
 
-        if *tile_to == Tile::Empty ||*tile_to == Tile::Goal ||  *tile_to == Tile::BoxInHole ||
+        if *tile_to == Tile::Empty || *tile_to == Tile::FragileFloor ||*tile_to == Tile::Goal ||  *tile_to == Tile::BoxInHole ||
                 *tile_to == Tile::Hole || (!is_box && *tile_to == Tile::LockedDoor) {
             if is_box && *tile_to == Tile::Goal {
                 tile_to_new_value = Tile::BoxInGoal;
@@ -314,6 +330,12 @@ impl Level {
                 }
             }else if !is_box && *tile_to == Tile::Goal {
                 tile_to_new_value = Tile::KeyInGoal;
+            }else if *tile_to == Tile::FragileFloor {
+                if is_box {
+                    tile_to_new_value = Tile::BoxOnFragileFloor;
+                }else {
+                    tile_to_new_value = Tile::KeyOnFragileFloor;
+                }
             }else if *tile_to == Tile::Hole {
                 if is_box {
                     tile_to_new_value = Tile::BoxInHole;
@@ -334,6 +356,8 @@ impl Level {
                 tile_from_new_value = Tile::Empty;
             }else if *tile_from == Tile::BoxInHole {
                 tile_from_new_value = Tile::BoxInHole;
+            }else if *tile_from == Tile::BoxOnFragileFloor || *tile_from == Tile::KeyOnFragileFloor {
+                tile_from_new_value = Tile::FragileFloor;
             }else {
                 tile_from_new_value = Tile::Goal;
             }
@@ -438,7 +462,7 @@ pub struct PlayingLevel {
 
 impl PlayingLevel {
     pub fn new(level: &Level, history_size: usize) -> Result<Self, LevelLoadingError> {
-        let player_tile_count = level.tiles().iter().filter(|tile| **tile == Tile::Player).count();
+        let player_tile_count = level.tiles().iter().filter(|tile| **tile == Tile::Player || **tile == Tile::PlayerOnFragileFloor).count();
         if player_tile_count == 0 {
             return Err(LevelLoadingError::new("Level does not contain a player tile!"));
         }else if player_tile_count > 1 {
@@ -450,7 +474,7 @@ impl PlayingLevel {
         'outer:
         for i in 0..level.width() {
             for j in 0..level.height() {
-                if let Some(tile) = level.get_tile(i, j) && *tile == Tile::Player {
+                if let Some(tile) = level.get_tile(i, j) && matches!(tile, Tile::Player | Tile::PlayerOnFragileFloor) {
                     player_pos = Some((i, j));
 
                     break 'outer;
@@ -505,20 +529,27 @@ impl PlayingLevel {
 
         //Set players old position to old level data
         let mut tile = self.original_level.get_tile(x_from, y_from).unwrap().clone();
+        let player_tile = level.get_tile(x_from, y_from).unwrap().clone();
         if matches!(tile, Tile::Player | Tile::Box | Tile::Key | Tile::LockedDoor) {
             tile = Tile::Empty;
         }else if matches!(tile, Tile::BoxInGoal | Tile::KeyInGoal) {
             tile = Tile::Goal;
         }else if matches!(tile, Tile::Hole | Tile::BoxInHole) {
             tile = Tile::BoxInHole;
+        }else if matches!(tile, Tile::FragileFloor | Tile::PlayerOnFragileFloor | Tile::BoxOnFragileFloor | Tile::KeyOnFragileFloor) {
+            tile = if player_tile == Tile::PlayerOnFragileFloor {
+                Tile::Hole //First time player is on tile -> Replace with Hole
+            }else {
+                Tile::BoxInHole //Hole from Fragile Floor usage must already have been filled with box
+            };
         }
 
         level.set_tile(x_from, y_from, tile);
 
         let tile = level.get_tile(x_to, y_to).unwrap().clone();
-        let move_result = if matches!(tile, Tile::Empty | Tile::Goal | Tile::Secret | Tile::BoxInHole) || tile == one_way_door_tile {
+        let move_result = if matches!(tile, Tile::Empty | Tile::FragileFloor | Tile::Goal | Tile::Secret | Tile::BoxInHole) || tile == one_way_door_tile {
             MoveResult::Valid { has_won: false, secret_found: tile == Tile::Secret }
-        }else if matches!(tile, Tile::Box | Tile::BoxInGoal | Tile::Key | Tile::KeyInGoal) {
+        }else if matches!(tile, Tile::Box | Tile::BoxInGoal | Tile::BoxOnFragileFloor | Tile::Key | Tile::KeyInGoal | Tile::KeyOnFragileFloor) {
             level.move_box_or_key(&self.original_level, x_from, y_from, x_to, y_to)
         }else {
             MoveResult::Invalid
@@ -529,7 +560,11 @@ impl PlayingLevel {
         }
 
         //Set player to new position
-        level.set_tile(player_pos.0, player_pos.1, Tile::Player);
+        if matches!(level.get_tile(x_to, y_to).unwrap(), Tile::FragileFloor | Tile::PlayerOnFragileFloor | Tile::BoxOnFragileFloor | Tile::KeyOnFragileFloor) {
+            level.set_tile(player_pos.0, player_pos.1, Tile::PlayerOnFragileFloor);
+        }else {
+            level.set_tile(player_pos.0, player_pos.1, Tile::Player);
+        }
 
         if move_result.is_valid() {
             self.playing_level.commit_change((level, player_pos));
