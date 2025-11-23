@@ -846,7 +846,7 @@ impl LevelPack {
                 };
 
                 if !editor_level_pack {
-                    let player_tile_count = level.tiles().iter().filter(|tile| **tile == Tile::Player).count();
+                    let player_tile_count = level.tiles().iter().filter(|tile| **tile == Tile::Player || **tile == Tile::PlayerOnFragileFloor).count();
                     if player_tile_count == 0 {
                         return Err(Box::new(GameError::new(format!(
                             "Error while loading level pack \"{}\": Level {} does not contain a player tile",
