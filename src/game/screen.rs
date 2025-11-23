@@ -4,7 +4,7 @@ use std::str::FromStr;
 use std::time::SystemTime;
 use dialog::DialogYesNo;
 use crate::game::{audio, Game, GameState};
-use crate::game::level::{Direction, Level, LevelPack, MoveResult, Tile};
+use crate::game::level::{Direction, Level, LevelPack, MoveResult, PlayingLevel, Tile};
 use crate::game::screen::dialog::{DialogOk, DialogSelection, DialogYesCancelNo};
 use crate::collections::UndoHistory;
 use crate::game::console_extension::ConsoleExtension;
@@ -1290,7 +1290,7 @@ pub struct ScreenInGame {
     time_sec: u32,
     time_min: u32,
 
-    level: Option<UndoHistory<(Level, (usize, usize))>>,
+    level: Option<PlayingLevel>,
 
     continue_flag: bool,
     secret_found_flag: bool,
@@ -1323,25 +1323,10 @@ impl ScreenInGame {
         self.time_sec = 0;
         self.time_min = 0;
 
-        let level = level.clone();
-
         self.continue_flag = false;
         self.game_over_flag = false;
 
-        let mut player_pos = None;
-
-        'outer:
-        for i in 0..level.width() {
-            for j in 0..level.height() {
-                if let Some(tile) = level.get_tile(i, j) && *tile == Tile::Player {
-                    player_pos = Some((i, j));
-
-                    break 'outer;
-                }
-            }
-        }
-
-        self.level = Some(UndoHistory::new(Self::UNDO_HISTORY_SIZE_PLAYING, (level, player_pos.unwrap())));
+        self.level = Some(PlayingLevel::new(level, Self::UNDO_HISTORY_SIZE_PLAYING).unwrap());
     }
 
     fn draw_tutorial_level_text(&self, game_state: &GameState, console: &Console) {
@@ -1608,7 +1593,7 @@ impl Screen for ScreenInGame {
         console.draw_text(utils::number_to_string_leading_ascii(2, game_state.current_level_index as u32 + 1, true));
 
         console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 11) as f64 * 0.75) as usize, 0);
-        console.draw_text(format!("Moves: {:04}", self.level.as_ref().unwrap().current_index()));
+        console.draw_text(format!("Moves: {:04}", self.level.as_ref().unwrap().current_move_index()));
 
         console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 15, 0);
         console.draw_text(format!(
@@ -1633,7 +1618,7 @@ impl Screen for ScreenInGame {
             }
         }
 
-        if let Some(level) = self.level.as_ref().map(|level| &level.current().0) {
+        if let Some(level) = self.level.as_ref().map(|level| &level.current_playing_level().0) {
             let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
             let y_offset = 1;
 
@@ -1697,7 +1682,7 @@ impl Screen for ScreenInGame {
 
         //Reset
         if key == Key::R {
-            let should_play_sound_effect = self.level.as_ref().unwrap().current_index() > 0 &&
+            let should_play_sound_effect = self.level.as_ref().unwrap().current_move_index() > 0 &&
                     ((self.time_min * 60) + self.time_sec) * 1000 + self.time_millis > 50;
 
             self.start_level(level_pack.levels()[current_level_index].level());
@@ -1737,14 +1722,14 @@ impl Screen for ScreenInGame {
         }
 
         if key == Key::U || key == Key::Z {
-            let level = self.level.as_mut().unwrap().undo();
+            let level = self.level.as_mut().unwrap().undo_move();
             if level.is_some() {
                 game_state.play_sound_effect(audio::UNDO_REDO_EFFECT);
             }
 
             return;
         }else if key == Key::Y {
-            let level = self.level.as_mut().unwrap().redo();
+            let level = self.level.as_mut().unwrap().redo_move();
             if level.is_some() {
                 game_state.play_sound_effect(audio::UNDO_REDO_EFFECT);
             }
@@ -1753,8 +1738,6 @@ impl Screen for ScreenInGame {
         }
 
         if key.is_arrow_key() {
-            let (mut level, mut player_pos) = self.level.as_ref().unwrap().current().clone();
-
             let direction = match key {
                 Key::LEFT => Direction::Left,
                 Key::UP => Direction::Up,
@@ -1762,11 +1745,8 @@ impl Screen for ScreenInGame {
                 Key::DOWN => Direction::Down,
                 _ => unreachable!("Invalid arrow key"),
             };
-            let move_result = level.move_player(
-                level_pack.levels()[current_level_index].level(),
 
-                &mut player_pos, direction,
-            );
+            let move_result = self.level.as_mut().unwrap().move_player(direction);
 
             if let MoveResult::Valid { has_won, secret_found } = move_result {
                 self.time_start.get_or_insert_with(SystemTime::now);
@@ -1776,14 +1756,12 @@ impl Screen for ScreenInGame {
                     self.secret_found_flag = true;
                 }
 
-                self.level.as_mut().unwrap().commit_change((level, player_pos));
-
                 if has_won {
                     self.continue_flag = true;
 
                     //Update best scores
                     let time = self.time_millis as u64 + 1000 * self.time_sec as u64 + 60000 * self.time_min as u64;
-                    let moves = self.level.as_ref().unwrap().current_index() as u32;
+                    let moves = self.level.as_ref().unwrap().current_move_index() as u32;
 
                     level_pack.update_stats(current_level_index, time, moves);
 
@@ -3104,7 +3082,7 @@ pub struct ScreenLevelEditor {
     validation_result_history_index: usize,
     //TODO best time
     validation_best_moves: Option<u32>,
-    playing_level: Option<UndoHistory<(Level, (usize, usize))>>,
+    playing_level: Option<PlayingLevel>,
     cursor_pos: (usize, usize),
 }
 
@@ -3141,14 +3119,14 @@ impl ScreenLevelEditor {
             return;
         }
 
-        if let Some(level_history) = self.playing_level.as_mut() {
+        if let Some(playing_level) = self.playing_level.as_mut() {
             if matches!(key, Key::U | Key::Z | Key::Y) {
                 let is_redo = key == Key::Y;
 
                 let level = if is_redo {
-                    level_history.redo()
+                    playing_level.redo_move()
                 }else {
-                    level_history.undo()
+                    playing_level.undo_move()
                 };
 
                 if level.is_some() {
@@ -3157,8 +3135,6 @@ impl ScreenLevelEditor {
             }
 
             if key.is_arrow_key() {
-                let (mut level, mut player_pos) = level_history.current().clone();
-
                 let direction = match key {
                     Key::LEFT => Direction::Left,
                     Key::UP => Direction::Up,
@@ -3166,22 +3142,17 @@ impl ScreenLevelEditor {
                     Key::DOWN => Direction::Down,
                     _ => unreachable!("Invalid arrow key"),
                 };
-                let move_result = level.move_player(
-                    self.level.current(),
 
-                    &mut player_pos, direction,
-                );
+                let move_result = playing_level.move_player(direction);
 
                 if let MoveResult::Valid { has_won, .. } = move_result {
-                    level_history.commit_change((level, player_pos));
-
                     if has_won {
                         self.continue_flag = true;
 
                         //TODO best time
 
                         //Use current index of playing level history
-                        let moves = level_history.current_index() as u32;
+                        let moves = playing_level.current_move_index() as u32;
                         if self.validation_best_moves.is_none_or(|best_moves| moves < best_moves) ||
                                 self.validation_result_history_index != self.level.current_index() {
                             //Always update best moves of validation if level was changed
@@ -3467,7 +3438,7 @@ impl Screen for ScreenLevelEditor {
             }
 
             console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 11) as f64 * 0.75) as usize, 0);
-            console.draw_text(format!("Moves: {:04}", level_history.current_index()));
+            console.draw_text(format!("Moves: {:04}", level_history.current_move_index()));
         }else {
             console.draw_text(format!(
                 "Editing ({})",
@@ -3517,7 +3488,7 @@ impl Screen for ScreenLevelEditor {
         let x_offset = ((Game::CONSOLE_MIN_WIDTH - self.level.current().width()) as f64 * 0.5) as usize;
         let y_offset = 1;
 
-        self.playing_level.as_ref().map_or(self.level.current(), |level| &level.current().0).
+        self.playing_level.as_ref().map_or(self.level.current(), |level| &level.current_playing_level().0).
                 draw(console, x_offset, y_offset, game_state.is_player_background(),
                      self.playing_level.as_ref().map_or(Some(self.cursor_pos), |_| None));
     }
@@ -3538,31 +3509,18 @@ impl Screen for ScreenLevelEditor {
             }else {
                 self.continue_flag = false;
 
-                let player_tile_count = self.level.current().tiles().iter().filter(|tile| **tile == Tile::Player).count();
-                if player_tile_count == 0 {
-                    game_state.open_dialog(Box::new(DialogOk::new_error("Level does not contain a player tile!")));
+                let playing_level = PlayingLevel::new(self.level.current(), Self::UNDO_HISTORY_SIZE_PLAYING);
+                match playing_level {
+                    Ok(playing_level) => {
+                        Some(playing_level)
+                    },
 
-                    return;
-                }else if player_tile_count > 1 {
-                    game_state.open_dialog(Box::new(DialogOk::new_error("Level contains too many player tiles!")));
+                    Err(err) => {
+                        game_state.open_dialog(Box::new(DialogOk::new_error(err.to_string())));
 
-                    return;
+                        return;
+                    },
                 }
-
-                let mut player_pos = None;
-
-                'outer:
-                for i in 0..self.level.current().width() {
-                    for j in 0..self.level.current().height() {
-                        if let Some(tile) = self.level.current().get_tile(i, j) && *tile == Tile::Player {
-                            player_pos = Some((i, j));
-
-                            break 'outer;
-                        }
-                    }
-                }
-
-                Some(UndoHistory::new(Self::UNDO_HISTORY_SIZE_PLAYING, (self.level.current().clone(), player_pos.unwrap())))
             };
 
             return;
