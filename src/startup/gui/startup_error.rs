@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use bevy::input_focus::{AutoFocus, InputDispatchPlugin, InputFocus};
 use bevy::input_focus::tab_navigation::{TabGroup, TabIndex, TabNavigationPlugin};
+use bevy::log::LogPlugin;
 use bevy::picking::hover::Hovered;
 use bevy::prelude::*;
 use bevy::ui_widgets::{observe, Activate, Button, Checkbox, RadioGroup, UiWidgetsPlugins};
@@ -31,7 +32,7 @@ pub fn show_startup_error_dialog(app: &mut App, error_message: &str) {
                     ..default()
                 }),
                 ..default()
-            })).
+            }).disable::<LogPlugin>()).
             add_plugins((
                 UiWidgetsPlugins,
                 InputDispatchPlugin,

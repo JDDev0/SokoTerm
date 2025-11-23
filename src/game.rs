@@ -704,12 +704,33 @@ impl <'a> Game<'a> {
                     ))));
                 };
 
-                editor_level_packs.push(LevelPack::read_from_save_game(
+                let level_pack = LevelPack::read_from_save_game(
                     level_pack_id, entry.path().to_str().unwrap(), level_pack_data, true,
 
                     #[cfg(feature = "steam")]
                     None,
-                )?);
+                );
+                let level_pack = match level_pack {
+                    Ok(level_pack) => level_pack,
+
+                    #[cfg(feature = "gui")]
+                    Err(err) => {
+                        {
+                            warn!("Could not load editor level pack \"{file_name}\": {err}");
+                        }
+
+                        continue;
+                    },
+
+                    #[cfg(feature = "cli")]
+                    Err(_err) => {
+                        //TODO warning in cli version
+
+                        continue;
+                    },
+                };
+
+                editor_level_packs.push(level_pack);
             }
         }
 

@@ -9,6 +9,7 @@ use bevy::input::keyboard::KeyboardInput;
 use bevy::input::mouse::MouseButtonInput;
 use bevy::window::{PrimaryWindow, WindowMode, WindowResized};
 use bevy::asset::io::embedded::EmbeddedAssetRegistry;
+use bevy::log::LogPlugin;
 use crate::game::Game;
 use crate::io::bevy_abstraction::{ConsoleState, Key, COLOR_SCHEMES};
 use crate::io::Console;
@@ -63,6 +64,8 @@ enum AppState {
 
 pub fn run_game() -> ExitCode {
     let mut app = App::new();
+
+    app.add_plugins(LogPlugin::default());
 
     #[cfg(feature = "steam")]
     let steam_client = {
@@ -138,7 +141,7 @@ pub fn run_game() -> ExitCode {
                     ..default()
                 }),
                 ..default()
-            })).
+            }).disable::<LogPlugin>()).
 
             init_state::<AppState>().
 
