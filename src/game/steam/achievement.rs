@@ -30,6 +30,8 @@ impl Achievement {
     achievement! { STEAM_WORKSHOP_LEVEL_PACK_CREATED }
 
     pub fn unlock(&self, steam_client: Client) {
+        info!("Steam achievement unlocked: {}", self.id);
+
         if !USER_STATS_RECEIVED.load(Ordering::Relaxed) {
             error!("Steam stats were not received yet!");
 
