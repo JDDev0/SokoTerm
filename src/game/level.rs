@@ -12,7 +12,7 @@ use crate::io::{Color, Console};
 #[cfg(feature = "steam")]
 use bevy_steamworks::*;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tile {
     Empty,
     FragileFloor,
@@ -263,8 +263,8 @@ impl Level {
         &self.tiles
     }
 
-    pub fn get_tile(&self, x: usize, y: usize) -> Option<&Tile> {
-        self.tiles.get(x + y * self.width)
+    pub fn get_tile(&self, x: usize, y: usize) -> Option<Tile> {
+        self.tiles.get(x + y * self.width).copied()
     }
 
     pub fn get_tile_mut(&mut self, x: usize, y: usize) -> Option<&mut Tile> {
@@ -528,8 +528,8 @@ impl PlayingLevel {
         };
 
         //Set players old position to old level data
-        let mut tile = self.original_level.get_tile(x_from, y_from).unwrap().clone();
-        let player_tile = level.get_tile(x_from, y_from).unwrap().clone();
+        let mut tile = self.original_level.get_tile(x_from, y_from).unwrap();
+        let player_tile = level.get_tile(x_from, y_from).unwrap();
         if matches!(tile, Tile::Player | Tile::Box | Tile::Key | Tile::LockedDoor) {
             tile = Tile::Empty;
         }else if matches!(tile, Tile::BoxInGoal | Tile::KeyInGoal) {
@@ -546,7 +546,7 @@ impl PlayingLevel {
 
         level.set_tile(x_from, y_from, tile);
 
-        let tile = level.get_tile(x_to, y_to).unwrap().clone();
+        let tile = level.get_tile(x_to, y_to).unwrap();
         let move_result = if matches!(tile, Tile::Empty | Tile::FragileFloor | Tile::Goal | Tile::Secret | Tile::BoxInHole) || tile == one_way_door_tile {
             MoveResult::Valid { has_won: false, secret_found: tile == Tile::Secret }
         }else if matches!(tile, Tile::Box | Tile::BoxInGoal | Tile::BoxOnFragileFloor | Tile::Key | Tile::KeyInGoal | Tile::KeyOnFragileFloor) {

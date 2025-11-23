@@ -3226,7 +3226,7 @@ impl ScreenLevelEditor {
 
                     for i in 0..level_orig.height() {
                         for mut j in 0..level_orig.width() {
-                            let tile = level_orig.get_tile(j, i).unwrap().clone();
+                            let tile = level_orig.get_tile(j, i).unwrap();
 
                             if j == index {
                                 continue;
@@ -3262,7 +3262,7 @@ impl ScreenLevelEditor {
 
                     for i in 0..level_orig.width() {
                         for mut j in 0..level_orig.height() {
-                            let tile = level_orig.get_tile(i, j).unwrap().clone();
+                            let tile = level_orig.get_tile(i, j).unwrap();
 
                             if j == index {
                                 continue;
@@ -3309,7 +3309,7 @@ impl ScreenLevelEditor {
 
                     for i in 0..level_orig.width() {
                         for mut j in 0..level_orig.height() {
-                            let tile = level_orig.get_tile(i, j).unwrap().clone();
+                            let tile = level_orig.get_tile(i, j).unwrap();
 
                             if j >= index {
                                 j += 1;
@@ -3319,7 +3319,7 @@ impl ScreenLevelEditor {
                         }
 
                         let tile = if is_copy {
-                            level_orig.get_tile(i, index_orig).unwrap().clone()
+                            level_orig.get_tile(i, index_orig).unwrap()
                         }else {
                             Tile::Empty
                         };
@@ -3348,7 +3348,7 @@ impl ScreenLevelEditor {
 
                     for i in 0..level_orig.height() {
                         for mut j in 0..level_orig.width() {
-                            let tile = level_orig.get_tile(j, i).unwrap().clone();
+                            let tile = level_orig.get_tile(j, i).unwrap();
 
                             if j >= index {
                                 j += 1;
@@ -3358,7 +3358,7 @@ impl ScreenLevelEditor {
                         }
 
                         let tile = if is_copy {
-                            level_orig.get_tile(index_orig, i).unwrap().clone()
+                            level_orig.get_tile(index_orig, i).unwrap()
                         }else {
                             Tile::Empty
                         };
