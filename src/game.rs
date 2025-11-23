@@ -11,7 +11,7 @@ use crate::game::audio::{AudioHandler, BackgroundMusic, BackgroundMusicId};
 use crate::game::help_page::HelpPage;
 use crate::game::level::{Level, LevelPack};
 use crate::game::screen::*;
-use crate::game::screen::dialog::{Dialog, DialogOk, DialogType};
+use crate::game::screen::dialog::{DialogType, RenderedDialog, Dialog};
 use crate::io::{Console, Key};
 
 #[cfg(feature = "gui")]
@@ -209,7 +209,7 @@ pub struct GameState {
     should_call_on_set_screen: bool,
 
     is_help: bool,
-    dialog: Option<Box<dyn Dialog>>,
+    dialog: Option<RenderedDialog>,
 
     current_level_pack_index: usize,
     level_packs: Vec<LevelPack>,
@@ -333,10 +333,10 @@ impl GameState {
         self.dialog.is_some()
     }
 
-    pub fn open_dialog(&mut self, dialog: Box<dyn Dialog>) {
+    pub fn open_dialog(&mut self, dialog: Dialog) {
         let dialog_type = dialog.dialog_type();
 
-        self.dialog = Some(dialog);
+        self.dialog = Some(dialog.render(Game::CONSOLE_MIN_WIDTH, Game::CONSOLE_MIN_HEIGHT));
 
         match dialog_type {
             DialogType::Information => {
@@ -538,6 +538,8 @@ impl <'a> Game<'a> {
             ))));
         }
 
+        let mut warning_message = String::new();
+
         let screens = HashMap::from_iter([
             (ScreenId::StartMenu, Box::new(ScreenStartMenu::new()) as Box<dyn Screen>),
             (ScreenId::About, Box::new(ScreenAbout::new()) as Box<dyn Screen>),
@@ -713,18 +715,15 @@ impl <'a> Game<'a> {
                 let level_pack = match level_pack {
                     Ok(level_pack) => level_pack,
 
-                    #[cfg(feature = "gui")]
                     Err(err) => {
+                        let message = format!("Could not load editor level pack \"{file_name}\":\n{err}");
+
+                        #[cfg(feature = "gui")]
                         {
-                            warn!("Could not load editor level pack \"{file_name}\": {err}");
+                            warn!(message);
                         }
 
-                        continue;
-                    },
-
-                    #[cfg(feature = "cli")]
-                    Err(_err) => {
-                        //TODO warning in cli version
+                        warning_message += &message;
 
                         continue;
                     },
@@ -789,6 +788,10 @@ impl <'a> Game<'a> {
         }
 
         game_state.set_background_music_loop(&audio::BACKGROUND_MUSIC_FIELDS_OF_ICE);
+
+        if !warning_message.is_empty() {
+            game_state.open_dialog(Dialog::new_ok_error(format!("Warning!\n{warning_message}")));
+        }
 
         Ok(Self {
             console,
@@ -927,7 +930,7 @@ impl <'a> Game<'a> {
             self.game_state.play_sound_effect_ui_select();
 
             if let Err(err) = self.game_state.set_and_save_background_music_enabled(!self.game_state.settings.background_music) {
-                self.game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save settings: {}", err))));
+                self.game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save settings: {}", err)));
             }
 
             return;
@@ -949,7 +952,7 @@ impl <'a> Game<'a> {
         }
 
         if let Some(dialog) = self.game_state.dialog.as_ref() {
-            if let Some(dialog_selection) = dialog.on_key_pressed(Self::CONSOLE_MIN_WIDTH, Self::CONSOLE_MIN_HEIGHT, key) {
+            if let Some(dialog_selection) = dialog.on_key_pressed(key) {
                 self.game_state.close_dialog();
 
                 let screen = self.screens.get_mut(&self.game_state.current_screen_id);
@@ -986,7 +989,7 @@ impl <'a> Game<'a> {
         }
 
         if let Some(dialog) = self.game_state.dialog.as_ref() {
-            if let Some(dialog_selection) = dialog.on_mouse_pressed(Self::CONSOLE_MIN_WIDTH, Self::CONSOLE_MIN_HEIGHT, column, row) {
+            if let Some(dialog_selection) = dialog.on_mouse_pressed(column, row) {
                 self.game_state.close_dialog();
 
                 let screen = self.screens.get_mut(&self.game_state.current_screen_id);
@@ -1021,7 +1024,7 @@ impl <'a> Game<'a> {
         }
 
         if let Some(dialog) = self.game_state.dialog.as_ref() {
-            dialog.draw(self.console, Self::CONSOLE_MIN_WIDTH, Self::CONSOLE_MIN_HEIGHT);
+            dialog.draw(self.console);
         }
     }
 

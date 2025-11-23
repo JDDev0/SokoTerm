@@ -2,10 +2,9 @@ use std::cmp::Ordering;
 use std::fmt::Write as _;
 use std::str::FromStr;
 use std::time::SystemTime;
-use dialog::DialogYesNo;
 use crate::game::{audio, Game, GameState};
 use crate::game::level::{Direction, Level, LevelPack, MoveResult, PlayingLevel, Tile};
-use crate::game::screen::dialog::{DialogOk, DialogSelection, DialogYesCancelNo};
+use crate::game::screen::dialog::{Dialog, DialogSelection};
 use crate::collections::UndoHistory;
 use crate::game::console_extension::ConsoleExtension;
 use crate::io::{Color, Console, Key};
@@ -131,7 +130,7 @@ impl Screen for ScreenStartMenu {
 
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
         if key == Key::ESC {
-            game_state.open_dialog(Box::new(DialogYesNo::new("Exit game?")));
+            game_state.open_dialog(Dialog::new_yes_no("Exit game?"));
 
             return;
         }
@@ -1686,7 +1685,7 @@ impl Screen for ScreenInGame {
 
             self.time_start_in_menu = Some(SystemTime::now());
 
-            game_state.open_dialog(Box::new(DialogYesNo::new("Back to level selection?")));
+            game_state.open_dialog(Dialog::new_yes_no("Back to level selection?"));
 
             return;
         }
@@ -1829,7 +1828,7 @@ impl Screen for ScreenInGame {
                     }
 
                     if let Err(err) = level_pack.save_save_game(false) {
-                        game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
+                        game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
                     }
 
                     game_state.play_sound_effect(audio::LEVEL_COMPLETE_EFFECT);
@@ -1844,10 +1843,10 @@ impl Screen for ScreenInGame {
                 #[cfg(feature = "steam")]
                 Achievement::LEVEL_PACK_SECRET_DISCOVERED.unlock(steam_client.clone());
 
-                game_state.open_dialog(Box::new(DialogOk::new_secret_found("You have found a secret!")));
+                game_state.open_dialog(Dialog::new_ok_secret_found("You have found a secret!"));
 
                 if let Err(err) = game_state.on_found_secret() {
-                    game_state.open_dialog(Box::new(DialogOk::new_error(format!("Error: {}", err))));
+                    game_state.open_dialog(Dialog::new_ok_error(format!("Error: {}", err)));
                 }
             }
         }
@@ -2108,7 +2107,7 @@ impl Screen for ScreenSelectLevelPackEditor {
 
                 Key::ENTER => {
                     if self.new_level_pack_id.len() < 3 {
-                        game_state.open_dialog(Box::new(DialogOk::new_error("Level pack ID must have at least 3 characters!")));
+                        game_state.open_dialog(Dialog::new_ok_error("Level pack ID must have at least 3 characters!"));
 
                         return;
                     }
@@ -2116,14 +2115,14 @@ impl Screen for ScreenSelectLevelPackEditor {
                     for id in game_state.editor_state.level_packs.iter().
                             map(|level_pack| level_pack.id()) {
                         if id == self.new_level_pack_id {
-                            game_state.open_dialog(Box::new(DialogOk::new_error(format!("The level pack with the ID \"{}\" already exists!", id))));
+                            game_state.open_dialog(Dialog::new_ok_error(format!("The level pack with the ID \"{}\" already exists!", id)));
 
                             return;
                         }
                     }
 
                     let Ok(mut save_game_file) = Game::get_or_create_save_game_folder() else {
-                        game_state.open_dialog(Box::new(DialogOk::new_error("Cannot save!")));
+                        game_state.open_dialog(Dialog::new_ok_error("Cannot save!"));
 
                         return;
                     };
@@ -2131,14 +2130,14 @@ impl Screen for ScreenSelectLevelPackEditor {
                     save_game_file.push(".lvl.edit");
 
                     let Some(save_game_file) = save_game_file.to_str() else {
-                        game_state.open_dialog(Box::new(DialogOk::new_error("Cannot save!")));
+                        game_state.open_dialog(Dialog::new_ok_error("Cannot save!"));
 
                         return;
                     };
 
                     let level_pack = LevelPack::new(&self.new_level_pack_id, &self.new_level_pack_id, save_game_file);
                     if let Err(err) = level_pack.save_editor_level_pack() {
-                        game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
+                        game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
                     }
 
                     game_state.play_sound_effect_ui_select();
@@ -2195,16 +2194,16 @@ impl Screen for ScreenSelectLevelPackEditor {
         if key == Key::E && game_state.editor_state.selected_level_pack_index != game_state.editor_state.get_level_pack_count() {
             self.is_exporting_level_pack = true;
 
-            game_state.open_dialog(Box::new(DialogYesNo::new("Do you want to export the level pack to the current directory?")));
+            game_state.open_dialog(Dialog::new_yes_no("Do you want to export the level pack to the current directory?"));
         }
 
         #[cfg(feature = "steam")]
         if key == Key::U && game_state.editor_state.selected_level_pack_index != game_state.editor_state.get_level_pack_count() {
             let level_stats = &game_state.editor_state.get_current_level_pack().unwrap();
             if level_stats.level_pack_best_moves_sum().is_none() {
-                game_state.open_dialog(Box::new(DialogOk::new_error(
+                game_state.open_dialog(Dialog::new_ok_error(
                     "Level pack was not validated yet! All levels must be validated.",
-                )));
+                ));
 
                 return;
             }
@@ -2213,10 +2212,9 @@ impl Screen for ScreenSelectLevelPackEditor {
                 game_state.editor_state.get_current_level_pack().unwrap(),
             );
             if let Err(err) = ret {
-                game_state.open_dialog(Box::new(DialogOk::new_error(
-                    "Could not prepare files for upload to steam workshop!",
+                game_state.open_dialog(Dialog::new_ok_error(format!(
+                    "Could not prepare files for upload to steam workshop!\n{err}",
                 )));
-                println!("{err}"); //TODO remove and create proper popup with erro text
 
                 return;
             }
@@ -2228,10 +2226,10 @@ impl Screen for ScreenSelectLevelPackEditor {
         if key == Key::DELETE && game_state.editor_state.selected_level_pack_index != game_state.editor_state.get_level_pack_count() {
             self.is_deleting_level_pack = true;
 
-            game_state.open_dialog(Box::new(DialogYesNo::new(format!(
+            game_state.open_dialog(Dialog::new_yes_no(format!(
                 "Do you really want to delete level pack \"{}\"?",
                 game_state.editor_state.get_current_level_pack().unwrap().id(),
-            ))));
+            )));
         }
 
         'outer: {
@@ -2272,10 +2270,10 @@ impl Screen for ScreenSelectLevelPackEditor {
                     if game_state.editor_state.selected_level_pack_index == game_state.editor_state.get_level_pack_count() {
                         //Level Pack Editor entry
                         if game_state.editor_state.get_level_pack_count() == LevelPack::MAX_LEVEL_PACK_COUNT {
-                            game_state.open_dialog(Box::new(DialogOk::new_error(format!(
+                            game_state.open_dialog(Dialog::new_ok_error(format!(
                                 "Cannot create new level packs (Max level pack count ({}) reached)",
                                 LevelPack::MAX_LEVEL_PACK_COUNT,
-                            ))));
+                            )));
                         }else {
                             game_state.play_sound_effect_ui_select();
 
@@ -2331,18 +2329,18 @@ impl Screen for ScreenSelectLevelPackEditor {
                 let path = level_pack.id().to_string() + ".lvl";
 
                 if std::fs::exists(&path).ok().is_none_or(|exists| exists) {
-                    game_state.open_dialog(Box::new(DialogOk::new_error(format!(
+                    game_state.open_dialog(Dialog::new_ok_error(format!(
                         "File \"{}\" already exists!",
                         path,
-                    ))));
+                    )));
 
                     return;
                 }
 
                 if let Err(err) = level_pack.export_editor_level_pack_to_path(path) {
-                    game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot export: {}", err))));
+                    game_state.open_dialog(Dialog::new_ok_error(format!("Cannot export: {}", err)));
                 }else {
-                    game_state.open_dialog(Box::new(DialogOk::new("The level pack was exported successfully")));
+                    game_state.open_dialog(Dialog::new_ok("The level pack was exported successfully"));
                 }
             }
         }else if self.is_deleting_level_pack {
@@ -2352,7 +2350,7 @@ impl Screen for ScreenSelectLevelPackEditor {
                 let path = game_state.editor_state.get_current_level_pack().unwrap().path();
 
                 if let Err(err) = std::fs::remove_file(path) {
-                    game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot delete: {}", err))));
+                    game_state.open_dialog(Dialog::new_ok_error(format!("Cannot delete: {}", err)));
                 }else {
                     let index = game_state.editor_state.selected_level_pack_index;
                     game_state.editor_state.level_packs.remove(index);
@@ -2460,7 +2458,7 @@ impl Screen for ScreenSelectLevelPackBackgroundMusic {
             game_state.editor_state.get_current_level_pack_mut().unwrap().set_background_music_id(current_background_music_id);
 
             if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
-                game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
+                game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
             }
         }
 
@@ -2842,19 +2840,19 @@ impl Screen for ScreenLevelPackEditor {
 
                 Key::ENTER => {
                     if !(1..=2).contains(&self.new_level_width_str.len()) {
-                        game_state.open_dialog(Box::new(DialogOk::new_error(format!("Width must be >= 3 and <= {}!", Game::LEVEL_MAX_WIDTH))));
+                        game_state.open_dialog(Dialog::new_ok_error(format!("Width must be >= 3 and <= {}!", Game::LEVEL_MAX_WIDTH)));
 
                         return;
                     }
 
                     let Ok(width) = usize::from_str(&self.new_level_width_str) else {
-                        game_state.open_dialog(Box::new(DialogOk::new_error("Width must be a number")));
+                        game_state.open_dialog(Dialog::new_ok_error("Width must be a number"));
 
                         return;
                     };
 
                     if !(3..=Game::LEVEL_MAX_WIDTH).contains(&width) {
-                        game_state.open_dialog(Box::new(DialogOk::new_error(format!("Width must be >= 3 and <= {}!", Game::LEVEL_MAX_WIDTH))));
+                        game_state.open_dialog(Dialog::new_ok_error(format!("Width must be >= 3 and <= {}!", Game::LEVEL_MAX_WIDTH)));
 
                         return;
                     }
@@ -2866,19 +2864,19 @@ impl Screen for ScreenLevelPackEditor {
                     }
 
                     if !(1..=2).contains(&self.new_level_height_str.len()) {
-                        game_state.open_dialog(Box::new(DialogOk::new_error(format!("Height must be >= 3 and <= {}!", Game::LEVEL_MAX_HEIGHT))));
+                        game_state.open_dialog(Dialog::new_ok_error(format!("Height must be >= 3 and <= {}!", Game::LEVEL_MAX_HEIGHT)));
 
                         return;
                     }
 
                     let Ok(height) = usize::from_str(&self.new_level_height_str) else {
-                        game_state.open_dialog(Box::new(DialogOk::new_error("Height must be a number")));
+                        game_state.open_dialog(Dialog::new_ok_error("Height must be a number"));
 
                         return;
                     };
 
                     if !(3..=Game::LEVEL_MAX_HEIGHT).contains(&height) {
-                        game_state.open_dialog(Box::new(DialogOk::new_error(format!("Height must be >= 3 and <= {}!", Game::LEVEL_MAX_HEIGHT))));
+                        game_state.open_dialog(Dialog::new_ok_error(format!("Height must be >= 3 and <= {}!", Game::LEVEL_MAX_HEIGHT)));
 
                         return;
                     }
@@ -2970,10 +2968,10 @@ impl Screen for ScreenLevelPackEditor {
                     if game_state.editor_state.selected_level_index == game_state.editor_state.get_current_level_pack().unwrap().level_count() {
                         //Level Editor entry
                         if game_state.editor_state.get_current_level_pack().unwrap().level_count() == LevelPack::MAX_LEVEL_COUNT_PER_PACK {
-                            game_state.open_dialog(Box::new(DialogOk::new_error(format!(
+                            game_state.open_dialog(Dialog::new_ok_error(format!(
                                 "Cannot create level packs (Max level count ({}) reached)",
                                 LevelPack::MAX_LEVEL_COUNT_PER_PACK,
-                            ))));
+                            )));
                         }else {
                             game_state.play_sound_effect_ui_select();
 
@@ -3000,7 +2998,7 @@ impl Screen for ScreenLevelPackEditor {
                         }
 
                         if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
-                            game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
+                            game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
                         }
                     }
                 },
@@ -3009,7 +3007,7 @@ impl Screen for ScreenLevelPackEditor {
                     if game_state.editor_state.selected_level_index != game_state.editor_state.get_current_level_pack().unwrap().level_count() {
                         self.is_deleting_level = true;
 
-                        game_state.open_dialog(Box::new(DialogYesNo::new(format!("Do you really want to delete level {}?", game_state.editor_state.selected_level_index + 1))));
+                        game_state.open_dialog(Dialog::new_yes_no(format!("Do you really want to delete level {}?", game_state.editor_state.selected_level_index + 1)));
                     }
                 },
 
@@ -3076,7 +3074,7 @@ impl Screen for ScreenLevelPackEditor {
                 level_pack.calculate_stats_sum();
 
                 if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
-                    game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
+                    game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
                 }
             }
         }
@@ -3131,7 +3129,7 @@ impl ScreenLevelEditor {
                 self.continue_flag = false;
                 self.playing_level = None;
 
-                game_state.open_dialog(Box::new(DialogYesNo::new("Save changes and level validation state?")));
+                game_state.open_dialog(Dialog::new_yes_no("Save changes and level validation state?"));
                 self.should_exit_after_save = false;
             }
 
@@ -3226,10 +3224,10 @@ impl ScreenLevelEditor {
             Key::DELETE => {
                 if self.is_vertical_input {
                     if self.level.current().width() == 3 {
-                        game_state.open_dialog(Box::new(DialogOk::new_error(format!(
+                        game_state.open_dialog(Dialog::new_ok_error(format!(
                             "Level width limit reached (min: {})",
                             3,
-                        ))));
+                        )));
 
                         return;
                     }
@@ -3262,10 +3260,10 @@ impl ScreenLevelEditor {
                     self.level.commit_change(new_level);
                 }else {
                     if self.level.current().height() == 3 {
-                        game_state.open_dialog(Box::new(DialogOk::new_error(format!(
+                        game_state.open_dialog(Dialog::new_ok_error(format!(
                             "Level height limit reached (min: {})",
                             3,
-                        ))));
+                        )));
 
                         return;
                     }
@@ -3309,10 +3307,10 @@ impl ScreenLevelEditor {
 
                 if self.is_vertical_input {
                     if self.level.current().height() == Game::LEVEL_MAX_HEIGHT {
-                        game_state.open_dialog(Box::new(DialogOk::new_error(format!(
+                        game_state.open_dialog(Dialog::new_ok_error(format!(
                             "Level height limit reached (max: {})",
                             Game::LEVEL_MAX_HEIGHT,
-                        ))));
+                        )));
 
                         return;
                     }
@@ -3348,10 +3346,10 @@ impl ScreenLevelEditor {
                     self.level.commit_change(new_level);
                 }else {
                     if self.level.current().width() == Game::LEVEL_MAX_WIDTH {
-                        game_state.open_dialog(Box::new(DialogOk::new_error(format!(
+                        game_state.open_dialog(Dialog::new_ok_error(format!(
                             "Level width limit reached (max: {})",
                             Game::LEVEL_MAX_WIDTH,
-                        ))));
+                        )));
 
                         return;
                     }
@@ -3409,7 +3407,7 @@ impl ScreenLevelEditor {
             },
 
             Key::ENTER => {
-                game_state.open_dialog(Box::new(DialogYesNo::new("Save changes and level validation state?")));
+                game_state.open_dialog(Dialog::new_yes_no("Save changes and level validation state?"));
                 self.should_exit_after_save = false;
             },
 
@@ -3521,7 +3519,7 @@ impl Screen for ScreenLevelEditor {
 
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
         if key == Key::ESC {
-            game_state.open_dialog(Box::new(DialogYesCancelNo::new("Exiting (Save changes and level validation state?)")));
+            game_state.open_dialog(Dialog::new_yes_cancel_no("Exiting (Save changes and level validation state?)"));
             self.should_exit_after_save = true;
 
             return;
@@ -3542,7 +3540,7 @@ impl Screen for ScreenLevelEditor {
                     },
 
                     Err(err) => {
-                        game_state.open_dialog(Box::new(DialogOk::new_error(err.to_string())));
+                        game_state.open_dialog(Dialog::new_ok_error(err.to_string()));
 
                         return;
                     },
@@ -3603,7 +3601,7 @@ impl Screen for ScreenLevelEditor {
             level_pack.calculate_stats_sum();
 
             if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
-                game_state.open_dialog(Box::new(DialogOk::new_error(format!("Cannot save: {}", err))));
+                game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
             }else {
                 self.last_saved_history_index = self.level.current_index();
             }
