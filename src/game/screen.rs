@@ -1577,6 +1577,25 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(") and will be lost");
                 },
+                19 => {
+                    console.set_cursor_pos(2, 8);
+                    console.draw_text("Fragile Floor (");
+
+                    Tile::FragileFloor.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(") turns into a hole (");
+
+                    Tile::Hole.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(") once crossed by the player (");
+
+                    Tile::Player.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(")");
+                },
                 _ => {},
             }
         }
