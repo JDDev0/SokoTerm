@@ -20,7 +20,7 @@ use bevy::prelude::*;
 use bevy_steamworks::*;
 
 pub mod level;
-mod screen;
+pub(crate) mod screen;
 mod help_page;
 pub mod audio;
 pub mod console_extension;

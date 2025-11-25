@@ -59,7 +59,10 @@ impl Plugin for SteamWorkshopUploadPopupPlugin {
                 add_systems(OnEnter(AppState::SteamWorkshopUploadPopup), create_level_pack_thumbnail.after(on_open_steam_workshop_upload_popup)).
                 add_systems(OnEnter(AppState::SteamWorkshopUploadPopup), on_resize_popup_text.after(on_open_steam_workshop_upload_popup)).
 
-                add_systems(OnExit(AppState::SteamWorkshopUploadPopup), on_close_steam_workshop_upload_popup);
+                add_systems(OnExit(AppState::SteamWorkshopUploadPopup), (
+                    on_close_steam_workshop_upload_popup,
+                    close_upload_progress_popup,
+                ));
     }
 }
 

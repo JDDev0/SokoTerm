@@ -18,6 +18,7 @@ use crate::io::Console;
 use bevy_steamworks::*;
 #[cfg(feature = "steam")]
 use crate::game::level::LevelPack;
+use crate::game::screen::dialog::Dialog;
 #[cfg(feature = "steam")]
 use crate::game::steam;
 
@@ -194,13 +195,19 @@ pub fn run_game() -> ExitCode {
 
 fn handle_recoverable_error(
     In(result): In<Result<(), Box<dyn Error>>>,
+
+    mut game: NonSendMut<Game>,
+
+    mut app_state_next_state: ResMut<NextState<AppState>>,
 ) {
     let Err(err) = result else {
         return;
     };
 
-    //TODO show popup with ok button
+    app_state_next_state.set(AppState::InGame);
+
     error!("An error occurred: {err}");
+    game.game_state_mut().open_dialog(Dialog::new_ok_error(format!("An error occurred:\n{err}")));
 }
 
 fn spawn_camera(
