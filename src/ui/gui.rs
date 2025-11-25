@@ -11,6 +11,7 @@ use bevy::window::{PrimaryWindow, WindowMode, WindowResized};
 use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use bevy::log::LogPlugin;
 use crate::game::Game;
+use crate::game::screen::dialog::Dialog;
 use crate::io::bevy_abstraction::{ConsoleState, Key, COLOR_SCHEMES};
 use crate::io::Console;
 
@@ -18,7 +19,6 @@ use crate::io::Console;
 use bevy_steamworks::*;
 #[cfg(feature = "steam")]
 use crate::game::level::LevelPack;
-use crate::game::screen::dialog::Dialog;
 #[cfg(feature = "steam")]
 use crate::game::steam;
 
