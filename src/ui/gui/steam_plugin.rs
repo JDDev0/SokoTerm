@@ -3,7 +3,7 @@ use std::error::Error;
 use std::sync::{Arc, LazyLock, Mutex};
 use bevy::prelude::*;
 use bevy_steamworks::*;
-use crate::game::Game;
+use crate::game::{steam, Game, GameError};
 use crate::ui::gui::{handle_recoverable_error, on_resize, CharacterScaling};
 use crate::ui::gui::steam_plugin::steam_workshop_upload_popup::SteamWorkshopUploadPopupPlugin;
 
@@ -12,7 +12,22 @@ mod steam_workshop_upload_popup;
 #[cfg(unix)]
 mod linux_steam_overlay_info_popup;
 
-pub struct SteamPlugin;
+pub fn init(app: &mut App) -> Result<(), GameError> {
+    let steamworks_plugin = SteamworksPlugin::init_app(steam::APP_ID);
+    let steamworks_plugin = match steamworks_plugin {
+        Ok(steamworks_plugin) => steamworks_plugin,
+        Err(err) => {
+            return Err(GameError::new(format!("Could not initialize Steam Client: {err}")));
+        },
+    };
+    app.add_plugins(steamworks_plugin);
+
+    app.add_plugins(SteamPlugin);
+
+    Ok(())
+}
+
+struct SteamPlugin;
 
 impl Plugin for SteamPlugin {
     fn build(&self, app: &mut App) {
@@ -26,8 +41,11 @@ impl Plugin for SteamPlugin {
 
                 add_message::<PlaySoundEffect>().
 
+                add_systems(Startup, steam::steam_init).
+
                 add_systems(PostStartup, load_steam_workshop_items.pipe(handle_recoverable_error)).
 
+                add_systems(Update, steam::steam_callback).
                 add_systems(Update, handle_workshop_item_loading_queue.pipe(handle_recoverable_error)).
                 add_systems(Update, on_resize_popup_text.after(on_resize)).
                 add_systems(Update, on_play_sound_effect);

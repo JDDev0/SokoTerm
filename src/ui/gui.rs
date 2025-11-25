@@ -19,8 +19,6 @@ use crate::io::Console;
 use bevy_steamworks::*;
 #[cfg(feature = "steam")]
 use crate::game::level::LevelPack;
-#[cfg(feature = "steam")]
-use crate::game::steam;
 
 mod assets;
 mod startup_error;
@@ -70,18 +68,9 @@ pub fn run_game() -> ExitCode {
 
     #[cfg(feature = "steam")]
     let steam_client = {
-        let steamworks_plugin = SteamworksPlugin::init_app(steam::APP_ID);
-        let steamworks_plugin = match steamworks_plugin {
-            Ok(steamworks_plugin) => steamworks_plugin,
-            Err(err) => {
-                startup_error::show_startup_error_dialog(&mut app, &format!("Could not initialize Steam Client: {err}"));
-                return ExitCode::FAILURE;
-            },
-        };
-
-        app.add_plugins(steamworks_plugin);
-        app.add_systems(Startup, steam::steam_init);
-        app.add_systems(Update, steam::steam_callback);
+        if let Err(err) = steam_plugin::init(&mut app) {
+            startup_error::show_startup_error_dialog(&mut app, &err.to_string());
+        }
 
         app.world().get_resource::<Client>().unwrap().clone()
     };
@@ -163,11 +152,6 @@ pub fn run_game() -> ExitCode {
                     run_if(in_state(AppState::InGame)).
                     before(draw_console_text)).
             add_systems(Update, (on_resize, toggle_fullscreen));
-
-    #[cfg(feature = "steam")]
-    {
-        app.add_plugins(steam_plugin::SteamPlugin);
-    }
 
     let embedded = app.world_mut().resource_mut::<EmbeddedAssetRegistry>();
 
