@@ -1789,7 +1789,7 @@ impl Screen for ScreenInGame {
 
                     #[cfg(feature = "steam")]
                     if level_pack.id() == "main" && current_level_index == 95 && moves < 160 {
-                        Achievement::LEVEL_PACK_MAIN_LEVEL_96_COMPLETED.unlock(steam_client.clone());
+                        Achievement::LEVEL_PACK_MAIN_LEVEL_96_CHALLENGE.unlock(steam_client.clone());
                     }
 
                     #[cfg(feature = "steam")]

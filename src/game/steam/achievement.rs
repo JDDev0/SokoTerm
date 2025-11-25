@@ -24,7 +24,7 @@ impl Achievement {
     achievement! { LEVEL_PACK_SECRET_COMPLETED }
     achievement! { LEVEL_PACK_TUTORIAL_FAST }
     achievement! { LEVEL_PACK_SECRET_DISCOVERED }
-    achievement! { LEVEL_PACK_MAIN_LEVEL_96_COMPLETED }
+    achievement! { LEVEL_PACK_MAIN_LEVEL_96_CHALLENGE }
     achievement! { STEAM_WORKSHOP_LEVEL_PACK_PLAYED }
     achievement! { STEAM_WORKSHOP_LEVEL_PACK_COMPLETED }
     achievement! { STEAM_WORKSHOP_LEVEL_PACK_CREATED }
