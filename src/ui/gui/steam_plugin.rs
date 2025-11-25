@@ -4,8 +4,8 @@ use std::sync::{Arc, LazyLock, Mutex};
 use bevy::prelude::*;
 use bevy_steamworks::*;
 use crate::game::Game;
-use crate::startup::gui::{handle_recoverable_error, on_resize, CharacterScaling};
-use crate::startup::gui::steam_plugin::steam_workshop_upload_popup::SteamWorkshopUploadPopupPlugin;
+use crate::ui::gui::{handle_recoverable_error, on_resize, CharacterScaling};
+use crate::ui::gui::steam_plugin::steam_workshop_upload_popup::SteamWorkshopUploadPopupPlugin;
 
 mod steam_workshop_upload_popup;
 

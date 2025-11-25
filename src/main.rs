@@ -10,14 +10,13 @@ compile_error!("Either feature `cli` or `gui` must be enabled");
 compile_error!("Features `cli` and `gui` are mutually exclusively");
 
 use std::process::ExitCode;
-use crate::startup::run_game;
+use ui::run_game;
 
 pub mod game;
 pub mod collections;
 pub mod io;
 pub mod utils;
-
-mod startup;
+mod ui;
 
 fn main() -> ExitCode {
     run_game()

@@ -11,7 +11,7 @@ use bevy::ui_widgets::{observe, Activate, Button, Checkbox, RadioGroup, UiWidget
 use bevy::window::{CursorIcon, PrimaryWindow, SystemCursorIcon};
 use rodio::{Decoder, OutputStream, Source};
 use crate::game::{audio, Game};
-use crate::startup::gui::{assets, spawn_camera};
+use crate::ui::gui::{assets, spawn_camera};
 
 #[derive(Debug, Default, Resource)]
 struct ErrorTextResource {

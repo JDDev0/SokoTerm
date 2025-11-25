@@ -18,9 +18,9 @@ use bevy::window::{CursorIcon, PrimaryWindow, SystemCursorIcon};
 use bevy_steamworks::*;
 use crate::game::{audio, steam, Game, GameError};
 use crate::game::steam::achievement::Achievement;
-use crate::startup::gui;
-use crate::startup::gui::{AppState, CONSOLE_STATE};
-use crate::startup::gui::steam_plugin::{handle_recoverable_error, on_resize_popup_text, PlaySoundEffect, ResizableNodeDimension, ResizableText};
+use crate::ui::gui;
+use crate::ui::gui::{handle_recoverable_error, AppState, CONSOLE_STATE};
+use crate::ui::gui::steam_plugin::{on_resize_popup_text, PlaySoundEffect, ResizableNodeDimension, ResizableText};
 use crate::utils;
 
 pub struct SteamWorkshopUploadPopupPlugin;

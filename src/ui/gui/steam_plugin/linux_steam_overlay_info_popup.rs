@@ -7,8 +7,8 @@ use bevy::input_focus::tab_navigation::{TabGroup, TabIndex};
 use bevy::prelude::*;
 use bevy::text::LineHeight;
 use bevy_steamworks::{CallbackResult, GameOverlayActivated, SteamworksEvent};
-use crate::startup::gui::CharacterScaling;
-use crate::startup::gui::steam_plugin::{on_resize_popup_text, ResizableNodeDimension, ResizableText};
+use crate::ui::gui::CharacterScaling;
+use crate::ui::gui::steam_plugin::{on_resize_popup_text, ResizableNodeDimension, ResizableText};
 
 #[derive(Debug, Component)]
 struct LinuxSteamOverlayInfoPopup;
