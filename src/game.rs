@@ -359,7 +359,7 @@ impl GameState {
         self.should_exit = true;
     }
 
-    fn on_found_secret_for_level_pack(&mut self, level_pack_index: usize) -> Result<(), Box<dyn Error>> {
+    fn on_found_secret_for_level_pack(&mut self, level_pack_index: usize, save_immediately: bool) -> Result<(), Box<dyn Error>> {
         if level_pack_index == 1 && !self.found_secret_main_level_pack {
             self.found_secret_main_level_pack = true;
 
@@ -370,8 +370,10 @@ impl GameState {
                 None,
             )?;
 
-            //Save immediately in order to keep secret level pack after game restart if not yet played
-            secret_level_pack.save_save_game(false)?;
+            if save_immediately {
+                //Save immediately in order to keep secret level pack after game restart if not yet played
+                secret_level_pack.save_save_game(false)?;
+            }
 
             self.level_packs.insert(4, secret_level_pack);
         }
@@ -380,7 +382,7 @@ impl GameState {
     }
 
     pub fn on_found_secret(&mut self) -> Result<(), Box<dyn Error>> {
-        self.on_found_secret_for_level_pack(self.current_level_pack_index)
+        self.on_found_secret_for_level_pack(self.current_level_pack_index, true)
     }
 
     pub fn play_sound_effect_ui_dialog_open(&self) {
@@ -784,7 +786,7 @@ impl <'a> Game<'a> {
         let mut save_game_file = Game::get_or_create_save_game_folder()?;
         save_game_file.push("secret.lvl.sav");
         if std::fs::exists(&save_game_file).is_ok_and(|exists| exists) {
-            game_state.on_found_secret_for_level_pack(1)?;
+            game_state.on_found_secret_for_level_pack(1, false)?;
         }
 
         game_state.set_background_music_loop(&audio::BACKGROUND_MUSIC_FIELDS_OF_ICE);
