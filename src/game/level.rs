@@ -49,6 +49,7 @@ impl Tile {
     pub fn from_ascii(a: u8) -> Result<Self, LevelLoadingError> {
         match a {
             b'-' => Ok(Tile::Empty),
+            //Different ASCII char than display for compatibility with old level packs
             b':' => Ok(Tile::FragileFloor),
 
             b'<' => Ok(Tile::OneWayLeft),
@@ -85,6 +86,7 @@ impl Tile {
     pub fn to_ascii(&self) -> u8 {
         match self {
             Tile::Empty => b'-',
+            //Different ASCII char than display for compatibility with old level packs
             Tile::FragileFloor => b':',
 
             Tile::OneWayLeft => b'<',
@@ -206,6 +208,44 @@ pub enum Direction {
     Down,
 }
 
+impl Direction {
+    pub fn update_x(&self, x: usize, width: usize) -> usize {
+        match self {
+            Direction::Left => if x == 0 {
+                width - 1
+            }else {
+                x - 1
+            },
+            Direction::Right => if x == width - 1 {
+                0
+            }else {
+                x + 1
+            },
+            _ => x,
+        }
+    }
+
+    pub fn update_y(&self, y: usize, height: usize) -> usize {
+        match self {
+            Direction::Up => if y == 0 {
+                height - 1
+            }else {
+                y - 1
+            },
+            Direction::Down => if y == height - 1 {
+                0
+            }else {
+                y + 1
+            },
+            _ => y,
+        }
+    }
+
+    pub fn update_xy(&self, x: usize, y: usize, width: usize, height: usize) -> (usize, usize) {
+        (self.update_x(x, width), self.update_y(y, height))
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum MoveResult {
     Valid {
@@ -275,16 +315,15 @@ impl Level {
         self.tiles[x + y * self.width] = tile;
     }
 
-    fn move_box_or_key(&mut self, level_original: &Level, from_pos_x: usize, from_pos_y: usize, to_pos_x: usize, to_pos_y: usize) -> MoveResult {
+    fn move_box_or_key(&mut self, level_original: &Level, x_from: usize, y_from: usize, direction: Direction) -> MoveResult {
         if self.width != level_original.width || self.height != level_original.height {
             panic!("Original level must have the same width and height as the modified level!");
         }
 
-        let move_x = to_pos_x as isize - from_pos_x as isize;
-        let move_y = to_pos_y as isize - from_pos_y as isize;
-        let index_from = to_pos_x + to_pos_y * self.width;
-        let index_to = ((to_pos_x as isize + move_x + self.width as isize) % self.width as isize) as usize +
-                ((to_pos_y as isize + move_y + self.height as isize) % self.height as isize) as usize * self.width;
+        let (x_to, y_to) = direction.update_xy(x_from, y_from, self.width, self.height);
+
+        let index_from = x_from + y_from * self.width;
+        let index_to = x_to + y_to * self.width;
 
         let Some(tile_from) = self.tiles.get(index_from) else {
             return MoveResult::Invalid;
@@ -293,15 +332,15 @@ impl Level {
             return MoveResult::Invalid;
         };
 
-        let is_box = *tile_from == Tile::Box || *tile_from == Tile::BoxInGoal || *tile_from == Tile::BoxOnFragileFloor;
+        let is_box = matches!(*tile_from, Tile::Box | Tile::BoxInGoal | Tile::BoxOnFragileFloor);
 
         let tile_from_new_value;
         let tile_to_new_value;
 
         let mut has_won = false;
 
-        if *tile_to == Tile::Empty || *tile_to == Tile::FragileFloor ||*tile_to == Tile::Goal ||  *tile_to == Tile::BoxInHole ||
-                *tile_to == Tile::Hole || (!is_box && *tile_to == Tile::LockedDoor) {
+        if matches!(*tile_to, Tile::Empty | Tile::FragileFloor | Tile::Goal | Tile::BoxInHole | Tile::Hole) ||
+                (!is_box && *tile_to == Tile::LockedDoor) {
             if is_box && *tile_to == Tile::Goal {
                 tile_to_new_value = Tile::BoxInGoal;
 
@@ -492,33 +531,7 @@ impl PlayingLevel {
         let (mut level, mut player_pos) = self.playing_level.current().clone();
 
         let (x_from, y_from) = player_pos;
-
-        let x_to = match direction {
-            Direction::Left => if x_from == 0 {
-                level.width() - 1
-            }else {
-                x_from - 1
-            },
-            Direction::Right => if x_from == level.width() - 1 {
-                0
-            }else {
-                x_from + 1
-            },
-            _ => x_from,
-        };
-        let y_to = match direction {
-            Direction::Up => if y_from == 0 {
-                level.height() - 1
-            }else {
-                y_from - 1
-            },
-            Direction::Down => if y_from == level.height() - 1 {
-                0
-            }else {
-                y_from + 1
-            },
-            _ => y_from,
-        };
+        let (x_to, y_to) = direction.update_xy(x_from, y_from, level.width, level.height);
 
         let one_way_door_tile = match direction {
             Direction::Left => Tile::OneWayLeft,
@@ -550,7 +563,7 @@ impl PlayingLevel {
         let move_result = if matches!(tile, Tile::Empty | Tile::FragileFloor | Tile::Goal | Tile::Secret | Tile::BoxInHole) || tile == one_way_door_tile {
             MoveResult::Valid { has_won: false, secret_found: tile == Tile::Secret }
         }else if matches!(tile, Tile::Box | Tile::BoxInGoal | Tile::BoxOnFragileFloor | Tile::Key | Tile::KeyInGoal | Tile::KeyOnFragileFloor) {
-            level.move_box_or_key(&self.original_level, x_from, y_from, x_to, y_to)
+            level.move_box_or_key(&self.original_level, x_to, y_to, direction)
         }else {
             MoveResult::Invalid
         };
