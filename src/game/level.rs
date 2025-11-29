@@ -16,6 +16,7 @@ use bevy_steamworks::*;
 pub enum Tile {
     Empty,
     FragileFloor,
+    Ice,
 
     OneWayLeft,
     OneWayUp,
@@ -26,15 +27,18 @@ pub enum Tile {
 
     Player,
     PlayerOnFragileFloor,
+    PlayerOnIce,
 
     Key,
     KeyInGoal,
     KeyOnFragileFloor,
+    KeyOnIce,
     LockedDoor,
 
     Box,
     BoxInGoal,
     BoxOnFragileFloor,
+    BoxOnIce,
     Goal,
 
     Hole,
@@ -51,6 +55,7 @@ impl Tile {
             b'-' => Ok(Tile::Empty),
             //Different ASCII char than display for compatibility with old level packs
             b':' => Ok(Tile::FragileFloor),
+            b'%' => Ok(Tile::Ice),
 
             b'<' => Ok(Tile::OneWayLeft),
             b'^' => Ok(Tile::OneWayUp),
@@ -61,15 +66,18 @@ impl Tile {
 
             b'p' | b'P' => Ok(Tile::Player),
             b',' => Ok(Tile::PlayerOnFragileFloor),
+            b'&' => Ok(Tile::PlayerOnIce),
 
             b'*' => Ok(Tile::Key),
             b'~' => Ok(Tile::KeyInGoal),
             b';' => Ok(Tile::KeyOnFragileFloor),
+            b'\\' => Ok(Tile::KeyOnIce),
             b'=' => Ok(Tile::LockedDoor),
 
             b'@' => Ok(Tile::Box),
             b'+' => Ok(Tile::BoxInGoal),
             b'!' => Ok(Tile::BoxOnFragileFloor),
+            b'/' => Ok(Tile::BoxOnIce),
             b'x' | b'X' => Ok(Tile::Goal),
 
             b'o' | b'O' => Ok(Tile::Hole),
@@ -88,6 +96,7 @@ impl Tile {
             Tile::Empty => b'-',
             //Different ASCII char than display for compatibility with old level packs
             Tile::FragileFloor => b':',
+            Tile::Ice => b'%',
 
             Tile::OneWayLeft => b'<',
             Tile::OneWayUp => b'^',
@@ -98,15 +107,18 @@ impl Tile {
 
             Tile::Player => b'P',
             Tile::PlayerOnFragileFloor => b',',
+            Tile::PlayerOnIce => b'&',
 
             Tile::Key => b'*',
             Tile::KeyInGoal => b'~',
             Tile::KeyOnFragileFloor => b';',
+            Tile::KeyOnIce => b'\\',
             Tile::LockedDoor => b'=',
 
             Tile::Box => b'@',
             Tile::BoxInGoal => b'+',
             Tile::BoxOnFragileFloor => b'!',
+            Tile::BoxOnIce => b'/',
             Tile::Goal => b'x',
 
             Tile::Hole => b'o',
@@ -128,6 +140,10 @@ impl Tile {
                 console.set_color_invertible(Color::LightBlue, Color::Default, inverted);
                 console.draw_text("~");
             },
+            Tile::Ice => {
+                console.set_color_invertible(Color::LightBlue, Color::Default, inverted);
+                console.draw_text("%");
+            },
             Tile::OneWayLeft => {
                 console.set_color_invertible(Color::LightBlue, Color::Default, inverted);
                 console.draw_text("<");
@@ -148,7 +164,7 @@ impl Tile {
                 console.set_color_invertible(Color::LightGreen, Color::Default, inverted);
                 console.draw_text("#");
             },
-            Tile::Player | Tile::PlayerOnFragileFloor => {
+            Tile::Player | Tile::PlayerOnFragileFloor | Tile::PlayerOnIce => {
                 if is_player_background {
                     console.set_color_invertible(Color::Default, Color::Yellow, inverted);
                 }else {
@@ -156,7 +172,7 @@ impl Tile {
                 }
                 console.draw_text("P");
             },
-            Tile::Key | Tile::KeyOnFragileFloor => {
+            Tile::Key | Tile::KeyOnFragileFloor | Tile::KeyOnIce => {
                 console.set_color_invertible(Color::LightCyan, Color::Default, inverted);
                 console.draw_text("*");
             },
@@ -168,7 +184,7 @@ impl Tile {
                 console.set_color_invertible(Color::LightRed, Color::Default, inverted);
                 console.draw_text("=");
             },
-            Tile::Box | Tile::BoxOnFragileFloor => {
+            Tile::Box | Tile::BoxOnFragileFloor | Tile::BoxOnIce => {
                 console.set_color_invertible(Color::LightCyan, Color::Default, inverted);
                 console.draw_text("@");
             },
@@ -246,13 +262,30 @@ impl Direction {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
+enum AnimationState {
+    Player {
+        last_valid_move_result: MoveResult,
+        direction: Direction,
+    },
+    BoxOrKey {
+        last_valid_move_result: MoveResult,
+        x_from: usize,
+        y_from: usize,
+        direction: Direction,
+    },
+}
+
+#[derive(Debug, Clone)]
 pub enum MoveResult {
     Valid {
         has_won: bool,
         secret_found: bool,
     },
     Invalid,
+    Animation {
+        player_animation: bool,
+    },
 }
 
 impl MoveResult {
@@ -266,6 +299,14 @@ impl MoveResult {
 
     pub fn secret_found(&self) -> bool {
         matches!(self, MoveResult::Valid {secret_found: true, ..})
+    }
+
+    pub fn is_invalid(&self) -> bool {
+        matches!(self, MoveResult::Invalid)
+    }
+
+    pub fn is_animation(&self) -> bool {
+        matches!(self, MoveResult::Animation {..})
     }
 }
 
@@ -313,101 +354,6 @@ impl Level {
 
     pub fn set_tile(&mut self, x: usize, y: usize, tile: Tile) {
         self.tiles[x + y * self.width] = tile;
-    }
-
-    fn move_box_or_key(&mut self, level_original: &Level, x_from: usize, y_from: usize, direction: Direction) -> MoveResult {
-        if self.width != level_original.width || self.height != level_original.height {
-            panic!("Original level must have the same width and height as the modified level!");
-        }
-
-        let (x_to, y_to) = direction.update_xy(x_from, y_from, self.width, self.height);
-
-        let index_from = x_from + y_from * self.width;
-        let index_to = x_to + y_to * self.width;
-
-        let Some(tile_from) = self.tiles.get(index_from) else {
-            return MoveResult::Invalid;
-        };
-        let Some(tile_to) = self.tiles.get(index_to) else {
-            return MoveResult::Invalid;
-        };
-
-        let is_box = matches!(*tile_from, Tile::Box | Tile::BoxInGoal | Tile::BoxOnFragileFloor);
-
-        let tile_from_new_value;
-        let tile_to_new_value;
-
-        let mut has_won = false;
-
-        if matches!(*tile_to, Tile::Empty | Tile::FragileFloor | Tile::Goal | Tile::BoxInHole | Tile::Hole) ||
-                (!is_box && *tile_to == Tile::LockedDoor) {
-            if is_box && *tile_to == Tile::Goal {
-                tile_to_new_value = Tile::BoxInGoal;
-
-                has_won = true;
-                for (index, tile) in self.tiles.iter().
-                        enumerate() {
-                    if index == index_to {
-                        continue;
-                    }
-
-                    if *tile == Tile::Goal || *tile == Tile::KeyInGoal {
-                        has_won = false;
-
-                        break;
-                    }
-
-                    let tile_original = &level_original.tiles[index];
-
-                    //If player is on GOAL -> check level field
-                    if index == index_from && (*tile_original == Tile::Goal ||
-                            *tile_original == Tile::BoxInGoal || *tile_original == Tile::KeyInGoal) {
-                        has_won = false;
-
-                        break;
-                    }
-                }
-            }else if !is_box && *tile_to == Tile::Goal {
-                tile_to_new_value = Tile::KeyInGoal;
-            }else if *tile_to == Tile::FragileFloor {
-                if is_box {
-                    tile_to_new_value = Tile::BoxOnFragileFloor;
-                }else {
-                    tile_to_new_value = Tile::KeyOnFragileFloor;
-                }
-            }else if *tile_to == Tile::Hole {
-                if is_box {
-                    tile_to_new_value = Tile::BoxInHole;
-                }else {
-                    //Key will be destroyed, only boxes can fill holes
-                    tile_to_new_value = Tile::Hole;
-                }
-            }else if is_box {
-                tile_to_new_value = Tile::Box;
-            }else if *tile_to == Tile::LockedDoor {
-                //Open door and destroy key
-                tile_to_new_value = Tile::Empty;
-            }else {
-                tile_to_new_value = Tile::Key;
-            }
-
-            if *tile_from == Tile::Box || *tile_from == Tile::Key {
-                tile_from_new_value = Tile::Empty;
-            }else if *tile_from == Tile::BoxInHole {
-                tile_from_new_value = Tile::BoxInHole;
-            }else if *tile_from == Tile::BoxOnFragileFloor || *tile_from == Tile::KeyOnFragileFloor {
-                tile_from_new_value = Tile::FragileFloor;
-            }else {
-                tile_from_new_value = Tile::Goal;
-            }
-
-            self.tiles[index_from] = tile_from_new_value;
-            self.tiles[index_to] = tile_to_new_value;
-
-            return MoveResult::Valid { has_won, secret_found: false };
-        }
-
-        MoveResult::Invalid
     }
 
     pub fn draw(&self, console: &Console, x_offset: usize, y_offset: usize, is_player_background: bool, cursor_pos: Option<(usize, usize)>) {
@@ -496,12 +442,13 @@ impl FromStr for Level {
 #[derive(Debug)]
 pub struct PlayingLevel {
     original_level: Level,
+    animation_state: Option<AnimationState>,
     playing_level: UndoHistory<(Level, (usize, usize))>,
 }
 
 impl PlayingLevel {
     pub fn new(level: &Level, history_size: usize) -> Result<Self, LevelLoadingError> {
-        let player_tile_count = level.tiles().iter().filter(|tile| **tile == Tile::Player || **tile == Tile::PlayerOnFragileFloor).count();
+        let player_tile_count = level.tiles().iter().filter(|tile| matches!(tile, Tile::Player | Tile::PlayerOnFragileFloor | Tile::PlayerOnIce)).count();
         if player_tile_count == 0 {
             return Err(LevelLoadingError::new("Level does not contain a player tile!"));
         }else if player_tile_count > 1 {
@@ -513,7 +460,7 @@ impl PlayingLevel {
         'outer:
         for i in 0..level.width() {
             for j in 0..level.height() {
-                if let Some(tile) = level.get_tile(i, j) && matches!(tile, Tile::Player | Tile::PlayerOnFragileFloor) {
+                if let Some(tile) = level.get_tile(i, j) && matches!(tile, Tile::Player | Tile::PlayerOnFragileFloor | Tile::PlayerOnIce) {
                     player_pos = Some((i, j));
 
                     break 'outer;
@@ -523,11 +470,89 @@ impl PlayingLevel {
 
         Ok(PlayingLevel {
             original_level: level.clone(),
+            animation_state: None,
             playing_level: UndoHistory::new(history_size, (level.clone(), player_pos.unwrap())),
         })
     }
 
+    pub fn is_playing_animation(&self) -> bool {
+        self.animation_state.is_some()
+    }
+
+    #[must_use]
+    pub fn continue_animation(&mut self) -> MoveResult {
+        let Some(animation_state) = self.animation_state.clone() else {
+            return MoveResult::Invalid;
+        };
+
+        let move_result = match animation_state {
+            AnimationState::Player {
+                last_valid_move_result, direction,
+            } => {
+                let move_result = self.move_player_internal(direction);
+                if move_result.is_invalid() {
+                    //Animation finished
+                    self.animation_state = None;
+
+                    //No changes happened to level -> return result directly
+                    return last_valid_move_result;
+                }
+
+                if move_result.is_valid() {
+                    //Animation finished
+                    self.animation_state = None;
+                }
+
+                move_result
+            },
+
+            AnimationState::BoxOrKey {
+                last_valid_move_result,
+                x_from, y_from,
+                direction,
+            } => {
+                let (mut level, player_pos) = self.playing_level.current().clone();
+
+                let move_result = self.move_box_or_key(&mut level, x_from, y_from, direction);
+                if move_result.is_invalid() {
+                    //Animation finished
+                    self.animation_state = None;
+
+                    //No changes happened to level -> return result directly
+                    return last_valid_move_result;
+                }
+
+                if move_result.is_valid() {
+                    //Animation finished
+                    self.animation_state = None;
+                }
+
+                self.playing_level.commit_change((level, player_pos));
+
+                move_result
+            },
+        };
+
+        //Undo temporary change from last animation iteration
+        let current_playing_level = self.playing_level.current().clone();
+        self.playing_level.undo();
+        self.playing_level.undo();
+        self.playing_level.commit_change(current_playing_level);
+
+        move_result
+    }
+
+    #[must_use]
     pub fn move_player(&mut self, direction: Direction) -> MoveResult {
+        if self.is_playing_animation() {
+            return MoveResult::Invalid;
+        }
+
+        self.move_player_internal(direction)
+    }
+
+    #[must_use]
+    fn move_player_internal(&mut self, direction: Direction) -> MoveResult {
         let (mut level, mut player_pos) = self.playing_level.current().clone();
 
         let (x_from, y_from) = player_pos;
@@ -555,20 +580,22 @@ impl PlayingLevel {
             }else {
                 Tile::BoxInHole //Hole from Fragile Floor usage must already have been filled with box
             };
+        }else if matches!(tile, Tile::Ice | Tile::PlayerOnIce | Tile::BoxOnIce | Tile::KeyOnIce) {
+            tile = Tile::Ice;
         }
 
         level.set_tile(x_from, y_from, tile);
 
         let tile = level.get_tile(x_to, y_to).unwrap();
-        let move_result = if matches!(tile, Tile::Empty | Tile::FragileFloor | Tile::Goal | Tile::Secret | Tile::BoxInHole) || tile == one_way_door_tile {
+        let move_result = if matches!(tile, Tile::Empty | Tile::FragileFloor | Tile::Ice | Tile::Goal | Tile::Secret | Tile::BoxInHole) || tile == one_way_door_tile {
             MoveResult::Valid { has_won: false, secret_found: tile == Tile::Secret }
-        }else if matches!(tile, Tile::Box | Tile::BoxInGoal | Tile::BoxOnFragileFloor | Tile::Key | Tile::KeyInGoal | Tile::KeyOnFragileFloor) {
-            level.move_box_or_key(&self.original_level, x_to, y_to, direction)
+        }else if matches!(tile, Tile::Box | Tile::BoxInGoal | Tile::BoxOnFragileFloor | Tile::BoxOnIce | Tile::Key | Tile::KeyInGoal | Tile::KeyOnFragileFloor | Tile::KeyOnIce) {
+            self.move_box_or_key(&mut level, x_to, y_to, direction)
         }else {
             MoveResult::Invalid
         };
 
-        if move_result.is_valid() {
+        if move_result.is_valid() || move_result.is_animation() {
             player_pos = (x_to, y_to);
         }
 
@@ -579,11 +606,138 @@ impl PlayingLevel {
             level.set_tile(player_pos.0, player_pos.1, Tile::Player);
         }
 
-        if move_result.is_valid() {
+        if move_result.is_valid() || move_result.is_animation() {
             self.playing_level.commit_change((level, player_pos));
+
+            //If ice tile: move forwards until no longer ice (Start animation)
+            if tile == Tile::Ice {
+                self.animation_state = Some(AnimationState::Player {
+                    last_valid_move_result: move_result,
+                    direction,
+                });
+
+                return MoveResult::Animation { player_animation: true };
+            }
         }
 
         move_result
+    }
+
+    #[must_use]
+    fn move_box_or_key(&mut self, level: &mut Level, x_from: usize, y_from: usize, direction: Direction) -> MoveResult {
+        if level.width != self.original_level.width || level.height != self.original_level.height {
+            panic!("Original level must have the same width and height as the modified level!");
+        }
+
+        let (x_to, y_to) = direction.update_xy(x_from, y_from, level.width, level.height);
+
+        let index_from = x_from + y_from * level.width;
+        let index_to = x_to + y_to * level.width;
+
+        let Some(tile_from) = level.tiles.get(index_from) else {
+            return MoveResult::Invalid;
+        };
+        let Some(tile_to) = level.tiles.get(index_to) else {
+            return MoveResult::Invalid;
+        };
+
+        let is_box = matches!(*tile_from, Tile::Box | Tile::BoxInGoal | Tile::BoxOnFragileFloor | Tile::BoxOnIce);
+
+        let tile_from_new_value;
+        let tile_to_new_value;
+
+        let mut has_won = false;
+
+        if matches!(*tile_to, Tile::Empty | Tile::FragileFloor | Tile::Ice | Tile::Goal | Tile::BoxInHole | Tile::Hole) ||
+                (!is_box && *tile_to == Tile::LockedDoor) {
+            if is_box && *tile_to == Tile::Goal {
+                tile_to_new_value = Tile::BoxInGoal;
+
+                has_won = true;
+                for (index, tile) in level.tiles.iter().
+                        enumerate() {
+                    if index == index_to {
+                        continue;
+                    }
+
+                    if *tile == Tile::Goal || *tile == Tile::KeyInGoal {
+                        has_won = false;
+
+                        break;
+                    }
+
+                    let tile_original = &self.original_level.tiles[index];
+
+                    //If player is on GOAL -> check level field
+                    if index == index_from && (*tile_original == Tile::Goal ||
+                            *tile_original == Tile::BoxInGoal || *tile_original == Tile::KeyInGoal) {
+                        has_won = false;
+
+                        break;
+                    }
+                }
+            }else if !is_box && *tile_to == Tile::Goal {
+                tile_to_new_value = Tile::KeyInGoal;
+            }else if *tile_to == Tile::FragileFloor {
+                if is_box {
+                    tile_to_new_value = Tile::BoxOnFragileFloor;
+                }else {
+                    tile_to_new_value = Tile::KeyOnFragileFloor;
+                }
+            }else if *tile_to == Tile::Ice {
+                if is_box {
+                    tile_to_new_value = Tile::BoxOnIce;
+                }else {
+                    tile_to_new_value = Tile::KeyOnIce;
+                }
+            }else if *tile_to == Tile::Hole {
+                if is_box {
+                    tile_to_new_value = Tile::BoxInHole;
+                }else {
+                    //Key will be destroyed, only boxes can fill holes
+                    tile_to_new_value = Tile::Hole;
+                }
+            }else if is_box {
+                tile_to_new_value = Tile::Box;
+            }else if *tile_to == Tile::LockedDoor {
+                //Open door and destroy key
+                tile_to_new_value = Tile::Empty;
+            }else {
+                tile_to_new_value = Tile::Key;
+            }
+
+            if *tile_from == Tile::Box || *tile_from == Tile::Key {
+                tile_from_new_value = Tile::Empty;
+            }else if *tile_from == Tile::BoxInHole {
+                tile_from_new_value = Tile::BoxInHole;
+            }else if *tile_from == Tile::BoxOnFragileFloor || *tile_from == Tile::KeyOnFragileFloor {
+                tile_from_new_value = Tile::FragileFloor;
+            }else if *tile_from == Tile::BoxOnIce || *tile_from == Tile::KeyOnIce {
+                tile_from_new_value = Tile::Ice;
+            }else {
+                tile_from_new_value = Tile::Goal;
+            }
+
+            level.tiles[index_from] = tile_from_new_value;
+            level.tiles[index_to] = tile_to_new_value;
+
+            let move_result = MoveResult::Valid { has_won, secret_found: false };
+
+            //If ice tile: move forwards until no longer ice
+            if matches!(tile_to_new_value, Tile::BoxOnIce | Tile::KeyOnIce) {
+                self.animation_state = Some(AnimationState::BoxOrKey {
+                    last_valid_move_result: move_result,
+                    x_from: x_to, y_from: y_to,
+                    direction,
+                });
+
+                return MoveResult::Animation { player_animation: false };
+            }
+
+            return move_result;
+        }
+
+        MoveResult::Invalid
     }
 
     pub fn original_level(&self) -> &Level {
@@ -859,7 +1013,7 @@ impl LevelPack {
                 };
 
                 if !editor_level_pack {
-                    let player_tile_count = level.tiles().iter().filter(|tile| **tile == Tile::Player || **tile == Tile::PlayerOnFragileFloor).count();
+                    let player_tile_count = level.tiles().iter().filter(|tile| matches!(tile, Tile::Player | Tile::PlayerOnFragileFloor | Tile::PlayerOnIce)).count();
                     if player_tile_count == 0 {
                         return Err(Box::new(GameError::new(format!(
                             "Error while loading level pack \"{}\": Level {} does not contain a player tile",

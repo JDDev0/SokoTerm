@@ -1289,6 +1289,7 @@ pub struct ScreenInGame {
     time_sec: u32,
     time_min: u32,
 
+    animation_first_frame: bool,
     level: Option<PlayingLevel>,
 
     continue_flag: bool,
@@ -1307,6 +1308,7 @@ impl ScreenInGame {
             time_sec: Default::default(),
             time_min: Default::default(),
 
+            animation_first_frame: false,
             level: Default::default(),
 
             continue_flag: Default::default(),
@@ -1325,6 +1327,7 @@ impl ScreenInGame {
         self.continue_flag = false;
         self.game_over_flag = false;
 
+        self.animation_first_frame = false;
         self.level = Some(PlayingLevel::new(level, Self::UNDO_HISTORY_SIZE_PLAYING).unwrap());
     }
 
@@ -1599,6 +1602,110 @@ impl ScreenInGame {
             }
         }
     }
+
+    fn handle_move_result(&mut self, game_state: &mut GameState, move_result: MoveResult) {
+        #[cfg(feature = "steam")]
+        let steam_client = game_state.steam_client.clone();
+
+        let current_level_index = game_state.current_level_index;
+        let Some(level_pack) = game_state.get_current_level_pack_mut() else {
+            return;
+        };
+
+        match move_result {
+            MoveResult::Valid { has_won, secret_found } => {
+                self.time_start.get_or_insert_with(SystemTime::now);
+
+                if secret_found {
+                    self.game_over_flag = true;
+                    self.secret_found_flag = true;
+                }
+
+                if has_won {
+                    self.continue_flag = true;
+
+                    //Update best scores
+                    let time = self.time_millis as u64 + 1000 * self.time_sec as u64 + 60000 * self.time_min as u64;
+                    let moves = self.level.as_ref().unwrap().current_move_index() as u32;
+
+                    level_pack.update_stats(current_level_index, time, moves);
+
+                    if current_level_index >= level_pack.min_level_not_completed() {
+                        level_pack.set_min_level_not_completed(current_level_index + 1);
+                    }
+
+                    #[cfg(feature = "steam")]
+                    if level_pack.id() == "main" && current_level_index == 95 && moves < 160 {
+                        Achievement::LEVEL_PACK_MAIN_LEVEL_96_CHALLENGE.unlock(steam_client.clone());
+                    }
+
+                    #[cfg(feature = "steam")]
+                    if level_pack.level_pack_best_moves_sum().is_some() && level_pack.level_pack_best_time_sum().is_some() {
+                        match level_pack.id() {
+                            "tutorial" => {
+                                Achievement::LEVEL_PACK_TUTORIAL_COMPLETED.unlock(steam_client.clone());
+
+                                if level_pack.level_pack_best_time_sum().unwrap() < 4000 {
+                                    Achievement::LEVEL_PACK_TUTORIAL_FAST.unlock(steam_client.clone());
+                                }
+                            },
+
+                            "main" => {
+                                Achievement::LEVEL_PACK_MAIN_COMPLETED.unlock(steam_client.clone());
+                            },
+
+                            "special" => {
+                                Achievement::LEVEL_PACK_SPECIAL_COMPLETED.unlock(steam_client.clone());
+                            },
+
+                            "demon" => {
+                                Achievement::LEVEL_PACK_DEMON_COMPLETED.unlock(steam_client.clone());
+                            },
+
+                            "secret" => {
+                                Achievement::LEVEL_PACK_SECRET_COMPLETED.unlock(steam_client.clone());
+                            },
+
+                            _ => {},
+                        }
+
+                        if level_pack.steam_workshop_id().is_some() {
+                            Achievement::STEAM_WORKSHOP_LEVEL_PACK_COMPLETED.unlock(steam_client.clone());
+                        }
+                    }
+
+                    if let Err(err) = level_pack.save_save_game(false) {
+                        game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
+                    }
+
+                    game_state.play_sound_effect(audio::LEVEL_COMPLETE_EFFECT);
+                }
+
+                game_state.play_sound_effect(audio::STEP_EFFECT);
+            },
+
+            MoveResult::Invalid => {
+                game_state.play_sound_effect(audio::NO_PATH_EFFECT);
+            },
+
+            MoveResult::Animation { .. } => {
+                if self.animation_first_frame {
+                    game_state.play_sound_effect(audio::STEP_EFFECT);
+                }
+            },
+        }
+
+        if self.secret_found_flag {
+            #[cfg(feature = "steam")]
+            Achievement::LEVEL_PACK_SECRET_DISCOVERED.unlock(steam_client.clone());
+
+            game_state.open_dialog(Dialog::new_ok_secret_found("You have found a secret!"));
+
+            if let Err(err) = game_state.on_found_secret() {
+                game_state.open_dialog(Dialog::new_ok_error(format!("Error: {}", err)));
+            }
+        }
+    }
 }
 
 impl Screen for ScreenInGame {
@@ -1668,6 +1775,13 @@ impl Screen for ScreenInGame {
                 self.time_min = 59;
             }
         }
+
+        if let Some(playing_level) = &mut self.level &&
+                playing_level.is_playing_animation() && !self.animation_first_frame {
+            let move_result = playing_level.continue_animation();
+            self.handle_move_result(game_state, move_result);
+        }
+        self.animation_first_frame = false;
     }
 
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
@@ -1689,9 +1803,6 @@ impl Screen for ScreenInGame {
 
             return;
         }
-
-        #[cfg(feature = "steam")]
-        let steam_client = game_state.steam_client.clone();
 
         let current_level_index = game_state.current_level_index;
         let Some(level_pack) = game_state.get_current_level_pack_mut() else {
@@ -1734,8 +1845,8 @@ impl Screen for ScreenInGame {
             return;
         }
 
-        //Prevent movement after level complete
-        if self.game_over_flag {
+        //Prevent movement after level complete and during animation
+        if self.game_over_flag || self.level.as_mut().unwrap().is_playing_animation() {
             return;
         }
 
@@ -1765,90 +1876,10 @@ impl Screen for ScreenInGame {
             };
 
             let move_result = self.level.as_mut().unwrap().move_player(direction);
-
-            if let MoveResult::Valid { has_won, secret_found } = move_result {
-                self.time_start.get_or_insert_with(SystemTime::now);
-
-                if secret_found {
-                    self.game_over_flag = true;
-                    self.secret_found_flag = true;
-                }
-
-                if has_won {
-                    self.continue_flag = true;
-
-                    //Update best scores
-                    let time = self.time_millis as u64 + 1000 * self.time_sec as u64 + 60000 * self.time_min as u64;
-                    let moves = self.level.as_ref().unwrap().current_move_index() as u32;
-
-                    level_pack.update_stats(current_level_index, time, moves);
-
-                    if current_level_index >= level_pack.min_level_not_completed() {
-                        level_pack.set_min_level_not_completed(current_level_index + 1);
-                    }
-
-                    #[cfg(feature = "steam")]
-                    if level_pack.id() == "main" && current_level_index == 95 && moves < 160 {
-                        Achievement::LEVEL_PACK_MAIN_LEVEL_96_CHALLENGE.unlock(steam_client.clone());
-                    }
-
-                    #[cfg(feature = "steam")]
-                    if level_pack.level_pack_best_moves_sum().is_some() && level_pack.level_pack_best_time_sum().is_some() {
-                        match level_pack.id() {
-                            "tutorial" => {
-                                Achievement::LEVEL_PACK_TUTORIAL_COMPLETED.unlock(steam_client.clone());
-
-                                if level_pack.level_pack_best_time_sum().unwrap() < 4000 {
-                                    Achievement::LEVEL_PACK_TUTORIAL_FAST.unlock(steam_client.clone());
-                                }
-                            },
-
-                            "main" => {
-                                Achievement::LEVEL_PACK_MAIN_COMPLETED.unlock(steam_client.clone());
-                            },
-
-                            "special" => {
-                                Achievement::LEVEL_PACK_SPECIAL_COMPLETED.unlock(steam_client.clone());
-                            },
-
-                            "demon" => {
-                                Achievement::LEVEL_PACK_DEMON_COMPLETED.unlock(steam_client.clone());
-                            },
-
-                            "secret" => {
-                                Achievement::LEVEL_PACK_SECRET_COMPLETED.unlock(steam_client.clone());
-                            },
-
-                            _ => {},
-                        }
-
-                        if level_pack.steam_workshop_id().is_some() {
-                            Achievement::STEAM_WORKSHOP_LEVEL_PACK_COMPLETED.unlock(steam_client.clone());
-                        }
-                    }
-
-                    if let Err(err) = level_pack.save_save_game(false) {
-                        game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
-                    }
-
-                    game_state.play_sound_effect(audio::LEVEL_COMPLETE_EFFECT);
-                }
-
-                game_state.play_sound_effect(audio::STEP_EFFECT);
-            }else {
-                game_state.play_sound_effect(audio::NO_PATH_EFFECT);
+            if move_result.is_animation() {
+                self.animation_first_frame = true;
             }
-
-            if self.secret_found_flag {
-                #[cfg(feature = "steam")]
-                Achievement::LEVEL_PACK_SECRET_DISCOVERED.unlock(steam_client.clone());
-
-                game_state.open_dialog(Dialog::new_ok_secret_found("You have found a secret!"));
-
-                if let Err(err) = game_state.on_found_secret() {
-                    game_state.open_dialog(Dialog::new_ok_error(format!("Error: {}", err)));
-                }
-            }
+            self.handle_move_result(game_state, move_result);
         }
     }
 
@@ -3099,6 +3130,7 @@ pub struct ScreenLevelEditor {
     validation_result_history_index: usize,
     //TODO best time
     validation_best_moves: Option<u32>,
+    animation_first_frame: bool,
     playing_level: Option<PlayingLevel>,
     cursor_pos: (usize, usize),
 }
@@ -3118,6 +3150,7 @@ impl ScreenLevelEditor {
             validation_result_history_index: 0,
             //TODO best time
             validation_best_moves: None,
+            animation_first_frame: false,
             playing_level: Default::default(),
             cursor_pos: Default::default(),
         }
@@ -3136,7 +3169,7 @@ impl ScreenLevelEditor {
             return;
         }
 
-        if let Some(playing_level) = self.playing_level.as_mut() {
+        if let Some(playing_level) = self.playing_level.as_mut() && !playing_level.is_playing_animation() {
             if matches!(key, Key::U | Key::Z | Key::Y) {
                 let is_redo = key == Key::Y;
 
@@ -3161,31 +3194,10 @@ impl ScreenLevelEditor {
                 };
 
                 let move_result = playing_level.move_player(direction);
-
-                if let MoveResult::Valid { has_won, .. } = move_result {
-                    if has_won {
-                        self.continue_flag = true;
-
-                        //TODO best time
-
-                        //Use current index of playing level history
-                        let moves = playing_level.current_move_index() as u32;
-                        if self.validation_best_moves.is_none_or(|best_moves| moves < best_moves) ||
-                                self.validation_result_history_index != self.level.current_index() {
-                            //Always update best moves of validation if level was changed
-                            self.validation_best_moves = Some(moves);
-                        }
-
-                        //Update validation
-                        self.validation_result_history_index = self.level.current_index(); //Use current index of editor level history
-
-                        game_state.play_sound_effect(audio::LEVEL_COMPLETE_EFFECT);
-                    }
-
-                    game_state.play_sound_effect(audio::STEP_EFFECT);
-                }else {
-                    game_state.play_sound_effect(audio::NO_PATH_EFFECT);
+                if move_result.is_animation() {
+                    self.animation_first_frame = true;
                 }
+                self.handle_move_result(game_state, move_result);
             }
         }
     }
@@ -3448,6 +3460,47 @@ impl ScreenLevelEditor {
             _ => {},
         }
     }
+
+    fn handle_move_result(&mut self, game_state: &mut GameState, move_result: MoveResult) {
+        let Some(playing_level) = self.playing_level.as_ref() else {
+            return;
+        };
+
+        match move_result {
+            MoveResult::Valid { has_won, .. } => {
+                if has_won {
+                    self.continue_flag = true;
+
+                    //TODO best time
+
+                    //Use current index of playing level history
+                    let moves = playing_level.current_move_index() as u32;
+                    if self.validation_best_moves.is_none_or(|best_moves| moves < best_moves) ||
+                            self.validation_result_history_index != self.level.current_index() {
+                        //Always update best moves of validation if level was changed
+                        self.validation_best_moves = Some(moves);
+                    }
+
+                    //Update validation
+                    self.validation_result_history_index = self.level.current_index(); //Use current index of editor level history
+
+                    game_state.play_sound_effect(audio::LEVEL_COMPLETE_EFFECT);
+                }
+
+                game_state.play_sound_effect(audio::STEP_EFFECT);
+            },
+
+            MoveResult::Invalid => {
+                game_state.play_sound_effect(audio::NO_PATH_EFFECT);
+            },
+
+            MoveResult::Animation { .. } => {
+                if self.animation_first_frame {
+                    game_state.play_sound_effect(audio::STEP_EFFECT);
+                }
+            },
+        };
+    }
 }
 
 impl Screen for ScreenLevelEditor {
@@ -3517,6 +3570,19 @@ impl Screen for ScreenLevelEditor {
                      self.playing_level.as_ref().map_or(Some(self.cursor_pos), |_| None));
     }
 
+    fn update(&mut self, game_state: &mut GameState) {
+        if game_state.is_dialog_opened() || self.continue_flag {
+            return;
+        }
+
+        if let Some(playing_level) = &mut self.playing_level &&
+                playing_level.is_playing_animation() && !self.animation_first_frame {
+            let move_result = playing_level.continue_animation();
+            self.handle_move_result(game_state, move_result);
+        }
+        self.animation_first_frame = false;
+    }
+    
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
         if key == Key::ESC {
             game_state.open_dialog(Dialog::new_yes_cancel_no("Exiting (Save changes and level validation state?)"));
@@ -3531,6 +3597,7 @@ impl Screen for ScreenLevelEditor {
 
                 None
             }else {
+                self.animation_first_frame = false;
                 self.continue_flag = false;
 
                 let playing_level = PlayingLevel::new(self.level.current(), Self::UNDO_HISTORY_SIZE_PLAYING);

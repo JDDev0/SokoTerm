@@ -391,6 +391,11 @@ impl HelpPage {
                     console.reset_color();
                     console.draw_text(": Fragile Floor");
                 }, |console| {
+                    Tile::Ice.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(": Ice");
+                }, |console| {
                     Tile::OneWayLeft.draw(console, false, false);
 
                     console.reset_color();
@@ -605,6 +610,10 @@ impl HelpPage {
                     console.reset_color();
                     console.draw_text(": Insert a fragile floor tile");
                 }, |console| {
+                    console.draw_key_input_text("%");
+                    console.reset_color();
+                    console.draw_text(": Insert an ice tile");
+                }, |console| {
                     console.draw_key_input_text("< ^ > v");
                     console.reset_color();
                     console.draw_text(": Insert an one-way door tile");
@@ -621,6 +630,10 @@ impl HelpPage {
                     console.reset_color();
                     console.draw_text(": Insert a player on fragile floor tile");
                 }, |console| {
+                    console.draw_key_input_text("&");
+                    console.reset_color();
+                    console.draw_text(": Insert a player on ice tile");
+                }, |console| {
                     console.draw_key_input_text("*");
                     console.reset_color();
                     console.draw_text(": Insert a key tile");
@@ -632,6 +645,10 @@ impl HelpPage {
                     console.draw_key_input_text(";");
                     console.reset_color();
                     console.draw_text(": Insert a key on fragile floor tile");
+                }, |console| {
+                    console.draw_key_input_text("\\");
+                    console.reset_color();
+                    console.draw_text(": Insert a key on ice tile");
                 }, |console| {
                     console.draw_key_input_text("=");
                     console.reset_color();
@@ -649,6 +666,13 @@ impl HelpPage {
                     console.reset_color();
                     console.draw_text(": Insert a box on fragile floor tile");
                 }, |console| {
+                    console.draw_key_input_text("/");
+                    console.reset_color();
+                    console.draw_text(": Insert a box on ice tile");
+                }],
+            ),
+            Section::new(
+                section_label_builder.new_sub_sub_section("Level editor (Editing mode - Tiles) [continuation]"), &[|console| {
                     console.draw_key_input_text("x");
                     console.reset_color();
                     console.draw_text(": Insert a goal tile");
