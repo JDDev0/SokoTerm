@@ -1,7 +1,7 @@
 # SokoTerm
 
 A sokoban game for Linux terminal/TTY and with the Windows CMD and PowerShell.
-Since v3.0.0 there is also an GUI version available for Linux and Windows.
+There is also an GUI version available for Linux and Windows.
 
 Download on itch.io: [SokoTerm](https://jddev0.itch.io/sokoterm)
 
