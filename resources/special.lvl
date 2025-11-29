@@ -81,29 +81,25 @@ w: 23, h: 15
 #++x+++++xx++++x++x+++#
 #######################
 
-w: 74, h: 22
-bbbb###################bbbbbbbbbb#########################################
-bbbb#-----------------#bbbbbb---b#---------------------------------------#
-bbbb#@@@@@--------------------@--=-@-@-@-@-@-@-@-@---@-@-@-@-@-@-@-@-@-@-#
-bbbb#xxxxx#xxxxx#xxxxx#bbb-bb---b#---------------------------------------#
-bbbb#xx+xx#x+++x#xxxxx#bbb-bbbbbb###^#^#^#^#^#^#^##*##^#^#^#^#^#^#^#^#^###
-bbbb###=############-##bbb-----bbbbb-b-b-b-b-b-b-bb-bb-b-b-b-b-b-b-b-b-bbb
-bbbbbbb-bbbbbbbbbbbb-bbbbbbbbb-bbbbb-----------------------------------bbb
-bbbbbbb-bbbbbbbbbbbb-----bbbbb-bbbbb-bbbbbbbbbbbbbbbbbbbbbbbbbbbbb-bbbbbbb
-bbbbbbb-bbbbbbbbbbbb-@*@-bbbbb-bbbbb-bbbbbbbbbbbbbbbbbbbbbbbbbbbbb-bbbbbbb
-#####bb-bb#########b-----bb###-###bb-bbbbbbb############bbbbbb####@###bbbb
-#---#bb-bb#++x-@--#bbbbbbbb#x---x#bb-bbb---b#----------#bbbbbb#------#bbbb
-#@-@#bb-bb#+++-*-P=-------->--@--=----*--@--<-@x@x@x@x-#bbbbbb#-x--x-#bbbb
-#---#bb-bb#++x-@--#bbbbbbbb#x@-@x#bb-bbb---b#-x@x@x@x@-#bbb####-@xx@-#bbbb
-#@-@#bb-bb#########bb#############bb-bbbbbbb#-@x@x-x@x->---<----@xx@-#bbbb
-#---#bb-bbbbbbbbbbbbb#--#xx+xx#--#bb-bbbbbbb#-x@x-x@x@-#b-b#-@--x@@x-#bbbb
-#@-@#bb-bbb-------b--<-@#-----#@-#bb-bbb---b#-@x@x@x@x-@---@---------#bbbb
-#---=----*--@-@-@---b#----@@@----=----*--@--<-x@x@x@x@-#bbb###########bbbb
-#xxx#bb-bbb-------b-->-@#-----#@-#bb-bbb---b#-@x@x@x@x-#bbbbbbbbbbbbbbbbbb
-#xxx#bb-bbbbbbbbbbbbb#--#xx+xx#--#bb-bbbbbbb#----------#bbbbbbbbbbbbbbbbbb
-#xxx#bb-bbbbbbbbbbbbb#############bb-bbbbbbb############bbbbbbbbbbbbbbbbbb
-#####bb-bbbbbbbbbbbbbbbbbbbbbbbbbbbb-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbb------------------------------bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+w: 46, h: 18
+bbbb###########################bbbbbbbbbbbbbbb
+bbbb#---------------#---#######bbbbbbbbbbbbbbb
+bbbb#@@@------@-------@-----###bbbbbbbbbbbbbbb
+bbbb#xxx#xxx#@-@#@-@#-*-###-###bbbbbbbbbbbbbbb
+bbbb#x+x#x+x#---#---#-@-###-###bbbbbbbbbbbbbbb
+bbbb##=##############---###-###########bbbbbbb
+bbbb##-##++x-@--#########x---x####---#########
+######-##+++-*-P=------->--@--=-*--@--<------#
+#---##-##++x-@--#########x@-@x#-##---##-x@x@-#
+#@-@##-########################-#######-@x@x-#
+#---##-############--#xx+xx#--#-#######-x@x@-#
+#@-@##-##-----##--<-@#-----#@-#-##---##-@x@x-#
+#---=--*--@-@----##----@@@----=-*--@--<-x@x@-#
+#xxx##-##-----##-->-@#-----#@-#-##---##------#
+#xxx##-############--#xx+xx#--#-##########^###
+######-########################-##########-#bb
+bbbb##-------------------------------------#bb
+bbbb########################################bb
 
 w: 9, h: 4
 #########
