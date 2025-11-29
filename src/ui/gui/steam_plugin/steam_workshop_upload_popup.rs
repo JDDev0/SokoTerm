@@ -992,6 +992,7 @@ fn on_validate_and_start_upload(
                 ..default()
             },
             BackgroundColor(Color::BLACK.with_alpha(0.75)),
+            GlobalZIndex(1),
             UploadProgressPopup,
             TabGroup::modal(),
             children![(
