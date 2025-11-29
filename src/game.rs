@@ -725,6 +725,7 @@ impl <'a> Game<'a> {
                             warn!(message);
                         }
 
+                        warning_message += "\n";
                         warning_message += &message;
 
                         continue;
@@ -792,7 +793,7 @@ impl <'a> Game<'a> {
         game_state.set_background_music_loop(&audio::BACKGROUND_MUSIC_FIELDS_OF_ICE);
 
         if !warning_message.is_empty() {
-            game_state.open_dialog(Dialog::new_ok_error(format!("Warning!\n{warning_message}")));
+            game_state.open_dialog(Dialog::new_ok_error(format!("Warning!{warning_message}")));
         }
 
         Ok(Self {
