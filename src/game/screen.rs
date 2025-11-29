@@ -1598,6 +1598,66 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(")");
                 },
+                25 => {
+                    console.set_cursor_pos(17, 8);
+                    console.draw_text("Ice (");
+
+                    Tile::Ice.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(") causes the player (");
+
+                    Tile::Player.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(") to slide");
+                },
+                26 => {
+                    console.set_cursor_pos(10, 8);
+                    console.draw_text("Ice (");
+
+                    Tile::Ice.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(") causes keys (");
+
+                    Tile::KeyOnIce.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(") and boxes (");
+
+                    Tile::BoxOnIce.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(") to slide as well");
+                },
+                27 => {
+                    console.set_cursor_pos(14, 8);
+                    console.draw_text("If a box (");
+
+                    Tile::BoxOnIce.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(") or a key (");
+
+                    Tile::KeyOnIce.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(") is pushed on ice (");
+
+                    Tile::Ice.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(")");
+
+                    console.set_cursor_pos(21, 9);
+                    console.draw_text("the player (");
+
+                    Tile::Player.draw(console, false, false);
+
+                    console.reset_color();
+                    console.draw_text(") will stop sliding");
+                },
                 _ => {},
             }
         }
