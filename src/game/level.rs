@@ -669,8 +669,8 @@ impl PlayingLevel {
                     let tile_original = &self.original_level.tiles[index];
 
                     //If player is on GOAL -> check level field
-                    if index == index_from && (*tile_original == Tile::Goal ||
-                            *tile_original == Tile::BoxInGoal || *tile_original == Tile::KeyInGoal) {
+                    if (*tile == Tile::Player || index == index_from) &&
+                            matches!(*tile_original, Tile::Goal | Tile::BoxInGoal | Tile::KeyInGoal) {
                         has_won = false;
 
                         break;
