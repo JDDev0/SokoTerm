@@ -223,6 +223,10 @@ impl HelpPage {
                     console.reset_color();
                     console.draw_text(": Open/close help menu");
                 }, |console| {
+                    console.draw_key_input_text("F8");
+                    console.reset_color();
+                    console.draw_text(": Change animation speed");
+                }, |console| {
                     console.draw_key_input_text("F9");
                     console.reset_color();
                     console.draw_text(": Enable/Disable background music");

@@ -84,10 +84,71 @@ impl EditorState {
     }
 }
 
+#[derive(Default, Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub enum AnimationSpeed {
+    Slow,
+    #[default]
+    Normal,
+    Fast,
+    VeryFast,
+}
+
+impl AnimationSpeed {
+    pub fn display_name(self) -> &'static str {
+        match self {
+            AnimationSpeed::Slow => "Slow",
+            AnimationSpeed::Normal => "Normal",
+            AnimationSpeed::Fast => "Fast",
+            AnimationSpeed::VeryFast => "Very fast",
+        }
+    }
+
+    pub fn animation_count_per_update(self) -> f32 {
+        match self {
+            AnimationSpeed::Slow => 0.75,
+            AnimationSpeed::Normal => 1.0,
+            AnimationSpeed::Fast => 1.5,
+            AnimationSpeed::VeryFast => 2.0,
+        }
+    }
+
+    fn next_setting(self) -> Self {
+        match self {
+            AnimationSpeed::Slow => AnimationSpeed::Normal,
+            AnimationSpeed::Normal => AnimationSpeed::Fast,
+            AnimationSpeed::Fast => AnimationSpeed::VeryFast,
+            AnimationSpeed::VeryFast => AnimationSpeed::Slow,
+        }
+    }
+}
+
+impl Display for AnimationSpeed {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.display_name())
+    }
+}
+
+impl FromStr for AnimationSpeed {
+    type Err = GameError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "Slow" => Ok(AnimationSpeed::Slow),
+            "Normal" => Ok(AnimationSpeed::Normal),
+            "Fast" => Ok(AnimationSpeed::Fast),
+            "VeryFast" => Ok(AnimationSpeed::VeryFast),
+
+            _ => Err(GameError::new("Invalid animation speed \"{s}\"")),
+        }
+    }
+}
+
 pub struct GameSettings {
     color_scheme_index: usize,
 
     background_music: bool,
+
+    animation_speed: AnimationSpeed,
 }
 
 impl GameSettings {
@@ -96,6 +157,8 @@ impl GameSettings {
             color_scheme_index: 0,
 
             background_music: true,
+
+            animation_speed: AnimationSpeed::default(),
         }
     }
 
@@ -155,6 +218,21 @@ impl GameSettings {
                             settings.background_music = value;
                         },
 
+                        "animation_speed" => {
+                            let Ok(value) = AnimationSpeed::from_str(value) else {
+                                #[cfg(feature = "gui")]
+                                {
+                                    warn!("\"settings.data\" contains invalid value for option \"{key}\": \"{value}\": Using default");
+                                }
+
+                                //TODO warning in cli version
+
+                                continue;
+                            };
+
+                            settings.animation_speed = value;
+                        },
+
                         _ => {
                             #[cfg(feature = "gui")]
                             {
@@ -185,6 +263,7 @@ impl GameSettings {
 
         writeln!(file, "color_scheme_index = {}", self.color_scheme_index)?;
         writeln!(file, "background_music = {}", self.background_music)?;
+        writeln!(file, "animation_speed = {:?}", self.animation_speed)?;
 
         Ok(())
     }
@@ -195,6 +274,10 @@ impl GameSettings {
 
     pub fn background_music(&self) -> bool {
         self.background_music
+    }
+
+    pub fn animation_speed(&self) -> AnimationSpeed {
+        self.animation_speed
     }
 }
 
@@ -218,6 +301,8 @@ pub struct GameState {
 
     is_player_background: bool,
     player_background_tmp: i32,
+
+    pending_animation_play_count: f32,
 
     found_secret_main_level_pack: bool,
 
@@ -258,6 +343,8 @@ impl GameState {
 
             is_player_background: Default::default(),
             player_background_tmp: Default::default(),
+
+            pending_animation_play_count: 0.0,
 
             found_secret_main_level_pack: Default::default(),
 
@@ -465,6 +552,14 @@ impl GameState {
         }else {
             self.stop_background_music_internal();
         }
+
+        self.settings.save_to_file()?;
+
+        Ok(())
+    }
+
+    pub fn set_and_save_animation_speed(&mut self, animation_speed: AnimationSpeed) -> Result<(), Box<dyn Error>> {
+        self.settings.animation_speed = animation_speed;
 
         self.settings.save_to_file()?;
 
@@ -913,6 +1008,16 @@ impl <'a> Game<'a> {
                 }
 
                 screen.update(&mut self.game_state);
+
+                //Animations
+                self.game_state.pending_animation_play_count += self.game_state.settings.animation_speed.animation_count_per_update();
+                while self.game_state.pending_animation_play_count > 0.0 {
+                    self.game_state.pending_animation_play_count -= 1.0;
+
+                    screen.animate(&mut self.game_state);
+                }
+            }else {
+                self.game_state.pending_animation_play_count = 0.0;
             }
         }
 
@@ -929,7 +1034,15 @@ impl <'a> Game<'a> {
     }
 
     fn update_key(&mut self, key: Key) {
-        if key == Key::F9 {
+        if key == Key::F8 {
+            self.game_state.play_sound_effect_ui_select();
+
+            if let Err(err) = self.game_state.set_and_save_animation_speed(self.game_state.settings.animation_speed.next_setting()) {
+                self.game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save settings: {}", err)));
+            }
+
+            return;
+        }else if key == Key::F9 {
             self.game_state.play_sound_effect_ui_select();
 
             if let Err(err) = self.game_state.set_and_save_background_music_enabled(!self.game_state.settings.background_music) {

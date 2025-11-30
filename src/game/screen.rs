@@ -39,6 +39,7 @@ pub trait Screen {
     fn draw(&self, game_state: &GameState, console: &Console);
 
     fn update(&mut self, game_state: &mut GameState) {}
+    fn animate(&mut self, game_state: &mut GameState) {}
 
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {}
     fn on_mouse_pressed(&mut self, game_state: &mut GameState, column: usize, row: usize) {}
@@ -622,7 +623,6 @@ impl Screen for ScreenSettings {
         console.draw_text("Settings menu");
         console.set_underline(false);
 
-        //Draw color scheme
         console.reset_color();
         console.set_cursor_pos(0, 2);
         if cfg!(feature = "gui") {
@@ -636,6 +636,7 @@ impl Screen for ScreenSettings {
             console.draw_text("Color scheme:");
         }
 
+        //Draw color scheme
         console.set_cursor_pos(0, 3);
         console.set_color(Color::Default, Color::Black);
         console.draw_text("   ");
@@ -672,7 +673,6 @@ impl Screen for ScreenSettings {
         console.set_color(Color::Default, Color::LightWhite);
         console.draw_text("   ");
 
-        //Draw color scheme
         console.reset_color();
         console.set_cursor_pos(0, 6);
         console.draw_text("Background Music: ");
@@ -689,6 +689,21 @@ impl Screen for ScreenSettings {
         console.draw_text(" (Toggle with ");
 
         console.draw_key_input_text("F9");
+
+        console.reset_color();
+        console.draw_text(")");
+
+        console.reset_color();
+        console.set_cursor_pos(0, 8);
+        console.draw_text("Animation Speed: ");
+
+        console.set_color(Color::Blue, Color::Default);
+        console.draw_text(game_state.settings.animation_speed.display_name());
+
+        console.reset_color();
+        console.draw_text(" (Toggle with ");
+
+        console.draw_key_input_text("F8");
 
         console.reset_color();
         console.draw_text(")");
@@ -1834,6 +1849,12 @@ impl Screen for ScreenInGame {
                 self.time_sec = 59;
                 self.time_min = 59;
             }
+        }
+    }
+
+    fn animate(&mut self, game_state: &mut GameState) {
+        if game_state.is_dialog_opened() || self.game_over_flag || self.continue_flag {
+            return;
         }
 
         if let Some(playing_level) = &mut self.level &&
@@ -3630,7 +3651,7 @@ impl Screen for ScreenLevelEditor {
                      self.playing_level.as_ref().map_or(Some(self.cursor_pos), |_| None));
     }
 
-    fn update(&mut self, game_state: &mut GameState) {
+    fn animate(&mut self, game_state: &mut GameState) {
         if game_state.is_dialog_opened() || self.continue_flag {
             return;
         }
