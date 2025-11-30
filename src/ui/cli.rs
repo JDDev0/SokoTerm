@@ -4,7 +4,15 @@ use std::time::Duration;
 use crate::game::Game;
 use crate::io::Console;
 
+#[cfg(unix)]
+mod linux_terminal_helper;
+
 pub fn run_game() -> ExitCode {
+    #[cfg(unix)]
+    if let Some(exit_code) = linux_terminal_helper::reopen_in_terminal_if_required() {
+        return exit_code;
+    }
+
     let console = Console::new().unwrap();
 
     let game = Game::new(&console);
