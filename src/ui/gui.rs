@@ -70,6 +70,8 @@ pub fn run_game() -> ExitCode {
     let steam_client = {
         if let Err(err) = steam_plugin::init(&mut app) {
             startup_error::show_startup_error_dialog(&mut app, &err.to_string());
+
+            return ExitCode::FAILURE;
         }
 
         app.world().get_resource::<Client>().unwrap().clone()
