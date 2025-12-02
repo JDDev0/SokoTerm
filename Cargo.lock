@@ -8,6 +8,9 @@ version = "1.0.0-dev"
 dependencies = [
  "bevy",
  "bevy-steamworks",
+ "bevy_app",
+ "bevy_ecs",
+ "bevy_time",
  "console-lib",
  "embed-resource",
  "rodio",

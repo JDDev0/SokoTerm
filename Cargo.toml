@@ -5,8 +5,11 @@ edition = "2024"
 
 [dependencies]
 rodio = "0.20.1"
+bevy_ecs = { version = "0.17.3" }
 
 console-lib = { version = "0.3.0", features = ["custom_panic_hook"], optional = true }
+bevy_app = { version = "0.17.3", optional = true }
+bevy_time = { version = "0.17.3", optional = true }
 
 bevy = { version = "0.17.3", default-features = false, features = [
     "std",
@@ -65,7 +68,7 @@ smol_str = { version = "0.2.2", optional = true }
 embed-resource = "3.0.6"
 
 [features]
-cli = ["dep:console-lib"]
+cli = ["dep:console-lib", "dep:bevy_app", "dep:bevy_time"]
 gui = ["dep:bevy", "dep:smol_str"]
 steam = ["gui", "dep:bevy-steamworks"]
 
