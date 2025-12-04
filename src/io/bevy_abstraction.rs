@@ -132,7 +132,7 @@ pub const HIGH_CONTRAST_COLOR_SCHEME: ColorScheme = color_scheme! {
 
     Black: (0, 0, 0),
     Blue: (128, 128, 128),
-    Green: (128, 128, 128),
+    Green: (60, 60, 60),
     Cyan: (80, 80, 80),
     Red: (160, 160, 160),
     Pink: (192, 192, 192),
@@ -140,7 +140,7 @@ pub const HIGH_CONTRAST_COLOR_SCHEME: ColorScheme = color_scheme! {
     White: (240, 240, 240),
     LightBlack: (0, 0, 0),
     LightBlue: (128, 128, 128),
-    LightGreen: (128, 128, 128),
+    LightGreen: (60, 60, 60),
     LightCyan: (80, 80, 80),
     LightRed: (160, 160, 160),
     LightPink: (192, 192, 192),
