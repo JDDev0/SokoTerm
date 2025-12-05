@@ -19,6 +19,8 @@ use crate::io::Console;
 use bevy_steamworks::*;
 #[cfg(feature = "steam")]
 use crate::game::level::LevelPack;
+#[cfg(feature = "steam")]
+use crate::ui::gui::steam_plugin::SteamPlugin;
 
 mod assets;
 mod startup_error;
@@ -117,6 +119,8 @@ pub fn run_game() -> ExitCode {
 
             return ExitCode::FAILURE;
         }
+
+        app.add_plugins(SteamPlugin);
     }
 
     app.

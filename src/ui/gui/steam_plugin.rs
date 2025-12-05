@@ -22,12 +22,10 @@ pub fn init(app: &mut App) -> Result<(), GameError> {
     };
     app.add_plugins(steamworks_plugin);
 
-    app.add_plugins(SteamPlugin);
-
     Ok(())
 }
 
-struct SteamPlugin;
+pub struct SteamPlugin;
 
 impl Plugin for SteamPlugin {
     fn build(&self, app: &mut App) {
