@@ -3269,7 +3269,7 @@ pub struct ScreenLevelEditor {
 }
 
 impl ScreenLevelEditor {
-    pub const UNDO_HISTORY_SIZE: usize = 256;
+    pub const UNDO_HISTORY_SIZE: usize = 1000;
     pub const UNDO_HISTORY_SIZE_PLAYING: usize = 10000;
 
     pub fn new() -> Self {
