@@ -3,7 +3,7 @@ use std::fmt::Write as _;
 use std::str::FromStr;
 use std::time::SystemTime;
 use crate::game::{audio, Game, GameState};
-use crate::game::level::{Direction, Level, LevelPack, MoveResult, PlayingLevel, Tile};
+use crate::game::level::{Direction, Level, LevelPack, LevelWithStats, MoveResult, PlayingLevel, Tile};
 use crate::game::screen::dialog::{Dialog, DialogSelection};
 use crate::collections::UndoHistory;
 use crate::game::console_extension::ConsoleExtension;
@@ -2618,6 +2618,8 @@ pub struct ScreenLevelPackEditor {
     is_deleting_level: bool,
     new_level_width_str: String,
     new_level_height_str: String,
+
+    level_clipboard: Option<LevelWithStats>,
 }
 
 impl ScreenLevelPackEditor {
@@ -2629,6 +2631,8 @@ impl ScreenLevelPackEditor {
             is_deleting_level: Default::default(),
             new_level_width_str: String::new(),
             new_level_height_str: String::new(),
+
+            level_clipboard: None,
         }
     }
 
@@ -3081,7 +3085,7 @@ impl Screen for ScreenLevelPackEditor {
                         //Level Editor entry
                         if game_state.editor_state.get_current_level_pack().unwrap().level_count() == LevelPack::MAX_LEVEL_COUNT_PER_PACK {
                             game_state.open_dialog(Dialog::new_ok_error(format!(
-                                "Cannot create level packs (Max level count ({}) reached)",
+                                "Cannot create level (Max level count ({}) reached)",
                                 LevelPack::MAX_LEVEL_COUNT_PER_PACK,
                             )));
                         }else {
@@ -3112,6 +3116,54 @@ impl Screen for ScreenLevelPackEditor {
                         if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
                             game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
                         }
+                    }
+                },
+
+                Key::C => {
+                    let selected_level_index = game_state.editor_state.selected_level_index;
+                    if selected_level_index != game_state.editor_state.get_current_level_pack().unwrap().level_count() {
+                        game_state.play_sound_effect_ui_select();
+
+                        self.level_clipboard = Some(game_state.editor_state.get_current_level_pack().unwrap().levels()[selected_level_index].clone());
+                    }
+                },
+
+                Key::X => {
+                    let selected_level_index = game_state.editor_state.selected_level_index;
+                    if selected_level_index != game_state.editor_state.get_current_level_pack().unwrap().level_count() {
+                        game_state.play_sound_effect_ui_select();
+
+                        let level_pack = game_state.editor_state.get_current_level_pack_mut().unwrap();
+                        self.level_clipboard = Some(level_pack.levels_mut().remove(selected_level_index));
+                        level_pack.calculate_stats_sum();
+
+                        if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
+                            game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
+                        }
+                    }
+                },
+
+                Key::V => {
+                    let selected_level_index = game_state.editor_state.selected_level_index;
+                    if let Some(ref level) = self.level_clipboard {
+                        if game_state.editor_state.get_current_level_pack().unwrap().level_count() == LevelPack::MAX_LEVEL_COUNT_PER_PACK {
+                            game_state.open_dialog(Dialog::new_ok_error(format!(
+                                "Cannot paste level (Max level count ({}) reached)",
+                                LevelPack::MAX_LEVEL_COUNT_PER_PACK,
+                            )));
+                        }else {
+                            game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
+
+                            let level_pack = game_state.editor_state.get_current_level_pack_mut().unwrap();
+                            level_pack.levels_mut().insert(selected_level_index, level.clone());
+                            level_pack.calculate_stats_sum();
+
+                            if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
+                                game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
+                            }
+                        }
+                    }else {
+                        game_state.open_dialog(Dialog::new_ok_error("No level in clipboard!\nPlease copy a level by pressing \"C\" or cut a level by pressing \"X\"."));
                     }
                 },
 

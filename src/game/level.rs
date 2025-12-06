@@ -761,7 +761,7 @@ impl PlayingLevel {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct LevelWithStats {
     level: Level,
     best_time: Option<u64>,

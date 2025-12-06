@@ -511,7 +511,7 @@ impl HelpPage {
                 }],
             ),
             Section::new(
-                section_label_builder.new_sub_sub_section("Level selection"), &[|console| {
+                section_label_builder.new_sub_sub_section("Level pack editor / Level selection"), &[|console| {
                     console.draw_key_input_text("ENTER");
                     console.reset_color();
                     console.draw_text(": Select or creates a level");
@@ -519,6 +519,21 @@ impl HelpPage {
                     console.draw_key_input_text("t");
                     console.reset_color();
                     console.draw_text(": Set or unset level as level pack thumbnail");
+                }, |console| {
+                    console.draw_key_input_text("c");
+                    console.reset_color();
+                    console.draw_text(": Copy the selected level");
+                }, |console| {
+                    console.draw_key_input_text("x");
+                    console.reset_color();
+                    console.draw_text(": Cut the selected level");
+                }, |console| {
+                    console.draw_key_input_text("v");
+                    console.reset_color();
+                    console.draw_text(": Paste the copied level at the current cursor position");
+                }, |console| {
+                    console.reset_color();
+                    console.draw_text("   (Levels can also be pasted from one level pack to another level pack)");
                 }, |console| {
                     console.draw_key_input_text("DELETE");
                     console.reset_color();
