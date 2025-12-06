@@ -3612,6 +3612,9 @@ impl ScreenLevelEditor {
                             self.validation_result_history_index != self.level.current_index() {
                         //Always update best moves of validation if level was changed
                         self.validation_best_moves = Some(moves);
+
+                        //Mark level as unsaved
+                        self.last_saved_history_index = Self::UNDO_HISTORY_SIZE + 1;
                     }
 
                     //Update validation
