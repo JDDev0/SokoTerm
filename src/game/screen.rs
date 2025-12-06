@@ -3751,7 +3751,25 @@ impl Screen for ScreenLevelEditor {
         }
 
         if self.playing_level.is_none() {
+            let old_history_len = self.level.len();
+            let old_history_index = self.level.current_index();
+            let is_redo = key == Key::Y;
+
             self.on_key_pressed_editing(game_state, key);
+
+            let new_history_len = self.level.len();
+            let new_history_index = self.level.current_index();
+
+            //Undo: New history len is same and new index is smaller
+            //Redo: New history len is same and new index is larger
+            //Commit change without previous undo: New history len is larger and new index is larger
+            //Commit change with previous undo(s): New history len is same or smaller and new index is larger
+
+            //Level is no longer valid if changed (one or more changes), then validated, then one or more undo(s), and then change again
+            if self.validation_result_history_index >= new_history_index && !is_redo &&
+                    new_history_len <= old_history_len && old_history_index + 1 == new_history_index {
+                self.validation_best_moves = None;
+            }
         }else {
             self.on_key_pressed_playing(game_state, key);
         }
