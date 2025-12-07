@@ -1307,6 +1307,8 @@ pub struct ScreenInGame {
     animation_first_frame: bool,
     level: Option<PlayingLevel>,
 
+    show_floor: bool,
+
     continue_flag: bool,
     secret_found_flag: bool,
     game_over_flag: bool,
@@ -1326,6 +1328,8 @@ impl ScreenInGame {
             animation_first_frame: false,
             level: Default::default(),
 
+            show_floor: false,
+
             continue_flag: Default::default(),
             secret_found_flag: Default::default(),
             game_over_flag: Default::default(),
@@ -1344,6 +1348,8 @@ impl ScreenInGame {
 
         self.animation_first_frame = false;
         self.level = Some(PlayingLevel::new(level, Self::UNDO_HISTORY_SIZE_PLAYING).unwrap());
+
+        self.show_floor = false;
     }
 
     fn draw_tutorial_level_text(&self, game_state: &GameState, console: &Console) {
@@ -1625,6 +1631,14 @@ impl ScreenInGame {
 
                     console.reset_color();
                     console.draw_text(")");
+
+                    console.set_cursor_pos(23, 10);
+                    console.draw_text("Press ");
+
+                    console.draw_key_input_text("q");
+
+                    console.reset_color();
+                    console.draw_text(" to view floor tiles");
                 },
                 25 => {
                     console.set_cursor_pos(17, 8);
@@ -1685,6 +1699,23 @@ impl ScreenInGame {
 
                     console.reset_color();
                     console.draw_text(") will stop sliding");
+
+                    console.set_cursor_pos(23, 11);
+                    console.draw_text("Press ");
+
+                    console.draw_key_input_text("q");
+
+                    console.reset_color();
+                    console.draw_text(" to view floor tiles");
+                },
+                28 => {
+                    console.set_cursor_pos(23, 11);
+                    console.draw_text("Press ");
+
+                    console.draw_key_input_text("q");
+
+                    console.reset_color();
+                    console.draw_text(" to view floor tiles");
                 },
                 _ => {},
             }
@@ -1819,9 +1850,7 @@ impl Screen for ScreenInGame {
         if self.continue_flag {
             console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 16) as f64 * 0.5) as usize, 0);
             console.draw_text("Level completed!");
-        }
-
-        if self.game_over_flag {
+        }else if self.game_over_flag {
             if self.secret_found_flag {
                 console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 13) as f64 * 0.5) as usize, 0);
                 console.draw_text("Secret found!");
@@ -1829,13 +1858,25 @@ impl Screen for ScreenInGame {
                 console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 13) as f64 * 0.5) as usize, 0);
                 console.draw_text("You have won!");
             }
+        }else if self.show_floor {
+            console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 14) as f64 * 0.5) as usize, 0);
+            console.draw_text("Show tiles (");
+            console.draw_key_input_text("q");
+            console.reset_color();
+            console.draw_text(")");
         }
 
-        if let Some(level) = self.level.as_ref().map(|level| &level.current_playing_level().0) {
+        if let Some(playing_level) = self.level.as_ref() {
+            let level = &playing_level.current_playing_level().0;
+
             let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
             let y_offset = 1;
 
-            level.draw(console, x_offset, y_offset, game_state.is_player_background(), None);
+            if self.show_floor {
+                level.draw_floor(console, x_offset, y_offset, game_state.is_player_background(), playing_level.original_level(), None);
+            }else {
+                level.draw(console, x_offset, y_offset, game_state.is_player_background(), None);
+            }
 
             self.draw_tutorial_level_text(game_state, console);
         }
@@ -1913,6 +1954,13 @@ impl Screen for ScreenInGame {
             if should_play_sound_effect {
                 game_state.play_sound_effect(audio::LEVEL_RESET);
             }
+
+            return;
+        }
+
+        if key == Key::Q {
+            game_state.play_sound_effect_ui_select();
+            self.show_floor = !self.show_floor;
 
             return;
         }
@@ -3280,6 +3328,8 @@ pub struct ScreenLevelEditor {
     animation_first_frame: bool,
     playing_level: Option<PlayingLevel>,
     cursor_pos: (usize, usize),
+
+    show_floor: bool,
 }
 
 impl ScreenLevelEditor {
@@ -3300,6 +3350,8 @@ impl ScreenLevelEditor {
             animation_first_frame: false,
             playing_level: Default::default(),
             cursor_pos: Default::default(),
+
+            show_floor: false,
         }
     }
 
@@ -3663,6 +3715,12 @@ impl Screen for ScreenLevelEditor {
             if self.continue_flag {
                 console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 16) as f64 * 0.5) as usize, 0);
                 console.draw_text("Level validated!");
+            }else if self.show_floor {
+                console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 14) as f64 * 0.5) as usize, 0);
+                console.draw_text("Show tiles (");
+                console.draw_key_input_text("q");
+                console.reset_color();
+                console.draw_text(")");
             }
 
             console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 11) as f64 * 0.75) as usize, 0);
@@ -3678,8 +3736,16 @@ impl Screen for ScreenLevelEditor {
                 }
             ));
 
-            console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 14) as f64 * 0.5) as usize, 0);
-            console.draw_text(format!("Cursor ({:02}:{:02})", self.cursor_pos.0 + 1, self.cursor_pos.1 + 1));
+            if self.show_floor {
+                console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 14) as f64 * 0.5) as usize, 0);
+                console.draw_text("Show tiles (");
+                console.draw_key_input_text("q");
+                console.reset_color();
+                console.draw_text(")");
+            }else {
+                console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 14) as f64 * 0.5) as usize, 0);
+                console.draw_text(format!("Cursor ({:02}:{:02})", self.cursor_pos.0 + 1, self.cursor_pos.1 + 1));
+            }
 
             console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 10) as f64 * 0.75) as usize, 0);
             console.draw_text("Saved: ");
@@ -3716,9 +3782,24 @@ impl Screen for ScreenLevelEditor {
         let x_offset = ((Game::CONSOLE_MIN_WIDTH - self.level.current().width()) as f64 * 0.5) as usize;
         let y_offset = 1;
 
-        self.playing_level.as_ref().map_or(self.level.current(), |level| &level.current_playing_level().0).
-                draw(console, x_offset, y_offset, game_state.is_player_background(),
-                     self.playing_level.as_ref().map_or(Some(self.cursor_pos), |_| None));
+
+        if let Some(playing_level) = self.playing_level.as_ref() {
+            let level = &playing_level.current_playing_level().0;
+
+            if self.show_floor {
+                level.draw_floor(console, x_offset, y_offset, game_state.is_player_background(), playing_level.original_level(), None);
+            }else {
+                level.draw(console, x_offset, y_offset, game_state.is_player_background(), None);
+            }
+        }else {
+            let level = self.level.current();
+
+            if self.show_floor {
+                level.draw_floor(console, x_offset, y_offset, game_state.is_player_background(), level, Some(self.cursor_pos));
+            }else {
+                level.draw(console, x_offset, y_offset, game_state.is_player_background(), Some(self.cursor_pos));
+            }
+        }
     }
 
     fn animate(&mut self, game_state: &mut GameState) {
@@ -3743,6 +3824,8 @@ impl Screen for ScreenLevelEditor {
         }
 
         if key == Key::R {
+            self.show_floor = false;
+
             self.playing_level = if self.playing_level.is_some() {
                 game_state.play_sound_effect(audio::LEVEL_RESET);
 
@@ -3764,6 +3847,13 @@ impl Screen for ScreenLevelEditor {
                     },
                 }
             };
+
+            return;
+        }
+
+        if key == Key::Q {
+            game_state.play_sound_effect_ui_select();
+            self.show_floor = !self.show_floor;
 
             return;
         }
@@ -3868,5 +3958,7 @@ impl Screen for ScreenLevelEditor {
         self.validation_result_history_index = 0;
         //TODO best time
         self.validation_best_moves = level.best_moves();
+
+        self.show_floor = false;
     }
 }

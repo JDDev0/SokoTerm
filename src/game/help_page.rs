@@ -292,6 +292,10 @@ impl HelpPage {
                     console.draw_key_input_text("y");
                     console.reset_color();
                     console.draw_text(": Redo");
+                }, |console| {
+                    console.draw_key_input_text("q");
+                    console.reset_color();
+                    console.draw_text(": Show/Hide floor tiles");
                 }],
             ),
 
@@ -583,6 +587,10 @@ impl HelpPage {
                     console.draw_key_input_text("r");
                     console.reset_color();
                     console.draw_text(": Switch to editing mode");
+                }, |console| {
+                    console.draw_key_input_text("q");
+                    console.reset_color();
+                    console.draw_text(": Show/Hide floor tiles");
                 }],
             ),
             Section::new(
@@ -625,6 +633,10 @@ impl HelpPage {
                     console.draw_key_input_text("r");
                     console.reset_color();
                     console.draw_text(": Switch to playing mode");
+                }, |console| {
+                    console.draw_key_input_text("q");
+                    console.reset_color();
+                    console.draw_text(": Show/Hide floor tiles");
                 }, empty_line, |console| {
                     console.reset_color();
                     console.draw_text("[");

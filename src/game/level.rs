@@ -50,6 +50,44 @@ pub enum Tile {
 }
 
 impl Tile {
+    pub fn floor_tile(&self) -> Self {
+        match self {
+            Tile::Empty => Tile::Empty,
+            Tile::FragileFloor => Tile::FragileFloor,
+            Tile::Ice => Tile::Ice,
+
+            Tile::OneWayLeft => Tile::OneWayLeft,
+            Tile::OneWayUp => Tile::OneWayUp,
+            Tile::OneWayRight => Tile::OneWayRight,
+            Tile::OneWayDown => Tile::OneWayDown,
+
+            Tile::Wall => Tile::Wall,
+
+            Tile::Player => Tile::Player,
+            Tile::PlayerOnFragileFloor => Tile::FragileFloor,
+            Tile::PlayerOnIce => Tile::Ice,
+
+            Tile::Key => Tile::Key,
+            Tile::KeyInGoal => Tile::Goal,
+            Tile::KeyOnFragileFloor => Tile::FragileFloor,
+            Tile::KeyOnIce => Tile::Ice,
+            Tile::LockedDoor => Tile::LockedDoor,
+
+            Tile::Box => Tile::Box,
+            Tile::BoxInGoal => Tile::Goal,
+            Tile::BoxOnFragileFloor => Tile::FragileFloor,
+            Tile::BoxOnIce => Tile::Ice,
+            Tile::Goal => Tile::Goal,
+
+            Tile::Hole => Tile::Hole,
+            Tile::BoxInHole => Tile::BoxInHole,
+
+            Tile::DecorationBlank => Tile::DecorationBlank,
+
+            Tile::Secret => Tile::Secret,
+        }
+    }
+
     pub fn from_ascii(a: u8) -> Result<Self, LevelLoadingError> {
         match a {
             b'-' => Ok(Tile::Empty),
@@ -364,6 +402,50 @@ impl Level {
 
             for j in 0..self.width {
                 if let Some(tile) = tile_iter.next() {
+                    tile.draw(console, is_player_background, cursor_pos.is_some_and(|(x, y)| x == j && y == i));
+                }
+            }
+
+            console.draw_text("\n");
+        }
+    }
+
+    pub fn draw_floor(&self, console: &Console, x_offset: usize, y_offset: usize, is_player_background: bool, original_level: &Level, cursor_pos: Option<(usize, usize)>) {
+        let mut tile_iter = self.tiles.iter();
+
+        for i in 0..self.height {
+            console.set_cursor_pos(x_offset, i + y_offset);
+
+            for j in 0..self.width {
+                if let Some(tile) = tile_iter.next() {
+                    let tile = match tile.floor_tile() {
+                        Tile::Player => match original_level.get_tile(j, i) {
+                            Some(Tile::KeyOnIce | Tile::BoxOnIce | Tile::Ice | Tile::PlayerOnIce) => Tile::Ice,
+
+                            Some(Tile::OneWayLeft) => Tile::OneWayLeft,
+                            Some(Tile::OneWayUp) => Tile::OneWayUp,
+                            Some(Tile::OneWayRight) => Tile::OneWayRight,
+                            Some(Tile::OneWayDown) => Tile::OneWayDown,
+
+                            Some(Tile::KeyInGoal | Tile::BoxInGoal | Tile::Goal) => Tile::Goal,
+
+                            Some(
+                                Tile::Hole | Tile::BoxInHole |
+                                Tile::KeyOnFragileFloor | Tile::BoxOnFragileFloor
+                            ) => Tile::BoxInHole,
+
+                            _ => Tile::Empty,
+                        },
+
+                        Tile::Box | Tile::Key => match original_level.get_tile(j, i) {
+                            Some(Tile::Hole | Tile::BoxInHole) => Tile::BoxInHole,
+
+                            _ => Tile::Empty,
+                        },
+
+                        tile => tile,
+                    };
+
                     tile.draw(console, is_player_background, cursor_pos.is_some_and(|(x, y)| x == j && y == i));
                 }
             }
