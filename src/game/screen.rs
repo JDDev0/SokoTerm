@@ -2532,9 +2532,12 @@ impl Screen for ScreenSelectLevelPackEditor {
             self.is_deleting_level_pack = false;
 
             if selection == DialogSelection::Yes {
-                let path = game_state.editor_state.get_current_level_pack().unwrap().path();
+                let path = game_state.editor_state.get_current_level_pack().unwrap().path().to_string();
+                let save_game_path = path.clone() + ".sav";
 
-                if let Err(err) = std::fs::remove_file(path) {
+                if let Err(err) = std::fs::remove_file(save_game_path) {
+                    game_state.open_dialog(Dialog::new_ok_error(format!("Cannot delete: {}", err)));
+                }else if let Err(err) = std::fs::remove_file(path) {
                     game_state.open_dialog(Dialog::new_ok_error(format!("Cannot delete: {}", err)));
                 }else {
                     let index = game_state.editor_state.selected_level_pack_index;
