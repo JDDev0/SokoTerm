@@ -3,6 +3,7 @@
 A sokoban game for Linux terminal/TTY and with the Windows CMD and PowerShell.
 There is also an GUI version available for Linux and Windows.
 
+Download on Steam: [SokoTerm](https://store.steampowered.com/app/4160140/SokoTerm/)<br>
 Download on itch.io: [SokoTerm](https://jddev0.itch.io/sokoterm)
 
 ## Gameplay
