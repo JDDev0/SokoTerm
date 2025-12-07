@@ -152,7 +152,7 @@ impl Screen for ScreenStartMenu {
             return;
         }
 
-        if key == Key::ENTER {
+        if key == Key::ENTER || key == Key::SPACE {
             game_state.play_sound_effect_ui_select();
 
             game_state.set_screen(ScreenId::SelectLevelPack);
@@ -932,7 +932,7 @@ impl Screen for ScreenSelectLevelPack {
                     game_state.current_level_pack_index += 24;
                 },
 
-                Key::ENTER => {
+                Key::ENTER | Key::SPACE => {
                     game_state.play_sound_effect_ui_select();
 
                     if game_state.get_level_pack_index() >= game_state.get_level_pack_count() {
@@ -1239,7 +1239,7 @@ impl Screen for ScreenSelectLevel {
                     self.selected_level += 24;
                 },
 
-                Key::ENTER => {
+                Key::ENTER | Key::SPACE => {
                     self.level_preview = false;
 
                     if self.selected_level <= game_state.get_current_level_pack().
@@ -1906,7 +1906,7 @@ impl Screen for ScreenInGame {
 
         //Level end
         if self.continue_flag {
-            if key == Key::ENTER {
+            if key == Key::ENTER || key == Key::SPACE {
                 self.continue_flag = false;
 
                 //All levels completed
@@ -2378,7 +2378,7 @@ impl Screen for ScreenSelectLevelPackEditor {
                     game_state.editor_state.selected_level_pack_index += 24;
                 },
 
-                Key::ENTER => {
+                Key::ENTER | Key::SPACE => {
                     if game_state.editor_state.selected_level_pack_index == game_state.editor_state.get_level_pack_count() {
                         //Level Pack Editor entry
                         if game_state.editor_state.get_level_pack_count() == LevelPack::MAX_LEVEL_PACK_COUNT {
@@ -2566,7 +2566,7 @@ impl Screen for ScreenSelectLevelPackBackgroundMusic {
             ));
         }
 
-        if key == Key::ENTER {
+        if key == Key::ENTER || key == Key::SPACE {
             game_state.editor_state.get_current_level_pack_mut().unwrap().set_background_music_id(current_background_music_id);
 
             if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
@@ -2574,7 +2574,7 @@ impl Screen for ScreenSelectLevelPackBackgroundMusic {
             }
         }
 
-        if key == Key::ENTER || key == Key::ESC {
+        if key == Key::ENTER || key == Key::SPACE || key == Key::ESC {
             game_state.play_sound_effect_ui_select();
 
             game_state.set_screen(ScreenId::SelectLevelPackEditor);
@@ -3078,7 +3078,7 @@ impl Screen for ScreenLevelPackEditor {
                     game_state.editor_state.selected_level_index += 24;
                 },
 
-                Key::ENTER => {
+                Key::ENTER | Key::SPACE => {
                     self.level_preview = false;
 
                     if game_state.editor_state.selected_level_index == game_state.editor_state.get_current_level_pack().unwrap().level_count() {

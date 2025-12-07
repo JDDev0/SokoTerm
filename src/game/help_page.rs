@@ -246,6 +246,13 @@ impl HelpPage {
                     console.reset_color();
                     console.draw_text(": Scroll up/down");
                 }, |console| {
+                    console.draw_key_input_text("ENTER");
+                    console.reset_color();
+                    console.draw_text("/");
+                    console.draw_key_input_text("SPACEBAR");
+                    console.reset_color();
+                    console.draw_text(": Accept/Continue");
+                }, |console| {
                     console.draw_key_input_text("ESC");
                     console.reset_color();
                     console.draw_text(": Cancel/Exit/Go back to last screen");
@@ -487,6 +494,9 @@ impl HelpPage {
                 section_label_builder.new_sub_sub_section("Level pack selection"), &[|console| {
                     console.draw_key_input_text("ENTER");
                     console.reset_color();
+                    console.draw_text("/");
+                    console.draw_key_input_text("SPACEBAR");
+                    console.reset_color();
                     console.draw_text(": Select or create a level pack");
                 }, |console| {
                     console.draw_key_input_text("s");
@@ -513,6 +523,9 @@ impl HelpPage {
             Section::new(
                 section_label_builder.new_sub_sub_section("Level pack editor / Level selection"), &[|console| {
                     console.draw_key_input_text("ENTER");
+                    console.reset_color();
+                    console.draw_text("/");
+                    console.draw_key_input_text("SPACEBAR");
                     console.reset_color();
                     console.draw_text(": Select or creates a level");
                 }, |console| {
@@ -617,7 +630,7 @@ impl HelpPage {
             ),
             Section::new(
                 section_label_builder.new_sub_sub_section("Level editor (Editing mode - Tiles)"), &[|console| {
-                    console.draw_key_input_text("SPACE");
+                    console.draw_key_input_text("SPACEBAR");
                     console.reset_color();
                     console.draw_text(": Move the cursor in cursor direction");
                 }, |console| {

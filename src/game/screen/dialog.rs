@@ -32,7 +32,7 @@ pub struct DialogOption {
 }
 
 impl DialogOption {
-    pub const OK: &'static DialogOption = &DialogOption::new("[O]k", DialogSelection::Ok, &[Key::O, Key::ENTER, Key::ESC]);
+    pub const OK: &'static DialogOption = &DialogOption::new("[O]k", DialogSelection::Ok, &[Key::O, Key::ENTER, Key::SPACE, Key::ESC]);
     pub const YES: &'static DialogOption = &DialogOption::new("[Y]es", DialogSelection::Yes, &[Key::Y]);
     pub const NO: &'static DialogOption = &DialogOption::new("[N]o", DialogSelection::No, &[Key::N]);
     pub const CANCEL: &'static DialogOption = &DialogOption::new("[C]ancel", DialogSelection::Cancel, &[Key::C, Key::ESC]);
