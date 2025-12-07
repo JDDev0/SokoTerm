@@ -273,6 +273,9 @@ impl HelpPage {
                 section_label_builder.new_sub_sub_section("Game controls"), &[|console| {
                     console.draw_key_input_text("Arrow keys");
                     console.reset_color();
+                    console.draw_text("/");
+                    console.draw_key_input_text("WASD");
+                    console.reset_color();
                     console.draw_text(": Move player");
                 }, |console| {
                     console.draw_key_input_text("r");
@@ -560,6 +563,9 @@ impl HelpPage {
             Section::new(
                 section_label_builder.new_sub_sub_section("Level editor (Playing mode)"), &[|console| {
                     console.draw_key_input_text("Arrow keys");
+                    console.reset_color();
+                    console.draw_text("/");
+                    console.draw_key_input_text("WASD");
                     console.reset_color();
                     console.draw_text(": Move player");
                 }, |console| {

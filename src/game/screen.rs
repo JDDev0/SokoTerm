@@ -1361,8 +1361,18 @@ impl ScreenInGame {
                         console.reset_color();
                         console.draw_text(" to go to the next level...");
                     }else {
-                        console.set_cursor_pos(17, 8);
-                        console.draw_text("Use the arrow keys (< ^ > v) to move...");
+                        console.set_cursor_pos(13, 8);
+                        console.draw_text("Use ");
+
+                        console.draw_key_input_text("Arrow Keys");
+
+                        console.reset_color();
+                        console.draw_text(" (< ^ > v) or ");
+
+                        console.draw_key_input_text("WASD");
+
+                        console.reset_color();
+                        console.draw_text(" keys to move...");
                     }
                 },
                 1 => {
@@ -1947,15 +1957,16 @@ impl Screen for ScreenInGame {
             return;
         }
 
-        if key.is_arrow_key() {
-            let direction = match key {
-                Key::LEFT => Direction::Left,
-                Key::UP => Direction::Up,
-                Key::RIGHT => Direction::Right,
-                Key::DOWN => Direction::Down,
-                _ => unreachable!("Invalid arrow key"),
-            };
+        let direction = match key {
+            Key::W | Key::UP => Some(Direction::Up),
+            Key::A | Key::LEFT => Some(Direction::Left),
+            Key::S | Key::DOWN => Some(Direction::Down),
+            Key::D | Key::RIGHT => Some(Direction::Right),
 
+            _ => None,
+        };
+
+        if let Some(direction) = direction {
             let move_result = self.level.as_mut().unwrap().move_player(direction);
             if move_result.is_animation() {
                 self.animation_first_frame = true;
@@ -3317,15 +3328,16 @@ impl ScreenLevelEditor {
                 }
             }
 
-            if key.is_arrow_key() {
-                let direction = match key {
-                    Key::LEFT => Direction::Left,
-                    Key::UP => Direction::Up,
-                    Key::RIGHT => Direction::Right,
-                    Key::DOWN => Direction::Down,
-                    _ => unreachable!("Invalid arrow key"),
-                };
+            let direction = match key {
+                Key::W | Key::UP => Some(Direction::Up),
+                Key::A | Key::LEFT => Some(Direction::Left),
+                Key::S | Key::DOWN => Some(Direction::Down),
+                Key::D | Key::RIGHT => Some(Direction::Right),
 
+                _ => None,
+            };
+
+            if let Some(direction) = direction {
                 let move_result = playing_level.move_player(direction);
                 if move_result.is_animation() {
                     self.animation_first_frame = true;
