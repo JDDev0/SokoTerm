@@ -1353,10 +1353,13 @@ impl ScreenInGame {
             match game_state.current_level_index {
                 0 => {
                     if self.continue_flag {
-                        console.set_cursor_pos(18, 8);
+                        console.set_cursor_pos(13, 8);
                         console.draw_text("Press ");
 
                         console.draw_key_input_text("ENTER");
+                        console.reset_color();
+                        console.draw_text("/");
+                        console.draw_key_input_text("SPACEBAR");
 
                         console.reset_color();
                         console.draw_text(" to go to the next level...");
