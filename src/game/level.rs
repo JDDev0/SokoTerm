@@ -880,6 +880,28 @@ impl LevelWithStats {
     }
 }
 
+#[cfg(feature = "steam")]
+#[derive(Debug)]
+pub struct SteamLevelPackData {
+    workshop_id: PublishedFileId,
+}
+
+#[cfg(feature = "steam")]
+impl SteamLevelPackData {
+    pub fn workshop_id(&self) -> PublishedFileId {
+        self.workshop_id
+    }
+}
+
+#[cfg(feature = "steam")]
+impl From<QueryResult> for SteamLevelPackData {
+    fn from(value: QueryResult) -> Self {
+        SteamLevelPackData {
+            workshop_id: value.published_file_id,
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct LevelPack {
     name: String,
@@ -897,7 +919,7 @@ pub struct LevelPack {
     level_pack_best_moves_sum: Option<u32>,
 
     #[cfg(feature = "steam")]
-    steam_workshop_id: Option<PublishedFileId>,
+    steam_level_pack_data: Option<SteamLevelPackData>,
 }
 
 impl LevelPack {
@@ -921,7 +943,7 @@ impl LevelPack {
             level_pack_best_moves_sum: Default::default(),
 
             #[cfg(feature = "steam")]
-            steam_workshop_id: None,
+            steam_level_pack_data: None,
         }
     }
 
@@ -929,7 +951,7 @@ impl LevelPack {
         id: impl Into<String>, path: impl Into<String>, lvl_data: impl Into<String>, editor_level_pack: bool,
 
         #[cfg(feature = "steam")]
-        steam_workshop_id: Option<PublishedFileId>,
+        steam_level_pack_data: Option<SteamLevelPackData>,
     ) -> Result<Self, Box<dyn Error>> {
         let mut lvl_name = None;
         let id = id.into();
@@ -1143,9 +1165,9 @@ impl LevelPack {
             }
 
             #[cfg(feature = "steam")]
-            if let Some(steam_workshop_id) = steam_workshop_id {
+            if let Some(steam_level_pack_data) = &steam_level_pack_data {
                 save_game_file.push("SteamWorkshop/");
-                save_game_file.push(steam_workshop_id.0.to_string());
+                save_game_file.push(steam_level_pack_data.workshop_id.0.to_string());
                 save_game_file.push(level_save_file_postfix);
             }else {
                 save_game_file.push(&id);
@@ -1228,7 +1250,7 @@ impl LevelPack {
             level_pack_best_moves_sum: Default::default(),
 
             #[cfg(feature = "steam")]
-            steam_workshop_id,
+            steam_level_pack_data,
         };
         level_pack.calculate_stats_sum();
 
@@ -1283,9 +1305,9 @@ impl LevelPack {
             }
 
             #[cfg(feature = "steam")]
-            if let Some(steam_workshop_id) = self.steam_workshop_id {
+            if let Some(steam_level_pack_data) = &self.steam_level_pack_data {
                 save_game_file.push("SteamWorkshop/");
-                save_game_file.push(steam_workshop_id.0.to_string());
+                save_game_file.push(steam_level_pack_data.workshop_id.0.to_string());
                 save_game_file.push(level_save_file_postfix);
             }else {
                 save_game_file.push(&self.id);
@@ -1432,8 +1454,8 @@ impl LevelPack {
     }
 
     #[cfg(feature = "steam")]
-    pub fn steam_workshop_id(&self) -> Option<PublishedFileId> {
-        self.steam_workshop_id
+    pub fn steam_level_pack_data(&self) -> Option<&SteamLevelPackData> {
+        self.steam_level_pack_data.as_ref()
     }
 }
 

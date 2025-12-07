@@ -965,7 +965,7 @@ impl <'a> Game<'a> {
         let mut level_pack = LevelPack::read_from_save_game(
             level_pack_id, level_pack_path.to_str().unwrap(), level_pack_data, false,
 
-            Some(item.published_file_id),
+            Some(item.clone().into()),
         )?;
         level_pack.set_name(truncated_workshop_item_name);
 

@@ -848,7 +848,7 @@ impl Screen for ScreenSelectLevelPack {
             console.draw_text(format!("Selected level pack: {}", game_state.level_packs().get(game_state.get_level_pack_index()).unwrap().name()));
 
             #[cfg(feature = "steam")]
-            if game_state.level_packs().get(game_state.get_level_pack_index()).unwrap().steam_workshop_id().is_some() {
+            if game_state.level_packs().get(game_state.get_level_pack_index()).unwrap().steam_level_pack_data().is_some() {
                 console.draw_text(" [");
 
                 console.draw_key_input_text("o");
@@ -892,9 +892,10 @@ impl Screen for ScreenSelectLevelPack {
 
         #[cfg(feature = "steam")]
         if key == Key::O && game_state.get_level_pack_index() < game_state.get_level_pack_count() &&
-                let Some(id) = game_state.level_packs().get(game_state.get_level_pack_index()).unwrap().steam_workshop_id() {
+                let Some(steam_level_pack_data) = game_state.level_packs().get(game_state.get_level_pack_index()).unwrap().steam_level_pack_data() {
             game_state.play_sound_effect_ui_dialog_open();
 
+            let id = steam_level_pack_data.workshop_id();
             game_state.steam_client.friends().activate_game_overlay_to_web_page(&format!("steam://url/CommunityFilePage/{}", id.0));
         }
 
@@ -1799,7 +1800,7 @@ impl ScreenInGame {
                             _ => {},
                         }
 
-                        if level_pack.steam_workshop_id().is_some() {
+                        if level_pack.steam_level_pack_data().is_some() {
                             Achievement::STEAM_WORKSHOP_LEVEL_PACK_COMPLETED.unlock(steam_client.clone());
                         }
                     }
@@ -2078,7 +2079,7 @@ impl Screen for ScreenInGame {
             game_state.get_level_index()).unwrap().level());
 
         #[cfg(feature = "steam")]
-        if game_state.get_current_level_pack().unwrap().steam_workshop_id().is_some() {
+        if game_state.get_current_level_pack().unwrap().steam_level_pack_data().is_some() {
             Achievement::STEAM_WORKSHOP_LEVEL_PACK_PLAYED.unlock(game_state.steam_client.clone());
         }
 
