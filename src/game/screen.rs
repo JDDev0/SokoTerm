@@ -1719,6 +1719,17 @@ impl ScreenInGame {
                 },
                 _ => {},
             }
+        }else if game_state.get_level_pack_index() == 4 && game_state.found_secret_main_level_pack { //Built-in Secret pack
+            console.reset_color();
+            #[expect(clippy::single_match)]
+            match game_state.current_level_index {
+                0 => {
+                    console.set_cursor_pos(35, 7);
+                    console.draw_text("???");
+                },
+
+                _ => {},
+            }
         }
     }
 
