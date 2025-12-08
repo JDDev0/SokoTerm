@@ -66,27 +66,6 @@ macro_rules! color_scheme {
     };
 }
 
-pub const DEFAULT_COLOR_SCHEME: ColorScheme = color_scheme! {
-    Default: (23, 20, 33),
-
-    Black: (23, 20, 33),
-    Blue: (18, 72, 139),
-    Green: (38, 162, 105),
-    Cyan: (42, 161, 179),
-    Red: (192, 28, 40),
-    Pink: (163, 71, 186),
-    Yellow: (162, 115, 76),
-    White: (208, 207, 204),
-    LightBlack: (94, 92, 100),
-    LightBlue: (42, 123, 222),
-    LightGreen: (51, 218, 122),
-    LightCyan: (51, 199, 222),
-    LightRed: (246, 97, 81),
-    LightPink: (192, 97, 203),
-    LightYellow: (233, 173, 12),
-    LightWhite: (255, 255, 255),
-};
-
 pub const MUTED_COLOR_SCHEME: ColorScheme = color_scheme! {
     Default: (40, 42, 46),
 
@@ -105,6 +84,27 @@ pub const MUTED_COLOR_SCHEME: ColorScheme = color_scheme! {
     LightRed: (204, 102, 102),
     LightPink: (178, 148, 187),
     LightYellow: (240, 198, 116),
+    LightWhite: (255, 255, 255),
+};
+
+pub const BLUE_TINTED_COLOR_SCHEME: ColorScheme = color_scheme! {
+    Default: (23, 20, 33),
+
+    Black: (23, 20, 33),
+    Blue: (18, 72, 139),
+    Green: (38, 162, 105),
+    Cyan: (42, 161, 179),
+    Red: (192, 28, 40),
+    Pink: (163, 71, 186),
+    Yellow: (162, 115, 76),
+    White: (208, 207, 204),
+    LightBlack: (94, 92, 100),
+    LightBlue: (42, 123, 222),
+    LightGreen: (51, 218, 122),
+    LightCyan: (51, 199, 222),
+    LightRed: (246, 97, 81),
+    LightPink: (192, 97, 203),
+    LightYellow: (233, 173, 12),
     LightWhite: (255, 255, 255),
 };
 
@@ -151,8 +151,8 @@ pub const HIGH_CONTRAST_COLOR_SCHEME: ColorScheme = color_scheme! {
 };
 
 pub const COLOR_SCHEMES: [ColorScheme; 4] = [
-    DEFAULT_COLOR_SCHEME,
     MUTED_COLOR_SCHEME,
+    BLUE_TINTED_COLOR_SCHEME,
     DARK_COLOR_SCHEME,
     HIGH_CONTRAST_COLOR_SCHEME,
 ];
@@ -746,6 +746,6 @@ impl Color {
 
 impl From<Color> for bevy::color::Color {
     fn from(value: Color) -> Self {
-        DEFAULT_COLOR_SCHEME.convert_console_color_to_bevy_color(value)
+        MUTED_COLOR_SCHEME.convert_console_color_to_bevy_color(value)
     }
 }
