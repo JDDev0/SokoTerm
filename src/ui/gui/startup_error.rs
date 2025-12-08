@@ -11,6 +11,7 @@ use bevy::ui_widgets::{observe, Activate, Button, Checkbox, RadioGroup, UiWidget
 use bevy::window::{CursorIcon, PrimaryWindow, SystemCursorIcon};
 use rodio::{Decoder, OutputStream, Source};
 use crate::game::{audio, Game};
+use crate::insert_embedded_asset;
 use crate::ui::gui::{assets, spawn_camera};
 
 #[derive(Debug, Default, Resource)]
@@ -46,11 +47,7 @@ pub fn show_startup_error_dialog(app: &mut App, error_message: &str) {
 
     let embedded = app.world_mut().resource_mut::<EmbeddedAssetRegistry>();
 
-    embedded.insert_asset(
-        PathBuf::from("../../../assets/font/JetBrainsMono-Bold.ttf"),
-        Path::new("font/JetBrainsMono-Bold.ttf"),
-        assets::font::JETBRAINS_MONO_BOLD_BYTES,
-    );
+    insert_embedded_asset!(embedded, assets::font::JETBRAINS_MONO_BOLD_BYTES);
 
     app.
             insert_resource(ErrorTextResource {

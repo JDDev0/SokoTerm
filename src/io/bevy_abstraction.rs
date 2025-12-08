@@ -3,6 +3,8 @@ use std::collections::VecDeque;
 use std::marker::PhantomData;
 use std::sync::{Arc, Mutex};
 use smol_str::SmolStr;
+use crate::game::level::Tile;
+use crate::game::TileMode;
 
 #[derive(Debug, Clone)]
 pub struct ColorScheme {
@@ -155,9 +157,37 @@ pub const COLOR_SCHEMES: [ColorScheme; 4] = [
     HIGH_CONTRAST_COLOR_SCHEME,
 ];
 
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub struct ConsoleCharacter {
+    data: u8,
+}
+
+impl ConsoleCharacter {
+    ///Returns Ok(u8) for simple ASCII char and Err(Tile) for tile char
+    pub fn get(self) -> Result<u8, Tile> {
+        if self.data & 128 == 0 {
+            Ok(self.data)
+        }else {
+            Tile::from_ascii(self.data - 128).map(Err).unwrap_or_else(|_| Ok(b'?'))
+        }
+    }
+}
+
+impl From<u8> for ConsoleCharacter {
+    fn from(value: u8) -> Self {
+        ConsoleCharacter { data: value }
+    }
+}
+
+impl From<Tile> for ConsoleCharacter {
+    fn from(value: Tile) -> Self {
+        ConsoleCharacter { data: 128 + value.to_ascii() }
+    }
+}
+
 #[derive(Clone)]
 pub struct ConsoleDrawBuffer {
-    text_buffer: Box<[u8]>,
+    text_buffer: Box<[ConsoleCharacter]>,
     text_color_buffer: Box<[(Color, Color)]>,
     //TODO: underline
 }
@@ -165,13 +195,13 @@ pub struct ConsoleDrawBuffer {
 impl ConsoleDrawBuffer {
     pub fn new<const W: usize, const H: usize>() -> Self {
         Self {
-            text_buffer: vec![b' '; W * H].into_boxed_slice(),
+            text_buffer: vec![ConsoleCharacter { data: b' ' }; W * H].into_boxed_slice(),
             text_color_buffer: vec![(Color::White, Color::Black); W * H].into_boxed_slice(),
             //TODO: underline
         }
     }
 
-    pub fn text_buffer(&self) -> &[u8] {
+    pub fn text_buffer(&self) -> &[ConsoleCharacter] {
         &self.text_buffer
     }
 
@@ -196,6 +226,8 @@ impl ConsoleBufferSelection {
 }
 
 pub struct ConsoleState {
+    tile_mode: TileMode,
+
     curser_pos: (usize, usize),
     current_color_pair: (Color, Color),
 
@@ -210,6 +242,8 @@ pub struct ConsoleState {
 impl ConsoleState {
     pub fn new<const W: usize, const H: usize>() -> Self {
         Self {
+            tile_mode: TileMode::default(),
+
             curser_pos: (0, 0),
             current_color_pair: (Color::White, Color::Black),
 
@@ -222,10 +256,18 @@ impl ConsoleState {
         }
     }
 
+    pub fn tile_mode(&self) -> TileMode {
+        self.tile_mode
+    }
+
+    pub fn set_tile_mode(&mut self, tile_mode: TileMode) {
+        self.tile_mode = tile_mode;
+    }
+
     pub fn clear_screen(&mut self) {
         self.curser_pos = (0, 0);
 
-        self.current_buffer_mut().text_buffer.fill(b' ');
+        self.current_buffer_mut().text_buffer.fill(ConsoleCharacter { data: b' ' });
         self.current_buffer_mut().text_color_buffer.fill((Color::White, Color::Black));
         //TODO: underline
     }
@@ -344,7 +386,9 @@ impl <'a> Console<'a> {
                 let line = &line.as_bytes()[..len];
                 let color = state.current_color_pair;
 
-                state.current_buffer_mut().text_buffer[start_index..start_index + len].copy_from_slice(line);
+                state.current_buffer_mut().text_buffer[start_index..start_index + len].
+                        //SAFETY: &[u8] and &[ConsoleCharacter] have the same byte representation and all u8s are valid ConsoleCharacters
+                        copy_from_slice(unsafe { mem::transmute::<&[u8], &[ConsoleCharacter]>(line) } );
                 state.current_buffer_mut().text_color_buffer[start_index..start_index + len].fill(color);
             }
 
@@ -358,6 +402,28 @@ impl <'a> Console<'a> {
 
         if !text.ends_with("\n") {
             state.curser_pos.0 = cursor_pos_x_before_newline;
+        }
+    }
+
+    pub fn draw_tile_internal(&self, tile: Tile, is_player_background: bool, inverted: bool) {
+        let mut state = self.state.lock().unwrap();
+        if state.tile_mode == TileMode::Graphical && !matches!(tile, Tile::DecorationBlank) &&
+                //TODO player tiles
+                !matches!(tile,  Tile::Player| Tile::PlayerOnFragileFloor| Tile::PlayerOnIce) {
+            let (width, _) = self.get_console_size();
+
+            let index = state.curser_pos.0 + width * state.curser_pos.1;
+
+            state.current_buffer_mut().text_buffer[index] = ConsoleCharacter::from(tile);
+            state.current_buffer_mut().text_color_buffer[index] = (
+                if is_player_background { Color::Yellow } else { Color::Default },
+                if inverted { Color::Black } else { Color::Default },
+            );
+            state.curser_pos.0 += 1;
+        }else {
+            drop(state);
+
+            tile.draw_raw(self, is_player_background, inverted);
         }
     }
 

@@ -7,6 +7,7 @@ use std::io::Write;
 use std::str::FromStr;
 use crate::collections::UndoHistory;
 use crate::game::audio::BackgroundMusicId;
+use crate::game::console_extension::ConsoleExtension;
 use crate::io::{Color, Console};
 
 #[cfg(feature = "steam")]
@@ -169,6 +170,10 @@ impl Tile {
     }
 
     pub fn draw(self, console: &Console, is_player_background: bool, inverted: bool) {
+        console.draw_tile(self, is_player_background, inverted);
+    }
+
+    pub fn draw_raw(self, console: &Console, is_player_background: bool, inverted: bool) {
         match self {
             Tile::Empty => {
                 console.set_color_invertible(Color::LightBlue, Color::Default, inverted);

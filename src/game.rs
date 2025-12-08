@@ -85,6 +85,49 @@ impl EditorState {
 }
 
 #[derive(Default, Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
+pub enum TileMode {
+    #[default]
+    Ascii,
+    Graphical,
+}
+
+impl TileMode {
+    pub fn display_name(self) -> &'static str {
+        match self {
+            TileMode::Ascii => "Ascii",
+            TileMode::Graphical => "Graphical",
+        }
+    }
+
+    #[must_use]
+    pub fn toggle(self) -> Self {
+        match self {
+            TileMode::Ascii => TileMode::Graphical,
+            TileMode::Graphical => TileMode::Ascii,
+        }
+    }
+}
+
+impl Display for TileMode {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.display_name())
+    }
+}
+
+impl FromStr for TileMode {
+    type Err = GameError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        match s {
+            "Ascii" => Ok(TileMode::Ascii),
+            "Graphical" => Ok(TileMode::Graphical),
+
+            _ => Err(GameError::new("Invalid tile mode \"{s}\"")),
+        }
+    }
+}
+
+#[derive(Default, Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum AnimationSpeed {
     Slow,
     #[default]
@@ -112,6 +155,7 @@ impl AnimationSpeed {
         }
     }
 
+    #[must_use]
     fn next_setting(self) -> Self {
         match self {
             AnimationSpeed::Slow => AnimationSpeed::Normal,
@@ -145,6 +189,7 @@ impl FromStr for AnimationSpeed {
 
 pub struct GameSettings {
     color_scheme_index: usize,
+    tile_mode: TileMode,
 
     background_music: bool,
 
@@ -155,6 +200,7 @@ impl GameSettings {
     pub fn new() -> GameSettings {
         Self {
             color_scheme_index: 0,
+            tile_mode: TileMode::default(),
 
             background_music: true,
 
@@ -201,6 +247,21 @@ impl GameSettings {
                                 //Not used in CLI build, but keep value as is for saving (CLI and GUI builds might both be played)
                                 settings.color_scheme_index = value;
                             }
+                        },
+
+                        "tile_mode" => {
+                            let Ok(value) = TileMode::from_str(value) else {
+                                #[cfg(feature = "gui")]
+                                {
+                                    warn!("\"settings.data\" contains invalid value for option \"{key}\": \"{value}\": Using default");
+                                }
+
+                                //TODO warning in cli version
+
+                                continue;
+                            };
+
+                            settings.tile_mode = value;
                         },
 
                         "background_music" => {
@@ -262,6 +323,7 @@ impl GameSettings {
         let mut file = File::create(settings_save_file)?;
 
         writeln!(file, "color_scheme_index = {}", self.color_scheme_index)?;
+        writeln!(file, "tile_mode = {}", self.tile_mode)?;
         writeln!(file, "background_music = {}", self.background_music)?;
         writeln!(file, "animation_speed = {:?}", self.animation_speed)?;
 
@@ -270,6 +332,10 @@ impl GameSettings {
 
     pub fn color_scheme_index(&self) -> usize {
         self.color_scheme_index
+    }
+
+    pub fn tile_mode(&self) -> TileMode {
+        self.tile_mode
     }
 
     pub fn background_music(&self) -> bool {
@@ -535,6 +601,13 @@ impl GameState {
 
     pub fn set_and_save_color_scheme_index(&mut self, color_scheme_index: usize) -> Result<(), Box<dyn Error>> {
         self.settings.color_scheme_index = color_scheme_index;
+        self.settings.save_to_file()?;
+
+        Ok(())
+    }
+
+    pub fn set_and_save_tile_mode(&mut self, tile_mode: TileMode) -> Result<(), Box<dyn Error>> {
+        self.settings.tile_mode = tile_mode;
         self.settings.save_to_file()?;
 
         Ok(())
@@ -1034,7 +1107,7 @@ impl <'a> Game<'a> {
     }
 
     fn update_key(&mut self, key: Key) {
-        if key == Key::F8 {
+        if key == Key::F7 {
             self.game_state.play_sound_effect_ui_select();
 
             if let Err(err) = self.game_state.set_and_save_animation_speed(self.game_state.settings.animation_speed.next_setting()) {
@@ -1042,7 +1115,7 @@ impl <'a> Game<'a> {
             }
 
             return;
-        }else if key == Key::F9 {
+        }else if key == Key::F8 {
             self.game_state.play_sound_effect_ui_select();
 
             if let Err(err) = self.game_state.set_and_save_background_music_enabled(!self.game_state.settings.background_music) {

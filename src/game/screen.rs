@@ -2,7 +2,7 @@ use std::cmp::Ordering;
 use std::fmt::Write as _;
 use std::str::FromStr;
 use std::time::SystemTime;
-use crate::game::{audio, Game, GameState};
+use crate::game::{audio, Game, GameState, TileMode};
 use crate::game::level::{Direction, Level, LevelPack, LevelWithStats, MoveResult, PlayingLevel, Tile};
 use crate::game::screen::dialog::{Dialog, DialogSelection};
 use crate::collections::UndoHistory;
@@ -675,6 +675,27 @@ impl Screen for ScreenSettings {
 
         console.reset_color();
         console.set_cursor_pos(0, 6);
+        if cfg!(feature = "gui") {
+            console.draw_text("Tile mode (Toggle with ");
+
+            console.draw_key_input_text("F9");
+
+            console.reset_color();
+            console.draw_text("): ");
+        }else {
+            console.draw_text("Tile mode: ");
+        }
+
+        if game_state.settings.tile_mode == TileMode::Graphical && !cfg!(feature = "cli") {
+            console.set_color(Color::Blue, Color::Default);
+            console.draw_text("Graphical");
+        }else {
+            console.set_color(Color::Red, Color::Default);
+            console.draw_text("ASCII");
+        }
+
+        console.reset_color();
+        console.set_cursor_pos(0, 8);
         console.draw_text("Background Music: ");
 
         if game_state.settings.background_music {
@@ -688,13 +709,13 @@ impl Screen for ScreenSettings {
         console.reset_color();
         console.draw_text(" (Toggle with ");
 
-        console.draw_key_input_text("F9");
+        console.draw_key_input_text("F8");
 
         console.reset_color();
         console.draw_text(")");
 
         console.reset_color();
-        console.set_cursor_pos(0, 8);
+        console.set_cursor_pos(0, 10);
         console.draw_text("Animation Speed: ");
 
         console.set_color(Color::Blue, Color::Default);
@@ -703,7 +724,7 @@ impl Screen for ScreenSettings {
         console.reset_color();
         console.draw_text(" (Toggle with ");
 
-        console.draw_key_input_text("F8");
+        console.draw_key_input_text("F7");
 
         console.reset_color();
         console.draw_text(")");

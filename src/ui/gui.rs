@@ -19,6 +19,7 @@ use crate::io::Console;
 use bevy_steamworks::*;
 #[cfg(feature = "steam")]
 use crate::game::level::LevelPack;
+use crate::game::level::Tile;
 #[cfg(feature = "steam")]
 use crate::ui::gui::steam_plugin::SteamPlugin;
 
@@ -28,6 +29,17 @@ mod startup_error;
 #[cfg(feature = "steam")]
 mod steam_plugin;
 
+#[macro_export]
+macro_rules! insert_embedded_asset {
+    ( $embedded:ident, $asset:path$(,)? ) => {
+        $embedded.insert_asset(
+            PathBuf::from("../../assets/".to_string() + $asset.path()),
+            Path::new($asset.path()),
+            $asset.data(),
+        );
+    };
+}
+
 #[expect(clippy::type_complexity)]
 static CONSOLE_STATE: LazyLock<Arc<Mutex<ConsoleState>>, fn() -> Arc<Mutex<ConsoleState>>> =
     LazyLock::new(|| Arc::new(Mutex::new(ConsoleState::new::<74, 23>())));
@@ -36,6 +48,12 @@ const BORDER_WIDTH: u32 = 5;
 
 #[derive(Debug, Component)]
 struct ConsoleTextCharacter {
+    x: usize,
+    y: usize,
+}
+
+#[derive(Debug, Component)]
+struct ConsoleTileCharacter {
     x: usize,
     y: usize,
 }
@@ -96,6 +114,7 @@ pub fn run_game() -> ExitCode {
     };
 
     let settings = game.game_state().settings();
+    CONSOLE_STATE.lock().unwrap().set_tile_mode(settings.tile_mode());
 
     #[cfg(feature = "steam")]
     {
@@ -157,23 +176,47 @@ pub fn run_game() -> ExitCode {
                     pipe(handle_recoverable_error).
                     run_if(in_state(AppState::InGame)).
                     before(draw_console_text)).
+            add_systems(Update, toggle_tile_mode.
+                    pipe(handle_recoverable_error).
+                    run_if(in_state(AppState::InGame)).
+                    before(draw_console_text)).
             add_systems(Update, (on_resize, toggle_fullscreen));
 
     let embedded = app.world_mut().resource_mut::<EmbeddedAssetRegistry>();
 
-    embedded.insert_asset(
-        PathBuf::from("../../assets/font/JetBrainsMono-Bold.ttf"),
-        Path::new("font/JetBrainsMono-Bold.ttf"),
-        assets::font::JETBRAINS_MONO_BOLD_BYTES,
-    );
+    //Textures
+    insert_embedded_asset!(embedded, assets::textures::tiles::EMPTY);
+    insert_embedded_asset!(embedded, assets::textures::tiles::FRAGILE_FLOOR);
+    insert_embedded_asset!(embedded, assets::textures::tiles::ICE);
+
+    insert_embedded_asset!(embedded, assets::textures::tiles::ONE_WAY_LEFT);
+    insert_embedded_asset!(embedded, assets::textures::tiles::ONE_WAY_UP);
+    insert_embedded_asset!(embedded, assets::textures::tiles::ONE_WAY_RIGHT);
+    insert_embedded_asset!(embedded, assets::textures::tiles::ONE_WAY_DOWN);
+
+    insert_embedded_asset!(embedded, assets::textures::tiles::WALL);
+
+    insert_embedded_asset!(embedded, assets::textures::tiles::KEY);
+    insert_embedded_asset!(embedded, assets::textures::tiles::KEY_IN_GOAL);
+    insert_embedded_asset!(embedded, assets::textures::tiles::KEY_ON_FRAGILE_FLOOR);
+    insert_embedded_asset!(embedded, assets::textures::tiles::KEY_ON_ICE);
+    insert_embedded_asset!(embedded, assets::textures::tiles::LOCKED_DOOR);
+
+    insert_embedded_asset!(embedded, assets::textures::tiles::BOX);
+    insert_embedded_asset!(embedded, assets::textures::tiles::BOX_IN_GOAL);
+    insert_embedded_asset!(embedded, assets::textures::tiles::GOAL);
+
+    insert_embedded_asset!(embedded, assets::textures::tiles::HOLE);
+    insert_embedded_asset!(embedded, assets::textures::tiles::BOX_IN_HOLE);
+
+    insert_embedded_asset!(embedded, assets::textures::tiles::SECRET);
+
+    //Fonts
+    insert_embedded_asset!(embedded, assets::font::JETBRAINS_MONO_BOLD_BYTES);
 
     #[cfg(feature = "steam")]
     {
-        embedded.insert_asset(
-            PathBuf::from("../../assets/font/JetBrainsMonoNL-ExtraLight.ttf"),
-            Path::new("font/JetBrainsMonoNL-ExtraLight.ttf"),
-            assets::font::JETBRAINS_MONO_NL_EXTRA_LIGHT_BYTES,
-        );
+        insert_embedded_asset!(embedded, assets::font::JETBRAINS_MONO_NL_EXTRA_LIGHT_BYTES);
     }
 
     let exit_code = app.run();
@@ -206,17 +249,18 @@ fn spawn_camera(
     commands.spawn(Camera2d);
 }
 
+#[expect(clippy::type_complexity)]
 fn update_text_entities(
     mut commands: Commands,
 
-    console_text_characters: Query<Entity, With<ConsoleTextCharacter>>,
+    console_characters: Query<Entity, Or<(With<ConsoleTextCharacter>, With<ConsoleTileCharacter>)>>,
     window_query: Query<&Window, With<PrimaryWindow>>,
 
     asset_server: Res<AssetServer>,
     mut character_scaling: ResMut<CharacterScaling>,
     current_color_scheme_index: Res<CurrentColorSchemeIndex>,
 ) {
-    for entity in console_text_characters.iter() {
+    for entity in console_characters.iter() {
         commands.entity(entity).despawn();
     }
 
@@ -248,14 +292,29 @@ fn update_text_entities(
             let screen_x = character_scaling.x_offset + x as f32 * character_scaling.char_width - window_width * 0.5;
             let screen_y = window_height * 0.5 - (character_scaling.y_offset + y as f32 * character_scaling.char_height);
 
+            let char = character.get();
+
             commands.spawn((
-                Text2d::new(String::from_utf8_lossy(&[character])),
+                Text2d::new(String::from_utf8_lossy(&[char.unwrap_or(b' ')])),
                 text_font.clone(),
-                Transform::from_translation(Vec3::new(screen_x, screen_y, 0.0)),
+                Transform::from_translation(Vec3::new(screen_x, screen_y, 1.0)),
                 TextColor(fg.into_bevy_color(color_scheme)),
                 TextBackgroundColor(bg.into_bevy_color(color_scheme)),
                 ConsoleTextCharacter { x, y },
+                if char.is_ok() { Visibility::Visible } else { Visibility::Hidden },
             ));
+
+            commands.spawn((
+                Sprite {
+                    custom_size: Some(Vec2::new(character_scaling.char_width, character_scaling.char_height)),
+                    ..default()
+                },
+                Transform::from_translation(Vec3::new(screen_x, screen_y, 0.0)),
+                ConsoleTileCharacter { x, y },
+                if char.is_err() { Visibility::Visible } else { Visibility::Hidden },
+            ));
+
+            //TODO set sprite image
         }
     }
 }
@@ -284,7 +343,8 @@ fn update_game(
                 continue;
             }
 
-            if event.logical_key == bevy::input::keyboard::Key::F10 ||
+            if event.logical_key == bevy::input::keyboard::Key::F9 ||
+                    event.logical_key == bevy::input::keyboard::Key::F10 ||
                     event.logical_key == bevy::input::keyboard::Key::F11 {
                 continue;
             }
@@ -331,10 +391,11 @@ fn update_game(
     }
 }
 
+#[expect(clippy::type_complexity)]
 fn on_resize(
     commands: Commands,
 
-    console_text_characters: Query<Entity, With<ConsoleTextCharacter>>,
+    console_characters: Query<Entity, Or<(With<ConsoleTextCharacter>, With<ConsoleTileCharacter>)>>,
     window_query: Query<&Window, With<PrimaryWindow>>,
 
     asset_server: Res<AssetServer>,
@@ -348,7 +409,7 @@ fn on_resize(
         update_text_entities(
             commands,
 
-            console_text_characters,
+            console_characters,
             window_query,
 
             asset_server,
@@ -394,10 +455,29 @@ fn cycle_through_color_schemes(
     Ok(())
 }
 
+fn toggle_tile_mode(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+
+    mut game: NonSendMut<Game>,
+) -> Result<(), Box<dyn Error>> {
+    if keyboard_input.just_pressed(KeyCode::F9) {
+        let mut state = CONSOLE_STATE.lock()?;
+        let tile_mode = state.tile_mode().toggle();
+        state.set_tile_mode(tile_mode);
+
+        game.game_state_mut().set_and_save_tile_mode(tile_mode)?;
+        game.game_state().play_sound_effect_ui_select();
+    }
+
+    Ok(())
+}
+
 fn draw_console_text(
-    mut console_text_characters: Query<(&mut Text2d, &mut TextColor, &mut TextBackgroundColor, &ConsoleTextCharacter)>,
+    mut console_text_characters: Query<(&mut Text2d, &mut TextColor, &mut TextBackgroundColor, &mut Visibility, &ConsoleTextCharacter), Without<ConsoleTileCharacter>>,
+    mut console_tile_characters: Query<(&mut Sprite, &mut Visibility, &ConsoleTileCharacter), Without<ConsoleTextCharacter>>,
 
     current_color_scheme_index: Res<CurrentColorSchemeIndex>,
+    asset_server: Res<AssetServer>,
 ) {
     //TODO optimize repaint logic
 
@@ -410,17 +490,84 @@ fn draw_console_text(
     let color_scheme = &COLOR_SCHEMES[current_color_scheme_index.0];
 
     for (
-        ref mut text,
-        ref mut fg_color,
-        ref mut bg_color,
+        mut text,
+        mut fg_color,
+        mut bg_color,
+        mut visibility,
         ConsoleTextCharacter { x, y },
     ) in console_text_characters.iter_mut() {
         let character = text_buffer[x + y * 74];
         let (fg, bg) = text_color_buffer[x + y * 74];
 
-        text.0 = String::from_utf8_lossy(&[character]).into();
-        fg_color.0 = fg.into_bevy_color(color_scheme);
-        bg_color.0 = bg.into_bevy_color(color_scheme);
+        let char = character.get();
+        match char {
+            Ok(char) => {
+                *visibility = Visibility::Visible;
+                text.0 = String::from_utf8_lossy(&[char]).into();
+                fg_color.0 = fg.into_bevy_color(color_scheme);
+                bg_color.0 = bg.into_bevy_color(color_scheme);
+            },
+            Err(_) => {
+                let inverted = bg == crate::io::bevy_abstraction::Color::Black;
+
+                if inverted {
+                    *visibility = Visibility::Visible;
+                    text.0 = " ".to_string();
+                    fg_color.0 = fg.into_bevy_color(color_scheme);
+                    bg_color.0 = bg.into_bevy_color(color_scheme).with_alpha(0.9);
+                }else {
+                    *visibility = Visibility::Hidden;
+                }
+            },
+        }
+    }
+
+    for (
+        mut sprite,
+        mut visibility,
+        ConsoleTileCharacter { x, y },
+    ) in console_tile_characters.iter_mut() {
+        let character = text_buffer[x + y * 74];
+
+        let char = character.get();
+        match char {
+            Ok(_) => {
+                *visibility = Visibility::Hidden;
+            },
+            Err(tile) => {
+                *visibility = Visibility::Visible;
+                sprite.image = match tile {
+                    Tile::Empty => asset_server.load("embedded://textures/tiles/empty.png"),
+                    Tile::FragileFloor => asset_server.load("embedded://textures/tiles/fragile_floor.png"),
+                    Tile::Ice => asset_server.load("embedded://textures/tiles/ice.png"),
+
+                    Tile::OneWayLeft => asset_server.load("embedded://textures/tiles/one_way_left.png"),
+                    Tile::OneWayUp => asset_server.load("embedded://textures/tiles/one_way_up.png"),
+                    Tile::OneWayRight => asset_server.load("embedded://textures/tiles/one_way_right.png"),
+                    Tile::OneWayDown => asset_server.load("embedded://textures/tiles/one_way_down.png"),
+
+                    Tile::Wall => asset_server.load("embedded://textures/tiles/wall.png"),
+
+                    Tile::Key => asset_server.load("embedded://textures/tiles/key.png"),
+                    Tile::KeyInGoal => asset_server.load("embedded://textures/tiles/key_in_goal.png"),
+                    Tile::KeyOnFragileFloor => asset_server.load("embedded://textures/tiles/key_on_fragile_floor.png"),
+                    Tile::KeyOnIce => asset_server.load("embedded://textures/tiles/key_on_ice.png"),
+
+                    Tile::LockedDoor => asset_server.load("embedded://textures/tiles/locked_door.png"),
+
+                    Tile::Box | Tile::BoxOnFragileFloor | Tile::BoxOnIce => asset_server.load("embedded://textures/tiles/box.png"),
+                    Tile::BoxInGoal => asset_server.load("embedded://textures/tiles/box_in_goal.png"),
+                    Tile::Goal => asset_server.load("embedded://textures/tiles/goal.png"),
+
+                    Tile::Hole => asset_server.load("embedded://textures/tiles/hole.png"),
+                    Tile::BoxInHole => asset_server.load("embedded://textures/tiles/box_in_hole.png"),
+
+                    Tile::Secret => asset_server.load("embedded://textures/tiles/secret.png"),
+
+                    _ => unreachable!(),
+                };
+            },
+        }
     }
 }
 

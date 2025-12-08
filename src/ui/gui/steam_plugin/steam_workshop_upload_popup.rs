@@ -16,7 +16,7 @@ use bevy::text::LineHeight;
 use bevy::ui::Checked;
 use bevy::window::{CursorIcon, PrimaryWindow, SystemCursorIcon};
 use bevy_steamworks::*;
-use crate::game::{audio, steam, Game, GameError};
+use crate::game::{audio, steam, Game, GameError, TileMode};
 use crate::game::steam::achievement::Achievement;
 use crate::ui::gui;
 use crate::ui::gui::{handle_recoverable_error, AppState, CONSOLE_STATE};
@@ -1399,10 +1399,18 @@ fn create_level_pack_thumbnail(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
+    let mut state = CONSOLE_STATE.lock().unwrap();
+    let tile_mode = state.tile_mode();
+    state.set_tile_mode(TileMode::Ascii);
     //Screenshot is written to secondary buffer
-    CONSOLE_STATE.lock().unwrap().swap_buffer_selection();
+    state.swap_buffer_selection();
+    drop(state);
+
     let dimensions = game.draw_level_pack_thumbnail_screenshot();
-    CONSOLE_STATE.lock().unwrap().swap_buffer_selection();
+    let mut state = CONSOLE_STATE.lock().unwrap();
+    state.swap_buffer_selection();
+    state.set_tile_mode(tile_mode);
+    drop(state);
 
     let Some((level_width, level_height)) = dimensions else {
         //TODO error -> Could not create screenshot
@@ -1439,7 +1447,7 @@ fn create_level_pack_thumbnail(
     commands.spawn((
         Mesh2d(meshes.add(Rectangle::new(window_width, window_height))),
         MeshMaterial2d(materials.add(Color::srgb_u8(23, 20, 33))),
-        Transform::from_translation(Vec3::new(0.0, 0.0, 1.0)),
+        Transform::from_translation(Vec3::new(0.0, 0.0, 2.0)),
         LevelPackThumbnail,
         render_layer.clone(),
     ));
@@ -1466,9 +1474,9 @@ fn create_level_pack_thumbnail(
             let screen_y = window_height * 0.5 - (character_scaling.y_offset + y as f32 * character_scaling.char_height);
 
             commands.spawn((
-                Text2d::new(String::from_utf8_lossy(&[character])),
+                Text2d::new(String::from_utf8_lossy(&[character.get().unwrap()])),
                 text_font.clone(),
-                Transform::from_translation(Vec3::new(screen_x, screen_y, 1.0)),
+                Transform::from_translation(Vec3::new(screen_x, screen_y, 2.0)),
                 TextColor(fg.into()),
                 TextBackgroundColor(bg.into()),
                 LevelPackThumbnail,

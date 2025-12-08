@@ -3,17 +3,17 @@ use bevy::prelude::*;
 use bevy_steamworks::Client;
 use crate::game::steam::USER_STATS_RECEIVED;
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Achievement {
+    id: &'static str,
+}
+
 macro_rules! achievement {
     ( $id:ident$(,)? ) => {
         pub const $id: Achievement = Achievement {
             id: stringify!($id),
         };
     };
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Achievement {
-    id: &'static str,
 }
 
 impl Achievement {

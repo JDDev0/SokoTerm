@@ -223,13 +223,17 @@ impl HelpPage {
                     console.reset_color();
                     console.draw_text(": Open/close help menu");
                 }, |console| {
-                    console.draw_key_input_text("F8");
+                    console.draw_key_input_text("F7");
                     console.reset_color();
                     console.draw_text(": Change animation speed");
                 }, |console| {
-                    console.draw_key_input_text("F9");
+                    console.draw_key_input_text("F8");
                     console.reset_color();
                     console.draw_text(": Enable/Disable background music");
+                }, #[cfg(feature = "gui")] |console| {
+                    console.draw_key_input_text("F9");
+                    console.reset_color();
+                    console.draw_text(": Toggle tile mode (ASCII or graphical)");
                 }, #[cfg(feature = "gui")] |console| {
                     console.draw_key_input_text("F10");
                     console.reset_color();
