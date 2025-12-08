@@ -50,7 +50,7 @@ pub enum Tile {
 }
 
 impl Tile {
-    pub fn floor_tile(&self) -> Self {
+    pub fn floor_tile(self) -> Self {
         match self {
             Tile::Empty => Tile::Empty,
             Tile::FragileFloor => Tile::FragileFloor,
@@ -129,7 +129,7 @@ impl Tile {
         }
     }
 
-    pub fn to_ascii(&self) -> u8 {
+    pub fn to_ascii(self) -> u8 {
         match self {
             Tile::Empty => b'-',
             //Different ASCII char than display for compatibility with old level packs
@@ -168,7 +168,7 @@ impl Tile {
         }
     }
 
-    pub fn draw(&self, console: &Console, is_player_background: bool, inverted: bool) {
+    pub fn draw(self, console: &Console, is_player_background: bool, inverted: bool) {
         match self {
             Tile::Empty => {
                 console.set_color_invertible(Color::LightBlue, Color::Default, inverted);
@@ -263,7 +263,7 @@ pub enum Direction {
 }
 
 impl Direction {
-    pub fn update_x(&self, x: usize, width: usize) -> usize {
+    pub fn update_x(self, x: usize, width: usize) -> usize {
         match self {
             Direction::Left => if x == 0 {
                 width - 1
@@ -279,7 +279,7 @@ impl Direction {
         }
     }
 
-    pub fn update_y(&self, y: usize, height: usize) -> usize {
+    pub fn update_y(self, y: usize, height: usize) -> usize {
         match self {
             Direction::Up => if y == 0 {
                 height - 1
@@ -295,7 +295,7 @@ impl Direction {
         }
     }
 
-    pub fn update_xy(&self, x: usize, y: usize, width: usize, height: usize) -> (usize, usize) {
+    pub fn update_xy(self, x: usize, y: usize, width: usize, height: usize) -> (usize, usize) {
         (self.update_x(x, width), self.update_y(y, height))
     }
 }
@@ -411,7 +411,7 @@ impl Level {
     }
 
     pub fn draw_floor(&self, console: &Console, x_offset: usize, y_offset: usize, is_player_background: bool, original_level: &Level, cursor_pos: Option<(usize, usize)>) {
-        let mut tile_iter = self.tiles.iter();
+        let mut tile_iter = self.tiles.iter().copied();
 
         for i in 0..self.height {
             console.set_cursor_pos(x_offset, i + y_offset);

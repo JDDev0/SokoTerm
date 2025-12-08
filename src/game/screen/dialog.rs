@@ -8,7 +8,7 @@ pub enum DialogType {
 }
 
 impl DialogType {
-    pub fn text_color(&self) -> Color {
+    pub fn text_color(self) -> Color {
         match self {
             DialogType::Information | DialogType::SecretFound => Color::Black,
             DialogType::Error => Color::LightRed,

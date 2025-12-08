@@ -85,7 +85,7 @@ impl BackgroundMusicId {
         BackgroundMusicId(NonZeroUsize::new(id).unwrap())
     }
 
-    pub fn id(&self) -> usize {
+    pub fn id(self) -> usize {
         self.0.get()
     }
 }
