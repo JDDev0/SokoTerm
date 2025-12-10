@@ -86,8 +86,8 @@ impl EditorState {
 
 #[derive(Default, Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub enum TileMode {
-    #[default]
     Ascii,
+    #[default]
     Graphical,
 }
 
