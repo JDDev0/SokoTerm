@@ -761,7 +761,7 @@ impl ScreenSelectLevelPack {
                     #[cfg(feature = "steam")]
                     UIListElement::new("[]", Color::White, Color::LightBlue),
                 ],
-                Box::new(|game_state: &mut GameState, cursor_index: usize| {
+                Box::new(|_, game_state: &mut GameState, cursor_index: usize| {
                     game_state.play_sound_effect_ui_select();
 
                     if cursor_index == 0 {
@@ -943,11 +943,11 @@ impl Screen for ScreenSelectLevelPack {
             game_state.steam_client.friends().activate_game_overlay_to_web_page(&format!("steam://url/CommunityFilePage/{}", id.0));
         }
 
-        self.level_pack_list.on_key_press(game_state, key);
+        self.level_pack_list.on_key_press(&mut (), game_state, key);
     }
 
     fn on_mouse_pressed(&mut self, game_state: &mut GameState, column: usize, row: usize) {
-        self.level_pack_list.on_mouse_pressed(game_state, column, row);
+        self.level_pack_list.on_mouse_pressed(&mut (), game_state, column, row);
     }
 
     fn on_set_screen(&mut self, game_state: &mut GameState) {
@@ -976,7 +976,7 @@ impl ScreenSelectLevel {
                     UIListElement::new("<<", Color::White, Color::LightBlue),
                     //[Level Entries]
                 ],
-                Box::new(|game_state: &mut GameState, cursor_index: usize| {
+                Box::new(|_, game_state: &mut GameState, cursor_index: usize| {
                     if cursor_index == 0 {
                         game_state.play_sound_effect_ui_select();
                         game_state.set_screen(ScreenId::SelectLevelPack);
@@ -1205,7 +1205,7 @@ impl Screen for ScreenSelectLevel {
             return;
         }
 
-        self.level_list.on_key_press(game_state, key);
+        self.level_list.on_key_press(&mut (), game_state, key);
     }
 
     fn on_mouse_pressed(&mut self, game_state: &mut GameState, column: usize, row: usize) {
@@ -1225,13 +1225,13 @@ impl Screen for ScreenSelectLevel {
             return;
         }
 
-        let level_count = self.level_list.elements().len();
-        let y = 4 + ((level_count - 1)/24)*2;
+        let element_count = self.level_list.elements().len();
+        let y = 4 + ((element_count - 1)/24)*2;
         if row == y + 1 && (29..54).contains(&column) {
             self.on_key_pressed(game_state, Key::P);
         }
 
-        self.level_list.on_mouse_pressed(game_state, column, row);
+        self.level_list.on_mouse_pressed(&mut (), game_state, column, row);
     }
 
     fn on_set_screen(&mut self, game_state: &mut GameState) {
@@ -2037,6 +2037,8 @@ impl Screen for ScreenInGame {
 }
 
 pub struct ScreenSelectLevelPackEditor {
+    level_pack_editor_list: UIList<bool>,
+
     is_exporting_level_pack: bool,
     is_deleting_level_pack: bool,
 
@@ -2047,12 +2049,80 @@ pub struct ScreenSelectLevelPackEditor {
 impl ScreenSelectLevelPackEditor {
     pub fn new() -> Self {
         Self {
+            level_pack_editor_list: UIList::new(
+                Rect::new(0, 1, Game::CONSOLE_MIN_WIDTH, Game::CONSOLE_MIN_HEIGHT - 1),
+                vec![
+                    UIListElement::new("<<", Color::White, Color::LightBlue),
+                    //[Level Pack Editor Entries]
+                ],
+                Box::new(|is_creating_new_level_pack: &mut bool, game_state: &mut GameState, cursor_index: usize| {
+                    if cursor_index == 0 {
+                        game_state.play_sound_effect_ui_select();
+                        game_state.set_screen(ScreenId::SelectLevelPack);
+
+                        return;
+                    }
+
+                    let level_pack_index = cursor_index - 1;
+                    if level_pack_index == game_state.editor_state.get_level_pack_count() {
+                        //Level Pack Editor entry
+                        if game_state.editor_state.get_level_pack_count() == LevelPack::MAX_LEVEL_PACK_COUNT {
+                            game_state.open_dialog(Dialog::new_ok_error(format!(
+                                "Cannot create new level packs (Max level pack count ({}) reached)",
+                                LevelPack::MAX_LEVEL_PACK_COUNT,
+                            )));
+                        }else {
+                            game_state.play_sound_effect_ui_select();
+                            *is_creating_new_level_pack = true;
+                        }
+                    }else {
+                        game_state.play_sound_effect_ui_select();
+                        game_state.editor_state.set_level_pack_index(level_pack_index);
+
+                        //Set selected level pack
+                        game_state.editor_state.set_level_index(0);
+                        game_state.set_screen(ScreenId::LevelPackEditor);
+                    }
+                }),
+            ),
+
             is_exporting_level_pack: Default::default(),
             is_deleting_level_pack: Default::default(),
 
             is_creating_new_level_pack: Default::default(),
             new_level_pack_id: String::new(),
         }
+    }
+
+    fn update_list_elements(&mut self, game_state: &GameState) {
+        let elements = self.level_pack_editor_list.elements_mut();
+
+        //Remove all level pack editor entries and create new level pack entry
+        elements.drain(1..);
+
+        for (i, level_pack) in game_state.editor_state.level_packs.iter().enumerate() {
+            elements.push(UIListElement::new(
+                utils::number_to_string_leading_ascii(2, i as u32 + 1, false),
+                Color::Black,
+                if level_pack.level_pack_best_moves_sum().is_some() {
+                    Color::Green
+                }else {
+                    Color::Yellow
+                },
+            ));
+        }
+
+        let has_max_level_pack_count = game_state.editor_state.get_level_pack_count() == LevelPack::MAX_LEVEL_PACK_COUNT;
+
+        elements.push(UIListElement::new(
+            " +",
+            Color::White,
+            if has_max_level_pack_count {
+                Color::LightRed
+            }else {
+                Color::LightBlue
+            },
+        ));
     }
 }
 
@@ -2063,78 +2133,11 @@ impl Screen for ScreenSelectLevelPackEditor {
         console.draw_text("Edit a level pack:");
         console.set_underline(false);
 
+        self.level_pack_editor_list.draw(console);
+
         let has_max_level_pack_count = game_state.editor_state.get_level_pack_count() == LevelPack::MAX_LEVEL_PACK_COUNT;
 
-        //Include Create Level Pack entry
-        let entry_count = game_state.editor_state.get_level_pack_count() + 1;
-
-        //Draw first line
-        console.set_cursor_pos(0, 1);
-        console.draw_text("-");
-        let mut max = entry_count%24;
-        if entry_count/24 > 0 {
-            max = 24;
-        }
-
-        for i in 0..max  {
-            let x = 1 + (i%24)*3;
-
-            console.set_cursor_pos(x, 1);
-            console.draw_text("---");
-        }
-
-        for i in 0..entry_count {
-            let x = 1 + (i%24)*3;
-            let y = 2 + (i/24)*2;
-
-            //First box
-            if x == 1 {
-                console.set_cursor_pos(x - 1, y);
-                console.draw_text("|");
-
-                console.set_cursor_pos(x - 1, y + 1);
-                console.draw_text("-");
-            }
-
-            console.set_cursor_pos(x, y);
-            if i == game_state.editor_state.get_level_pack_count() {
-                //Level Pack Editor entry
-                if has_max_level_pack_count {
-                    console.set_color(Color::White, Color::LightRed);
-                }else {
-                    console.set_color(Color::White, Color::LightBlue);
-                }
-                console.draw_text(" +");
-            }else {
-                console.set_color(Color::Black,  if game_state.editor_state.level_packs.get(i).
-                        unwrap().level_pack_best_moves_sum().is_some() {
-                    Color::Green
-                }else {
-                    Color::Yellow
-                });
-                console.draw_text(utils::number_to_string_leading_ascii(2, i as u32 + 1, false));
-            }
-
-            console.reset_color();
-            console.draw_text("|");
-
-            console.set_cursor_pos(x, y + 1);
-            console.draw_text("---");
-        }
-
-        //Mark selected level pack
-        let x = (game_state.editor_state.get_level_pack_index()%24)*3;
-        let y = 1 + (game_state.editor_state.get_level_pack_index()/24)*2;
-
-        console.set_color(Color::Cyan, Color::Default);
-        console.set_cursor_pos(x, y);
-        console.draw_text("----");
-        console.set_cursor_pos(x, y + 1);
-        console.draw_text("|");
-        console.set_cursor_pos(x + 3, y + 1);
-        console.draw_text("|");
-        console.set_cursor_pos(x, y + 2);
-        console.draw_text("----");
+        let entry_count = self.level_pack_editor_list.elements().len();
 
         //Draw border for best time and best moves
         let y = 4 + ((entry_count - 1)/24)*2;
@@ -2150,6 +2153,7 @@ impl Screen for ScreenSelectLevelPackEditor {
         console.draw_text("\'------------------------------------------------------------------------\'");
         console.reset_color();
 
+        let cursor_index = self.level_pack_editor_list.cursor_index();
         if self.is_creating_new_level_pack {
             console.set_cursor_pos(1, y + 1);
             console.draw_text("Enter a new level pack ID:");
@@ -2157,7 +2161,11 @@ impl Screen for ScreenSelectLevelPackEditor {
             console.set_cursor_pos(1, y + 2);
             console.set_color(Color::Cyan, Color::Default);
             console.draw_text(format!("> {}", &self.new_level_pack_id));
-        }else if game_state.editor_state.get_level_pack_index() == game_state.editor_state.get_level_pack_count() {
+        }else if cursor_index == 0 {
+            console.reset_color();
+            console.set_cursor_pos(35, y + 2);
+            console.draw_text("Back");
+        }else if cursor_index - 1 == game_state.editor_state.get_level_pack_count() {
             //Level Pack Editor entry
             if has_max_level_pack_count {
                 let error_msg = format!(
@@ -2174,17 +2182,18 @@ impl Screen for ScreenSelectLevelPackEditor {
                 console.draw_text("Create a level pack");
             }
         }else {
+            let level_pack = game_state.editor_state.level_packs.get(cursor_index - 1).unwrap();
+
             console.set_cursor_pos(1, y + 1);
-            console.draw_text(format!("Level Pack ID: {}", game_state.editor_state.get_current_level_pack().unwrap().id()));
+            console.draw_text(format!("Level Pack ID: {}", level_pack.id()));
 
             console.set_cursor_pos(1, y + 2);
-            console.draw_text(format!("Levels: {}", game_state.editor_state.get_current_level_pack().unwrap().level_count()));
+            console.draw_text(format!("Levels: {}", level_pack.level_count()));
 
             console.set_cursor_pos(1, y + 3);
             console.draw_text("Background music: ");
 
-            match game_state.editor_state.get_current_level_pack().unwrap().
-                    background_music_id().
+            match level_pack.background_music_id().
                     map(|background_music_id| audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(background_music_id)) {
                 Some(background_music) => {
                     console.set_color(Color::LightCyan, Color::Default);
@@ -2283,6 +2292,7 @@ impl Screen for ScreenSelectLevelPackEditor {
                     //self.is_creating_new_level_pack with be set to false in on_set_screen after background music selection
                     self.new_level_pack_id = String::new();
 
+                    self.level_pack_editor_list.set_cursor_index(index + 1);
                     game_state.editor_state.set_level_pack_index(index);
                     game_state.editor_state.set_level_index(0);
                     game_state.set_screen(ScreenId::SelectLevelPackBackgroundMusic);
@@ -2309,119 +2319,72 @@ impl Screen for ScreenSelectLevelPackEditor {
             return;
         }
 
-        if key == Key::S && game_state.editor_state.selected_level_pack_index != game_state.editor_state.get_level_pack_count() {
-            game_state.play_sound_effect_ui_dialog_open();
+        let cursor_index = self.level_pack_editor_list.cursor_index();
+        if cursor_index >= 1 && cursor_index - 1 != game_state.editor_state.get_level_pack_count() {
+            if key == Key::S {
+                game_state.play_sound_effect_ui_dialog_open();
 
-            match game_state.editor_state.get_current_level_pack().unwrap().
-                    background_music_id().
-                    map(|background_music_id| audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(background_music_id)) {
-                Some(background_music) => game_state.set_background_music_loop(background_music),
-                None => game_state.stop_background_music(),
+                game_state.editor_state.set_level_pack_index(cursor_index - 1);
+
+                match game_state.editor_state.get_current_level_pack().unwrap().
+                        background_music_id().
+                        map(|background_music_id| audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(background_music_id)) {
+                    Some(background_music) => game_state.set_background_music_loop(background_music),
+                    None => game_state.stop_background_music(),
+                }
+
+                game_state.set_screen(ScreenId::SelectLevelPackBackgroundMusic);
             }
 
-            game_state.set_screen(ScreenId::SelectLevelPackBackgroundMusic);
-        }
+            if key == Key::E {
+                game_state.editor_state.set_level_pack_index(cursor_index - 1);
 
-        if key == Key::E && game_state.editor_state.selected_level_pack_index != game_state.editor_state.get_level_pack_count() {
-            self.is_exporting_level_pack = true;
+                self.is_exporting_level_pack = true;
 
-            game_state.open_dialog(Dialog::new_yes_no("Do you want to export the level pack to the current directory?"));
-        }
-
-        #[cfg(feature = "steam")]
-        if key == Key::U && game_state.editor_state.selected_level_pack_index != game_state.editor_state.get_level_pack_count() {
-            let level_stats = &game_state.editor_state.get_current_level_pack().unwrap();
-            if level_stats.level_pack_best_moves_sum().is_none() {
-                game_state.open_dialog(Dialog::new_ok_error(
-                    "Level pack was not validated yet! All levels must be validated.",
-                ));
-
-                return;
+                game_state.open_dialog(Dialog::new_yes_no("Do you want to export the level pack to the current directory?"));
             }
 
-            let ret = steam::prepare_workshop_upload_temp_data(
-                game_state.editor_state.get_current_level_pack().unwrap(),
-            );
-            if let Err(err) = ret {
-                game_state.open_dialog(Dialog::new_ok_error(format!(
-                    "Could not prepare files for upload to steam workshop!\n{err}",
+            #[cfg(feature = "steam")]
+            if key == Key::U {
+                game_state.editor_state.set_level_pack_index(cursor_index - 1);
+
+                let level_stats = &game_state.editor_state.get_current_level_pack().unwrap();
+                if level_stats.level_pack_best_moves_sum().is_none() {
+                    game_state.open_dialog(Dialog::new_ok_error(
+                        "Level pack was not validated yet! All levels must be validated.",
+                    ));
+
+                    return;
+                }
+
+                let ret = steam::prepare_workshop_upload_temp_data(
+                    game_state.editor_state.get_current_level_pack().unwrap(),
+                );
+                if let Err(err) = ret {
+                    game_state.open_dialog(Dialog::new_ok_error(format!(
+                        "Could not prepare files for upload to steam workshop!\n{err}",
+                    )));
+
+                    return;
+                }
+
+                game_state.play_sound_effect_ui_dialog_open();
+                game_state.show_workshop_upload_popup = true;
+            }
+
+            if key == Key::DELETE {
+                game_state.editor_state.set_level_pack_index(cursor_index - 1);
+
+                self.is_deleting_level_pack = true;
+
+                game_state.open_dialog(Dialog::new_yes_no(format!(
+                    "Do you really want to delete level pack \"{}\"?",
+                    game_state.editor_state.get_current_level_pack().unwrap().id(),
                 )));
-
-                return;
-            }
-
-            game_state.play_sound_effect_ui_dialog_open();
-            game_state.show_workshop_upload_popup = true;
-        }
-
-        if key == Key::DELETE && game_state.editor_state.selected_level_pack_index != game_state.editor_state.get_level_pack_count() {
-            self.is_deleting_level_pack = true;
-
-            game_state.open_dialog(Dialog::new_yes_no(format!(
-                "Do you really want to delete level pack \"{}\"?",
-                game_state.editor_state.get_current_level_pack().unwrap().id(),
-            )));
-        }
-
-        'outer: {
-            //Include Level Pack Editor entry
-            let entry_count = game_state.editor_state.get_level_pack_count() + 1;
-
-            match key {
-                Key::LEFT => {
-                    if game_state.editor_state.selected_level_pack_index == 0 {
-                        break 'outer;
-                    }
-
-                    game_state.editor_state.selected_level_pack_index -= 1;
-                },
-                Key::UP => {
-                    if game_state.editor_state.selected_level_pack_index < 24 {
-                        break 'outer;
-                    }
-
-                    game_state.editor_state.selected_level_pack_index -= 24;
-                },
-                Key::RIGHT => {
-                    if game_state.editor_state.selected_level_pack_index + 1 >= entry_count {
-                        break 'outer;
-                    }
-
-                    game_state.editor_state.selected_level_pack_index += 1;
-                },
-                Key::DOWN => {
-                    if game_state.editor_state.selected_level_pack_index + 24 >= entry_count {
-                        break 'outer;
-                    }
-
-                    game_state.editor_state.selected_level_pack_index += 24;
-                },
-
-                Key::ENTER | Key::SPACE => {
-                    if game_state.editor_state.selected_level_pack_index == game_state.editor_state.get_level_pack_count() {
-                        //Level Pack Editor entry
-                        if game_state.editor_state.get_level_pack_count() == LevelPack::MAX_LEVEL_PACK_COUNT {
-                            game_state.open_dialog(Dialog::new_ok_error(format!(
-                                "Cannot create new level packs (Max level pack count ({}) reached)",
-                                LevelPack::MAX_LEVEL_PACK_COUNT,
-                            )));
-                        }else {
-                            game_state.play_sound_effect_ui_select();
-
-                            self.is_creating_new_level_pack = true;
-                        }
-                    }else {
-                        game_state.play_sound_effect_ui_select();
-
-                        //Set selected level pack
-                        game_state.editor_state.set_level_index(0);
-                        game_state.set_screen(ScreenId::LevelPackEditor);
-                    }
-                },
-
-                _ => {},
             }
         }
+
+        self.level_pack_editor_list.on_key_press(&mut self.is_creating_new_level_pack, game_state, key);
     }
 
     fn on_mouse_pressed(&mut self, game_state: &mut GameState, column: usize, row: usize) {
@@ -2430,9 +2393,8 @@ impl Screen for ScreenSelectLevelPackEditor {
         }
 
         //Include Level Pack Editor entry
-        let entry_count = game_state.editor_state.get_level_pack_count() + 1;
-
-        let y = 4 + ((entry_count - 1)/24)*2;
+        let element_count = self.level_pack_editor_list.elements().len();
+        let y = 4 + ((element_count - 1)/24)*2;
         if row == y + 1 && (46..Game::CONSOLE_MIN_WIDTH - 1).contains(&column) {
             self.on_key_pressed(game_state, Key::S);
         }
@@ -2444,11 +2406,7 @@ impl Screen for ScreenSelectLevelPackEditor {
             }
         }
 
-        let level_pack_index = column/3 + (row - 1)/2*24;
-        if level_pack_index < entry_count {
-            game_state.editor_state.selected_level_pack_index = level_pack_index;
-            self.on_key_pressed(game_state, Key::ENTER);
-        }
+        self.level_pack_editor_list.on_mouse_pressed(&mut self.is_creating_new_level_pack, game_state, column, row);
     }
 
     fn on_dialog_selection(&mut self, game_state: &mut GameState, selection: DialogSelection) {
@@ -2486,10 +2444,12 @@ impl Screen for ScreenSelectLevelPackEditor {
                 }else if let Err(err) = std::fs::remove_file(path) {
                     game_state.open_dialog(Dialog::new_ok_error(format!("Cannot delete: {}", err)));
                 }else {
-                    let index = game_state.editor_state.selected_level_pack_index;
-                    game_state.editor_state.level_packs.remove(index);
+                    game_state.editor_state.level_packs.remove(self.level_pack_editor_list.cursor_index() - 1);
                 }
             }
+
+            self.update_list_elements(game_state);
+            //Cursor index will always be inbound after level pack deletion because of the Create Level Pack Entry
         }
     }
 
@@ -2500,6 +2460,13 @@ impl Screen for ScreenSelectLevelPackEditor {
             self.is_creating_new_level_pack = false;
             game_state.set_screen(ScreenId::LevelPackEditor);
         }else {
+            self.update_list_elements(game_state);
+
+            if self.level_pack_editor_list.cursor_index() == 0 {
+                //Skip "back" entry and set to first level pack
+                self.level_pack_editor_list.set_cursor_index(1);
+            }
+
             game_state.set_background_music_loop(&audio::BACKGROUND_MUSIC_FIELDS_OF_ICE);
         }
     }

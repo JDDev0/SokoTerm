@@ -40,17 +40,17 @@ impl UIListElement {
     }
 }
 
-pub struct UIList {
+pub struct UIList<T = ()> {
     rect: Rect,
     cursor_index: usize,
     elements: Vec<UIListElement>,
     #[expect(clippy::type_complexity)]
-    on_select: Box<dyn FnMut(&mut GameState, usize)>,
+    on_select: Box<dyn FnMut(&mut T, &mut GameState, usize)>,
 }
 
-impl UIList {
+impl <T> UIList<T> {
     #[expect(clippy::type_complexity)]
-    pub fn new(rect: Rect, elements: Vec<UIListElement>, on_select: Box<dyn FnMut(&mut GameState, usize)>) -> Self {
+    pub fn new(rect: Rect, elements: Vec<UIListElement>, on_select: Box<dyn FnMut(&mut T, &mut GameState, usize)>) -> Self {
         Self { rect, cursor_index: 0, elements, on_select }
     }
 
@@ -126,7 +126,7 @@ impl UIList {
         }
     }
 
-    pub fn on_key_press(&mut self, game_state: &mut GameState, key: Key) {
+    pub fn on_key_press(&mut self, custom_state: &mut T, game_state: &mut GameState, key: Key) {
         let elements_per_row = (self.rect.width - 1) / 3;
 
         match key {
@@ -161,7 +161,7 @@ impl UIList {
 
             Key::ENTER|Key::SPACE => {
                 if self.cursor_index < self.elements.len() {
-                    (self.on_select)(game_state, self.cursor_index);
+                    (self.on_select)(custom_state, game_state, self.cursor_index);
                 }
             },
 
@@ -169,7 +169,7 @@ impl UIList {
         }
     }
 
-    pub fn on_mouse_pressed(&mut self, game_state: &mut GameState, column: usize, row: usize) {
+    pub fn on_mouse_pressed(&mut self, custom_state: &mut T, game_state: &mut GameState, column: usize, row: usize) {
         if column < self.rect.x || row < self.rect.y {
             return;
         }
@@ -182,7 +182,7 @@ impl UIList {
         let element_index = column/3 + row/2 * elements_per_row;
         if element_index < self.elements().len() {
             self.cursor_index = element_index;
-            (self.on_select)(game_state, element_index);
+            (self.on_select)(custom_state, game_state, element_index);
         }
     }
 }
