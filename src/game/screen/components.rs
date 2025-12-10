@@ -138,7 +138,7 @@ impl UIList {
                 self.cursor_index -= 1;
             },
             Key::UP|Key::W => {
-                if self.cursor_index <= elements_per_row {
+                if self.cursor_index < elements_per_row {
                     return;
                 }
 
