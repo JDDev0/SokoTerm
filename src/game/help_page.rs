@@ -266,6 +266,9 @@ impl HelpPage {
                 section_label_builder.new_sub_sub_section("Level (pack) selection"), &[|console| {
                     console.draw_key_input_text("Arrow keys");
                     console.reset_color();
+                    console.draw_text("/");
+                    console.draw_key_input_text("WASD");
+                    console.reset_color();
                     console.draw_text(": Move level (pack) selection cursor");
                 }, |console| {
                     console.draw_key_input_text("p");

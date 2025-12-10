@@ -1,7 +1,7 @@
+use std::fmt::Write as _;
+
 #[cfg(test)]
 mod tests;
-
-use std::fmt::Write as _;
 
 pub fn number_to_string_leading_ascii(digits: u32, num: u32, leading_zeros: bool) -> String {
     if digits == 0 {
