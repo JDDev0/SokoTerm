@@ -1275,7 +1275,7 @@ impl LevelPack {
 
         writeln!(file, "Name: {}", self.name)?;
 
-        if let Some(thumbnail_level_index) = self.thumbnail_level_index {
+        if let Some(thumbnail_level_index) = self.thumbnail_level_index && thumbnail_level_index < self.levels.len() {
             writeln!(file, "Thumbnail Level: {}", thumbnail_level_index)?;
         }
 
