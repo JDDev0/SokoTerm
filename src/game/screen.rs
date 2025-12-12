@@ -1404,10 +1404,13 @@ impl ScreenInGame {
                 },
                 5 => {
                     if self.game_over_flag {
-                        console.set_cursor_pos(12, 8);
+                        console.set_cursor_pos(6, 8);
                         console.draw_text("Press ");
 
-                        console.draw_key_input_text("ESC");
+                        console.draw_key_input_text("ENTER");
+                        console.reset_color();
+                        console.draw_text("/");
+                        console.draw_key_input_text("SPACEBAR");
 
                         console.reset_color();
                         console.draw_text(" to go back to the level selection screen");
@@ -1896,6 +1899,19 @@ impl Screen for ScreenInGame {
             return;
         }
 
+        if self.game_over_flag {
+            if key == Key::ENTER || key == Key::SPACE {
+                self.continue_flag = false;
+                self.game_over_flag = false;
+
+                game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
+
+                game_state.set_screen(ScreenId::SelectLevel);
+            }
+
+            return;
+        }
+
         let current_level_index = game_state.current_level_index;
         let Some(level_pack) = game_state.get_current_level_pack_mut() else {
             return;
@@ -1922,7 +1938,7 @@ impl Screen for ScreenInGame {
             return;
         }
 
-        //Level end
+        //Level end (Prevent movement)
         if self.continue_flag {
             if key == Key::ENTER || key == Key::SPACE {
                 self.continue_flag = false;
@@ -1944,8 +1960,8 @@ impl Screen for ScreenInGame {
             return;
         }
 
-        //Prevent movement after level complete and during animation
-        if self.game_over_flag || self.level.as_mut().unwrap().is_playing_animation() {
+        //Prevent movement during animation
+        if self.level.as_mut().unwrap().is_playing_animation() {
             return;
         }
 
