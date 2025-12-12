@@ -8,7 +8,7 @@ use bevy::prelude::*;
 use bevy::text::LineHeight;
 use bevy_steamworks::{CallbackResult, GameOverlayActivated, SteamworksEvent};
 use crate::ui::gui::CharacterScaling;
-use crate::ui::gui::steam_plugin::{on_resize_popup_text, ResizableNodeDimension, ResizableText};
+use crate::ui::gui::steam_plugin::{on_resize_popup_text, ResizableText};
 
 #[derive(Debug, Component)]
 struct LinuxSteamOverlayInfoPopup;
@@ -27,7 +27,6 @@ fn on_overlay_activated(
     mut steamworks_event: MessageReader<SteamworksEvent>,
 
     resizable_text_query: Query<(&mut TextFont, &ResizableText), With<ResizableText>>,
-    resizable_node_dimension_query: Query<(&mut Node, &ResizableNodeDimension), With<ResizableNodeDimension>>,
     linux_steam_overlay_info_popup_elements: Query<Entity, With<LinuxSteamOverlayInfoPopup>>,
 
     character_scaling: Res<CharacterScaling>,
@@ -148,5 +147,5 @@ fn on_overlay_activated(
         }
     }
 
-    on_resize_popup_text(character_scaling, resizable_text_query, resizable_node_dimension_query);
+    on_resize_popup_text(character_scaling, resizable_text_query);
 }

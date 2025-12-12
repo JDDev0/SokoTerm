@@ -4,13 +4,12 @@ use crate::io::{Color, Console, Key};
 pub enum DialogType {
     Information,
     Error,
-    SecretFound,
 }
 
 impl DialogType {
     pub fn text_color(self) -> Color {
         match self {
-            DialogType::Information | DialogType::SecretFound => Color::Black,
+            DialogType::Information => Color::Black,
             DialogType::Error => Color::LightRed,
         }
     }
@@ -81,14 +80,6 @@ impl Dialog {
     pub fn new_ok_error(message: impl Into<Box<str>>) -> Self {
         Self {
             dialog_type: DialogType::Error,
-            message: message.into(),
-            options: Box::from([DialogOption::OK]),
-        }
-    }
-
-    pub fn new_ok_secret_found(message: impl Into<Box<str>>) -> Self {
-        Self {
-            dialog_type: DialogType::SecretFound,
             message: message.into(),
             options: Box::from([DialogOption::OK]),
         }

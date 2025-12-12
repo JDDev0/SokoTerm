@@ -1,13 +1,10 @@
-use std::error::Error;
 use std::sync::atomic::{AtomicBool, Ordering};
 use bevy::prelude::*;
-use bevy_steamworks::{AppId, CallbackResult, Client, FileType, PublishedFileId, SteamError, SteamworksEvent};
-use crate::game::Game;
-use crate::game::level::LevelPack;
+use bevy_steamworks::{AppId, CallbackResult, Client, SteamworksEvent};
 
-pub mod achievement;
+pub mod stats;
 
-pub const APP_ID: AppId = AppId(4160140);
+pub const APP_ID: AppId = AppId(4254220);
 
 static USER_STATS_RECEIVED: AtomicBool = AtomicBool::new(false);
 
@@ -41,31 +38,4 @@ pub fn steam_callback(
             _ => {},
         }
     }
-}
-
-pub fn prepare_workshop_upload_temp_data(level_pack: &LevelPack) -> Result<(), Box<dyn Error>> {
-    let mut tmp_upload_path = Game::get_or_create_save_game_folder()?;
-    tmp_upload_path.push("SteamWorkshop/UploadTemp");
-
-    if std::fs::exists(&tmp_upload_path)? {
-        std::fs::remove_dir_all(&tmp_upload_path)?;
-    }
-
-    tmp_upload_path.push("/Data");
-    std::fs::create_dir_all(&tmp_upload_path)?;
-
-    tmp_upload_path.push("/");
-
-    tmp_upload_path.push("pack.lvl");
-
-    level_pack.export_editor_level_pack_to_path(tmp_upload_path)?;
-
-    Ok(())
-}
-
-pub fn crate_workshop_item<F>(
-    steam_client: Client,
-    callback: F,
-) where F: FnOnce(std::result::Result<(PublishedFileId, bool), SteamError>) + 'static + Send {
-    steam_client.ugc().create_item(APP_ID, FileType::Community, callback);
 }

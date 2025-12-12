@@ -56,7 +56,5 @@ pub mod textures {
 
         asset! { HOLE, "textures/tiles/hole.png" }
         asset! { BOX_IN_HOLE, "textures/tiles/box_in_hole.png" }
-
-        asset! { SECRET, "textures/tiles/secret.png" }
     }
 }

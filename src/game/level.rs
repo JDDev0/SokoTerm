@@ -10,9 +10,6 @@ use crate::game::audio::BackgroundMusicId;
 use crate::game::console_extension::ConsoleExtension;
 use crate::io::{Color, Console};
 
-#[cfg(feature = "steam")]
-use bevy_steamworks::*;
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tile {
     Empty,
@@ -46,8 +43,6 @@ pub enum Tile {
     BoxInHole,
 
     DecorationBlank,
-
-    Secret,
 }
 
 impl Tile {
@@ -84,8 +79,6 @@ impl Tile {
             Tile::BoxInHole => Tile::BoxInHole,
 
             Tile::DecorationBlank => Tile::DecorationBlank,
-
-            Tile::Secret => Tile::Secret,
         }
     }
 
@@ -123,8 +116,6 @@ impl Tile {
             b'.' => Ok(Tile::BoxInHole),
 
             b'b' | b'B' => Ok(Tile::DecorationBlank),
-
-            b's' | b'S' => Ok(Tile::Secret),
 
             _ => Err(LevelLoadingError::new("Invalid tile")),
         }
@@ -164,8 +155,6 @@ impl Tile {
             Tile::BoxInHole => b'.',
 
             Tile::DecorationBlank => b'b',
-
-            Tile::Secret => b's',
         }
     }
 
@@ -251,10 +240,6 @@ impl Tile {
                 console.set_color_invertible(Color::LightBlue, Color::Default, inverted);
                 console.draw_text(" ");
             },
-            Tile::Secret => {
-                console.set_color_invertible(Color::LightBlue, Color::Default, inverted);
-                console.draw_text("+");
-            },
         };
     }
 }
@@ -330,7 +315,6 @@ pub enum SoundEffect {
 pub enum MoveResult {
     Valid {
         has_won: bool,
-        secret_found: bool,
         sound_effect: Option<SoundEffect>,
     },
     Invalid,
@@ -347,10 +331,6 @@ impl MoveResult {
 
     pub fn has_won(&self) -> bool {
         matches!(self, MoveResult::Valid {has_won: true, ..})
-    }
-
-    pub fn secret_found(&self) -> bool {
-        matches!(self, MoveResult::Valid {secret_found: true, ..})
     }
 
     pub fn is_invalid(&self) -> bool {
@@ -685,15 +665,15 @@ impl PlayingLevel {
         let was_floor_broken = tile == Tile::Hole;
 
         let tile = level.get_tile(x_to, y_to).unwrap();
-        let move_result = if matches!(tile, Tile::Empty | Tile::FragileFloor | Tile::Ice | Tile::Goal | Tile::Secret | Tile::BoxInHole) || tile == one_way_door_tile {
-            MoveResult::Valid { has_won: false, secret_found: tile == Tile::Secret, sound_effect: was_floor_broken.then_some(SoundEffect::FloorBroken) }
+        let move_result = if matches!(tile, Tile::Empty | Tile::FragileFloor | Tile::Ice | Tile::Goal | Tile::BoxInHole) || tile == one_way_door_tile {
+            MoveResult::Valid { has_won: false, sound_effect: was_floor_broken.then_some(SoundEffect::FloorBroken) }
         }else if matches!(tile, Tile::Box | Tile::BoxInGoal | Tile::BoxOnFragileFloor | Tile::BoxOnIce | Tile::Key | Tile::KeyInGoal | Tile::KeyOnFragileFloor | Tile::KeyOnIce) {
             let move_result = self.move_box_or_key(&mut level, x_to, y_to, direction);
             match move_result {
                 MoveResult::Valid {
-                    has_won, secret_found, sound_effect,
+                    has_won, sound_effect,
                 } if was_floor_broken && sound_effect.is_none() => MoveResult::Valid {
-                    has_won, secret_found, sound_effect: Some(SoundEffect::FloorBroken),
+                    has_won, sound_effect: Some(SoundEffect::FloorBroken),
                 },
 
                 _ => move_result,
@@ -828,7 +808,7 @@ impl PlayingLevel {
             level.tiles[index_from] = tile_from_new_value;
             level.tiles[index_to] = tile_to_new_value;
 
-            let move_result = MoveResult::Valid { has_won, secret_found: false, sound_effect: match tile_to_new_value {
+            let move_result = MoveResult::Valid { has_won, sound_effect: match tile_to_new_value {
                 Tile::BoxInHole => Some(SoundEffect::BoxFall),
                 Tile::Empty => Some(SoundEffect::DoorUnlocked),
 
@@ -910,28 +890,6 @@ impl LevelWithStats {
     }
 }
 
-#[cfg(feature = "steam")]
-#[derive(Debug)]
-pub struct SteamLevelPackData {
-    workshop_id: PublishedFileId,
-}
-
-#[cfg(feature = "steam")]
-impl SteamLevelPackData {
-    pub fn workshop_id(&self) -> PublishedFileId {
-        self.workshop_id
-    }
-}
-
-#[cfg(feature = "steam")]
-impl From<QueryResult> for SteamLevelPackData {
-    fn from(value: QueryResult) -> Self {
-        SteamLevelPackData {
-            workshop_id: value.published_file_id,
-        }
-    }
-}
-
 #[derive(Debug)]
 pub struct LevelPack {
     name: String,
@@ -947,15 +905,11 @@ pub struct LevelPack {
 
     level_pack_best_time_sum: Option<u64>,
     level_pack_best_moves_sum: Option<u32>,
-
-    #[cfg(feature = "steam")]
-    steam_level_pack_data: Option<SteamLevelPackData>,
 }
 
 impl LevelPack {
     pub const MAX_LEVEL_PACK_NAME_LEN: usize = 25;
 
-    pub const MAX_LEVEL_PACK_COUNT: usize = 190;
     pub const MAX_LEVEL_COUNT_PER_PACK: usize = 190;
 
     pub fn new(name: impl Into<String>, id: impl Into<String>, path: impl Into<String>) -> Self {
@@ -971,17 +925,11 @@ impl LevelPack {
             min_level_not_completed: Default::default(),
             level_pack_best_time_sum: Default::default(),
             level_pack_best_moves_sum: Default::default(),
-
-            #[cfg(feature = "steam")]
-            steam_level_pack_data: None,
         }
     }
 
     pub fn read_from_save_game(
         id: impl Into<String>, path: impl Into<String>, lvl_data: impl Into<String>, editor_level_pack: bool,
-
-        #[cfg(feature = "steam")]
-        steam_level_pack_data: Option<SteamLevelPackData>,
     ) -> Result<Self, Box<dyn Error>> {
         let mut lvl_name = None;
         let id = id.into();
@@ -1188,21 +1136,8 @@ impl LevelPack {
 
         let mut save_game_file = Game::get_or_create_save_game_folder()?;
         {
-            #[cfg(not(feature = "steam"))]
-            {
-                save_game_file.push(&id);
-                save_game_file.push(level_save_file_postfix);
-            }
-
-            #[cfg(feature = "steam")]
-            if let Some(steam_level_pack_data) = &steam_level_pack_data {
-                save_game_file.push("SteamWorkshop/");
-                save_game_file.push(steam_level_pack_data.workshop_id.0.to_string());
-                save_game_file.push(level_save_file_postfix);
-            }else {
-                save_game_file.push(&id);
-                save_game_file.push(level_save_file_postfix);
-            }
+            save_game_file.push(&id);
+            save_game_file.push(level_save_file_postfix);
         }
 
         let mut min_level_not_completed= Default::default();
@@ -1278,9 +1213,6 @@ impl LevelPack {
             min_level_not_completed,
             level_pack_best_time_sum: Default::default(),
             level_pack_best_moves_sum: Default::default(),
-
-            #[cfg(feature = "steam")]
-            steam_level_pack_data,
         };
         level_pack.calculate_stats_sum();
 
@@ -1328,21 +1260,8 @@ impl LevelPack {
 
         let mut save_game_file = Game::get_or_create_save_game_folder()?;
         {
-            #[cfg(not(feature = "steam"))]
-            {
-                save_game_file.push(&self.id);
-                save_game_file.push(level_save_file_postfix);
-            }
-
-            #[cfg(feature = "steam")]
-            if let Some(steam_level_pack_data) = &self.steam_level_pack_data {
-                save_game_file.push("SteamWorkshop/");
-                save_game_file.push(steam_level_pack_data.workshop_id.0.to_string());
-                save_game_file.push(level_save_file_postfix);
-            }else {
-                save_game_file.push(&self.id);
-                save_game_file.push(level_save_file_postfix);
-            }
+        save_game_file.push(&self.id);
+        save_game_file.push(level_save_file_postfix);
         }
 
         let mut file = File::create(save_game_file)?;
@@ -1481,11 +1400,6 @@ impl LevelPack {
 
         self.level_pack_best_time_sum = stats_sum.0;
         self.level_pack_best_moves_sum = stats_sum.1;
-    }
-
-    #[cfg(feature = "steam")]
-    pub fn steam_level_pack_data(&self) -> Option<&SteamLevelPackData> {
-        self.steam_level_pack_data.as_ref()
     }
 }
 

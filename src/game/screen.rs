@@ -1,19 +1,14 @@
 use std::cmp::Ordering;
-use std::fmt::Write as _;
-use std::str::FromStr;
 use std::time::SystemTime;
 use crate::game::{audio, Game, GameState, TileMode};
-use crate::game::level::{Direction, Level, LevelPack, LevelWithStats, MoveResult, PlayingLevel, Tile};
+use crate::game::level::{Direction, Level, MoveResult, PlayingLevel, Tile};
 use crate::game::screen::dialog::{Dialog, DialogSelection};
-use crate::collections::UndoHistory;
 use crate::game::console_extension::ConsoleExtension;
 use crate::game::screen::components::{Rect, UIList, UIListElement};
 use crate::io::{Color, Console, Key};
 
 #[cfg(feature = "steam")]
-use crate::game::steam::achievement::Achievement;
-#[cfg(feature = "steam")]
-use crate::game::steam;
+use crate::game::steam::stats::*;
 
 pub mod dialog;
 pub mod utils;
@@ -25,15 +20,9 @@ pub enum ScreenId {
     About,
     Settings,
 
-    SelectLevelPack,
     SelectLevel,
 
     InGame,
-
-    SelectLevelPackEditor,
-    SelectLevelPackBackgroundMusic,
-    LevelPackEditor,
-    LevelEditor,
 }
 
 #[allow(unused_variables)]
@@ -81,6 +70,16 @@ impl Screen for ScreenStartMenu {
               ----' '---' '  ' '---'    '   '---- '  ' '   '
               ----------------------------------------------
             "#[1..].trim_end() /* Remove leading newline and trailing spaces */);
+        console.set_color(Color::LightRed, Color::Default);
+        console.draw_text(
+            r#"
+                          .--.  .---- .   . .---.
+                          |   | |     |\ /| |   |
+                          |   | +---- | v | |   |
+                          |   | |     |   | |   |
+                          '--'  '---- '   ' '---'
+            "#.trim_end() /* Remove trailing spaces */);
+        console.set_color(Color::LightYellow, Color::Default);
         console.set_cursor_pos(1, 13);
         console.draw_text("------------------------------------------------------------------------");
 
@@ -157,7 +156,7 @@ impl Screen for ScreenStartMenu {
         if key == Key::ENTER || key == Key::SPACE {
             game_state.play_sound_effect_ui_select();
 
-            game_state.set_screen(ScreenId::SelectLevelPack);
+            game_state.set_screen(ScreenId::SelectLevel);
         }
     }
 
@@ -377,6 +376,9 @@ impl Screen for ScreenAbout {
                 console.set_color(Color::Yellow, Color::Default);
                 console.draw_text("CLI");
             }
+
+            console.set_color(Color::LightRed, Color::Default);
+            console.draw_text(" [Demo]");
 
             console.reset_color();
             console.draw_text(" build of this game.");
@@ -745,225 +747,6 @@ impl Screen for ScreenSettings {
     }
 }
 
-pub struct ScreenSelectLevelPack {
-    level_pack_list: UIList,
-}
-
-impl ScreenSelectLevelPack {
-    pub fn new() -> Self {
-        Self {
-            level_pack_list: UIList::new(
-                Rect::new(0, 1, Game::CONSOLE_MIN_WIDTH, Game::CONSOLE_MIN_HEIGHT - 1),
-                vec![
-                    UIListElement::new("<<", Color::White, Color::LightBlue),
-                    //[Level Pack Entries]
-                    UIListElement::new(" +", Color::White, Color::LightBlue),
-                    #[cfg(feature = "steam")]
-                    UIListElement::new("[]", Color::White, Color::LightBlue),
-                ],
-                Box::new(|_, game_state: &mut GameState, cursor_index: usize| {
-                    game_state.play_sound_effect_ui_select();
-
-                    if cursor_index == 0 {
-                        game_state.set_screen(ScreenId::StartMenu);
-                    }else if cursor_index > game_state.get_level_pack_count() {
-                        if cursor_index == game_state.get_level_pack_count() + 2 {
-                            #[cfg(feature = "steam")]
-                            {
-                                //And Steam Workshop entry on steam build
-                                game_state.steam_client.friends().activate_game_overlay_to_web_page(&format!("steam://url/SteamWorkshopPage/{}", steam::APP_ID.0));
-                            }
-
-                            #[cfg(not(feature = "steam"))]
-                            unreachable!();
-                        }else {
-                            //Level Pack Editor entry
-                            game_state.set_level_index(0);
-
-                            game_state.set_screen(ScreenId::SelectLevelPackEditor);
-                        }
-                    }else {
-                        game_state.set_level_pack_index(cursor_index - 1);
-
-                        //Set selected level
-                        let level_pack = game_state.get_current_level_pack().unwrap();
-                        let min_level_not_completed = level_pack.min_level_not_completed();
-                        if min_level_not_completed >= level_pack.level_count() {
-                            game_state.set_level_index(0);
-                        }else {
-                            game_state.set_level_index(min_level_not_completed);
-                        }
-
-                        game_state.set_screen(ScreenId::SelectLevel);
-                    }
-                }),
-            ),
-        }
-    }
-
-    fn update_list_elements(&mut self, game_state: &GameState) {
-        let elements = self.level_pack_list.elements_mut();
-
-        //Remove all level pack entries
-        let trailing_element_count = if cfg!(feature = "steam") { 2 } else { 1 };
-        let mut trailing_elements = elements.drain(1..).
-                rev().
-                take(trailing_element_count).
-                rev().
-                collect::<Vec<_>>();
-
-        for (i, level_pack) in game_state.level_packs().iter().enumerate() {
-            elements.push(UIListElement::new(
-                utils::number_to_string_leading_ascii(2, i as u32 + 1, false),
-                Color::Black,
-                if level_pack.level_pack_best_moves_sum().is_some() {
-                    Color::Green
-                }else {
-                    Color::Yellow
-                },
-            ));
-        }
-
-        elements.append(&mut trailing_elements);
-    }
-}
-
-impl Screen for ScreenSelectLevelPack {
-    fn draw(&self, game_state: &GameState, console: &Console) {
-        console.reset_color();
-        console.set_underline(true);
-        console.draw_text("Select a level pack:");
-        console.set_underline(false);
-
-        self.level_pack_list.draw(console);
-
-        let entry_count = self.level_pack_list.elements().len();
-
-        //Draw border for best time and best moves
-        let y = 4 + (entry_count/24)*2;
-
-        console.set_cursor_pos(0, y);
-        console.set_color(Color::Cyan, Color::Default);
-        console.draw_text(".------------------------------------------------------------------------.");
-        for i in 1..4 {
-            console.set_cursor_pos(0, y + i);
-            console.draw_text("|                                                                        |");
-        }
-        console.set_cursor_pos(0, y + 4);
-        console.draw_text("\'------------------------------------------------------------------------\'");
-        console.reset_color();
-
-        let cursor_index = self.level_pack_list.cursor_index();
-        if cursor_index == 0 {
-            console.set_cursor_pos(35, y + 2);
-            console.draw_text("Back");
-        }else if cursor_index > game_state.get_level_pack_count() {
-            if cursor_index == game_state.get_level_pack_count() + 2 {
-                #[cfg(feature = "steam")]
-                {
-                    //And Steam Workshop entry on steam build
-                    console.set_cursor_pos(14, y + 1);
-                    console.draw_text("Download level packs from the Steam Workshop");
-
-                    console.set_cursor_pos(8, y + 3);
-                    console.set_color(Color::LightBlack, Color::Default);
-                    console.draw_text("You must relaunch the game after downloading level packs.");
-                }
-
-                #[cfg(not(feature = "steam"))]
-                unreachable!();
-            }else {
-                //Level Pack Editor entry
-                console.set_cursor_pos(23, y + 2);
-                console.draw_text("Create or edit level packs");
-            }
-        }else {
-            //Draw sum of best time and sum of best moves
-            console.set_cursor_pos(1, y + 1);
-            console.draw_text(format!("Selected level pack: {}", game_state.level_packs().get(cursor_index - 1).unwrap().name()));
-
-            let level_pack = game_state.level_packs.get(cursor_index - 1).unwrap();
-
-            #[cfg(feature = "steam")]
-            if level_pack.steam_level_pack_data().is_some() {
-                console.draw_text(" [");
-
-                console.draw_key_input_text("o");
-
-                console.reset_color();
-                console.draw_text(": open Steam Workshop]");
-            }
-
-            console.set_cursor_pos(1, y + 2);
-            console.draw_text("Sum of best time   : ");
-            match level_pack.level_pack_best_time_sum() {
-                None => console.draw_text("X:XX:XX:XX.XXX"),
-                Some(best_time_sum) => {
-                    console.draw_text(format!(
-                        "{:01}:{:02}:{:02}:{:02}.{:03}",
-                        best_time_sum/86400000,
-                        (best_time_sum/3600000)%24,
-                        (best_time_sum/60000)%60,
-                        (best_time_sum/1000)%60,
-                        best_time_sum%1000
-                    ));
-                },
-            }
-            console.set_cursor_pos(1, y + 3);
-            console.draw_text("Sum of best moves  : ");
-            match level_pack.level_pack_best_moves_sum() {
-                None => console.draw_text("XXXXXXX"),
-                Some(best_moves_sum) => console.draw_text(format!("{:07}", best_moves_sum)),
-            }
-        }
-    }
-
-    fn update(&mut self, game_state: &mut GameState) {
-        let expected_entry_count = game_state.get_level_pack_count() + if cfg!(feature = "steam") { 3 } else { 2 };
-        if expected_entry_count != self.level_pack_list.elements().len() {
-            self.update_list_elements(game_state);
-        }
-    }
-
-    fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
-        if key == Key::ESC {
-            game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
-
-            game_state.set_screen(ScreenId::StartMenu);
-
-            return;
-        }
-
-        #[cfg(feature = "steam")]
-        if key == Key::O && self.level_pack_list.cursor_index() >= 1 &&
-                let Some(steam_level_pack_data) = game_state.level_packs().get(self.level_pack_list.cursor_index() - 1).and_then(LevelPack::steam_level_pack_data) {
-            game_state.play_sound_effect_ui_dialog_open();
-
-            let id = steam_level_pack_data.workshop_id();
-            game_state.steam_client.friends().activate_game_overlay_to_web_page(&format!("steam://url/CommunityFilePage/{}", id.0));
-        }
-
-        self.level_pack_list.on_key_press(&mut (), game_state, key);
-    }
-
-    fn on_mouse_pressed(&mut self, game_state: &mut GameState, column: usize, row: usize) {
-        self.level_pack_list.on_mouse_pressed(&mut (), game_state, column, row);
-    }
-
-    fn on_set_screen(&mut self, game_state: &mut GameState) {
-        self.update_list_elements(game_state);
-
-        if self.level_pack_list.cursor_index() == 0 {
-            //Skip "back" entry and set to first level pack
-            self.level_pack_list.set_cursor_index(1);
-        }else {
-            self.level_pack_list.set_cursor_index(game_state.current_level_pack_index + 1);
-        }
-
-        game_state.set_background_music_loop(&audio::BACKGROUND_MUSIC_FIELDS_OF_ICE);
-    }
-}
-
 pub struct ScreenSelectLevel {
     level_list: UIList,
     level_preview: bool,
@@ -981,7 +764,7 @@ impl ScreenSelectLevel {
                 Box::new(|_, game_state: &mut GameState, cursor_index: usize| {
                     if cursor_index == 0 {
                         game_state.play_sound_effect_ui_select();
-                        game_state.set_screen(ScreenId::SelectLevelPack);
+                        game_state.set_screen(ScreenId::StartMenu);
 
                         return;
                     }
@@ -1193,7 +976,7 @@ impl Screen for ScreenSelectLevel {
             if self.level_preview {
                 self.level_preview = false;
             }else {
-                game_state.set_screen(ScreenId::SelectLevelPack);
+                game_state.set_screen(ScreenId::StartMenu);
             }
 
             return;
@@ -1258,7 +1041,6 @@ pub struct ScreenInGame {
     show_floor: bool,
 
     continue_flag: bool,
-    secret_found_flag: bool,
     game_over_flag: bool,
 }
 
@@ -1279,7 +1061,6 @@ impl ScreenInGame {
             show_floor: false,
 
             continue_flag: Default::default(),
-            secret_found_flag: Default::default(),
             game_over_flag: Default::default(),
         }
     }
@@ -1301,8 +1082,8 @@ impl ScreenInGame {
     }
 
     fn draw_tutorial_level_text(&self, game_state: &GameState, console: &Console) {
-        //Draw special help text for tutorial levels (tutorial pack and tutorial levels in special pack)
-        if game_state.get_level_pack_index() == 0 { //Built-in Tutorial pack
+        //Draw special help text for tutorial levels
+        if game_state.get_level_pack_index() == 0 { //Built-in Demo pack
             console.reset_color();
             match game_state.current_level_index {
                 0 => {
@@ -1353,34 +1134,6 @@ impl ScreenInGame {
                     console.draw_text(")");
                 },
                 2 => {
-                    console.set_cursor_pos(14, 8);
-                    console.draw_text("Some boxes (");
-
-                    Tile::BoxInGoal.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") might already be in a goal (");
-
-                    Tile::Goal.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(")");
-                },
-                3 => {
-                    console.set_cursor_pos(14, 8);
-                    console.draw_text("Not all boxes (");
-
-                    Tile::Box.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") must be in a goal (");
-
-                    Tile::Goal.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") to win");
-                },
-                4 => {
                     console.set_cursor_pos(5, 8);
                     console.draw_text("One-way doors (");
 
@@ -1404,80 +1157,67 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(") can only be entered from the opened side");
                 },
-                5 => {
-                    if self.game_over_flag {
-                        console.set_cursor_pos(6, 8);
-                        console.draw_text("Press ");
+                3 => {
+                    console.set_cursor_pos(8, 8);
+                    console.draw_text("Boxes (");
 
-                        console.draw_key_input_text("ENTER");
-                        console.reset_color();
-                        console.draw_text("/");
-                        console.draw_key_input_text("SPACEBAR");
+                    Tile::Box.draw(console, false, false);
 
-                        console.reset_color();
-                        console.draw_text(" to go back to the level selection screen");
-                    }else {
-                        console.set_cursor_pos(8, 8);
-                        console.draw_text("Boxes (");
+                    console.reset_color();
+                    console.draw_text(") cannot be moved through one-way doors (");
 
-                        Tile::Box.draw(console, false, false);
+                    Tile::OneWayLeft.draw(console, false, false);
 
-                        console.reset_color();
-                        console.draw_text(") cannot be moved through one-way doors (");
+                    console.reset_color();
+                    console.draw_text(" ");
 
-                        Tile::OneWayLeft.draw(console, false, false);
+                    Tile::OneWayUp.draw(console, false, false);
 
-                        console.reset_color();
-                        console.draw_text(" ");
+                    console.reset_color();
+                    console.draw_text(" ");
 
-                        Tile::OneWayUp.draw(console, false, false);
+                    Tile::OneWayRight.draw(console, false, false);
 
-                        console.reset_color();
-                        console.draw_text(" ");
+                    console.reset_color();
+                    console.draw_text(" ");
 
-                        Tile::OneWayRight.draw(console, false, false);
+                    Tile::OneWayDown.draw(console, false, false);
 
-                        console.reset_color();
-                        console.draw_text(" ");
-
-                        Tile::OneWayDown.draw(console, false, false);
-
-                        console.reset_color();
-                        console.draw_text(")");
-                    }
+                    console.reset_color();
+                    console.draw_text(")");
                 },
-                _ => {},
-            }
-        }else if game_state.get_level_pack_index() == 1 { //Built-in Main pack
-            console.reset_color();
-            if game_state.current_level_index < 3 {
-                let start_y = if game_state.current_level_index < 2 { 8 } else { 11 };
+                4 => {
+                    console.set_cursor_pos(28, 11);
+                    console.draw_key_input_text("z");
+                    console.reset_color();
+                    console.draw_text("/");
+                    console.draw_key_input_text("u");
 
-                console.set_cursor_pos(28, start_y);
-                console.draw_key_input_text("z");
-                console.reset_color();
-                console.draw_text("/");
-                console.draw_key_input_text("u");
+                    console.reset_color();
+                    console.draw_text(": Undo, ");
 
-                console.reset_color();
-                console.draw_text(": Undo, ");
+                    console.draw_key_input_text("y");
 
-                console.draw_key_input_text("y");
+                    console.reset_color();
+                    console.draw_text(": Redo");
 
-                console.reset_color();
-                console.draw_text(": Redo");
+                    console.set_cursor_pos(29, 12);
+                    console.draw_key_input_text("r");
 
-                console.set_cursor_pos(29, start_y + 1);
-                console.draw_key_input_text("r");
+                    console.reset_color();
+                    console.draw_text(": Restart Level");
+                },
+                6 => {
+                    console.set_cursor_pos(8, 13);
+                    console.draw_text("Press ");
 
-                console.reset_color();
-                console.draw_text(": Restart Level");
-            }
-        }else if game_state.get_level_pack_index() == 2 { //Built-in Special pack
-            console.reset_color();
-            match game_state.current_level_index {
-                0 => {
-                    console.set_cursor_pos(18, 8);
+                    console.draw_key_input_text("F9");
+
+                    console.reset_color();
+                    console.draw_text(" to toggle between Graphical and ASCII tile modes");
+                },
+                10 => {
+                    console.set_cursor_pos(18, 11);
                     console.draw_text("Keys (");
 
                     Tile::Key.draw(console, false, false);
@@ -1490,22 +1230,8 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(")");
                 },
-                1 => {
-                    console.set_cursor_pos(19, 8);
-                    console.draw_text("Every key (");
-
-                    Tile::Key.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") can open any door (");
-
-                    Tile::LockedDoor.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(")");
-                },
-                2 => {
-                    console.set_cursor_pos(21, 8);
+                13 => {
+                    console.set_cursor_pos(21, 13);
                     console.draw_text("Keys (");
 
                     Tile::KeyInGoal.draw(console, false, false);
@@ -1518,189 +1244,41 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(")");
                 },
-                8 => {
-                    console.set_cursor_pos(23, 8);
-                    console.draw_text("Holes (");
-
-                    Tile::Hole.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") cannot be crossed");
-                },
-                9 => {
-                    console.set_cursor_pos(21, 8);
-                    console.draw_text("Filled holes (");
-
-                    Tile::BoxInHole.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") can be crossed");
-                },
-                10 => {
-                    console.set_cursor_pos(23, 8);
-                    console.draw_text("Boxes (");
-
-                    Tile::Box.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") can fill holes (");
-
-                    Tile::Hole.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(")");
-                },
-                11 => {
-                    console.set_cursor_pos(13, 8);
-                    console.draw_text("Keys (");
-
-                    Tile::Key.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") cannot fill holes (");
-
-                    Tile::Hole.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") and will be lost");
-                },
                 19 => {
-                    console.set_cursor_pos(2, 8);
-                    console.draw_text("Fragile Floor (");
+                    if !self.game_over_flag {
+                        console.set_cursor_pos(11, 9);
+                        console.draw_text("Ice (");
 
-                    Tile::FragileFloor.draw(console, false, false);
+                        Tile::Ice.draw(console, false, false);
 
-                    console.reset_color();
-                    console.draw_text(") turns into a hole (");
+                        console.reset_color();
+                        console.draw_text(") causes the player (");
 
-                    Tile::Hole.draw(console, false, false);
+                        Tile::Player.draw(console, false, false);
 
-                    console.reset_color();
-                    console.draw_text(") once crossed by the player (");
+                        console.reset_color();
+                        console.draw_text(") and boxes (");
 
-                    Tile::Player.draw(console, false, false);
+                        Tile::BoxOnIce.draw(console, false, false);
 
-                    console.reset_color();
-                    console.draw_text(")");
-
-                    console.set_cursor_pos(23, 10);
-                    console.draw_text("Press ");
-
-                    console.draw_key_input_text("q");
-
-                    console.reset_color();
-                    console.draw_text(" to view floor tiles");
+                        console.reset_color();
+                        console.draw_text(") to slide");
+                    }
                 },
-                25 => {
-                    console.set_cursor_pos(17, 8);
-                    console.draw_text("Ice (");
-
-                    Tile::Ice.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") causes the player (");
-
-                    Tile::Player.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") to slide");
-                },
-                26 => {
-                    console.set_cursor_pos(10, 8);
-                    console.draw_text("Ice (");
-
-                    Tile::Ice.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") causes keys (");
-
-                    Tile::KeyOnIce.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") and boxes (");
-
-                    Tile::BoxOnIce.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") to slide as well");
-                },
-                27 => {
-                    console.set_cursor_pos(14, 8);
-                    console.draw_text("If a box (");
-
-                    Tile::BoxOnIce.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") or a key (");
-
-                    Tile::KeyOnIce.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") is pushed on ice (");
-
-                    Tile::Ice.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(")");
-
-                    console.set_cursor_pos(21, 9);
-                    console.draw_text("the player (");
-
-                    Tile::Player.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") will stop sliding");
-
-                    console.set_cursor_pos(23, 11);
-                    console.draw_text("Press ");
-
-                    console.draw_key_input_text("q");
-
-                    console.reset_color();
-                    console.draw_text(" to view floor tiles");
-                },
-                28 => {
-                    console.set_cursor_pos(23, 11);
-                    console.draw_text("Press ");
-
-                    console.draw_key_input_text("q");
-
-                    console.reset_color();
-                    console.draw_text(" to view floor tiles");
-                },
-                _ => {},
-            }
-        }else if game_state.get_level_pack_index() == 4 && game_state.found_secret_main_level_pack { //Built-in Secret pack
-            console.reset_color();
-            #[expect(clippy::single_match)]
-            match game_state.current_level_index {
-                0 => {
-                    console.set_cursor_pos(35, 7);
-                    console.draw_text("???");
-                },
-
                 _ => {},
             }
         }
     }
 
     fn handle_move_result(&mut self, game_state: &mut GameState, move_result: MoveResult) {
-        #[cfg(feature = "steam")]
-        let steam_client = game_state.steam_client.clone();
-
         let current_level_index = game_state.current_level_index;
         let Some(level_pack) = game_state.get_current_level_pack_mut() else {
             return;
         };
 
         match move_result {
-            MoveResult::Valid { has_won, secret_found, sound_effect } => {
+            MoveResult::Valid { has_won, sound_effect } => {
                 self.time_start.get_or_insert_with(SystemTime::now);
-
-                if secret_found {
-                    self.game_over_flag = true;
-                    self.secret_found_flag = true;
-                }
 
                 if has_won {
                     self.continue_flag = true;
@@ -1715,48 +1293,18 @@ impl ScreenInGame {
                         level_pack.set_min_level_not_completed(current_level_index + 1);
                     }
 
-                    #[cfg(feature = "steam")]
-                    if level_pack.id() == "main" && current_level_index == 95 && moves < 160 {
-                        Achievement::LEVEL_PACK_MAIN_LEVEL_96_CHALLENGE.unlock(steam_client.clone());
-                    }
-
-                    #[cfg(feature = "steam")]
-                    if level_pack.level_pack_best_moves_sum().is_some() && level_pack.level_pack_best_time_sum().is_some() {
-                        match level_pack.id() {
-                            "tutorial" => {
-                                Achievement::LEVEL_PACK_TUTORIAL_COMPLETED.unlock(steam_client.clone());
-
-                                if level_pack.level_pack_best_time_sum().unwrap() < 4000 {
-                                    Achievement::LEVEL_PACK_TUTORIAL_FAST.unlock(steam_client.clone());
-                                }
-                            },
-
-                            "main" => {
-                                Achievement::LEVEL_PACK_MAIN_COMPLETED.unlock(steam_client.clone());
-                            },
-
-                            "special" => {
-                                Achievement::LEVEL_PACK_SPECIAL_COMPLETED.unlock(steam_client.clone());
-                            },
-
-                            "demon" => {
-                                Achievement::LEVEL_PACK_DEMON_COMPLETED.unlock(steam_client.clone());
-                            },
-
-                            "secret" => {
-                                Achievement::LEVEL_PACK_SECRET_COMPLETED.unlock(steam_client.clone());
-                            },
-
-                            _ => {},
-                        }
-
-                        if level_pack.steam_level_pack_data().is_some() {
-                            Achievement::STEAM_WORKSHOP_LEVEL_PACK_COMPLETED.unlock(steam_client.clone());
-                        }
-                    }
-
                     if let Err(err) = level_pack.save_save_game(false) {
                         game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
+                    }
+
+                    #[cfg(feature = "steam")]
+                    {
+                        let steam_client = game_state.steam_client.clone();
+
+                        let val = Stat::MAX_COMPLETED_LEVEL.get(steam_client.clone());
+                        if current_level_index as i32 + 1 > val {
+                            Stat::MAX_COMPLETED_LEVEL.set(steam_client.clone(), current_level_index as i32 + 1)
+                        }
                     }
 
                     game_state.play_sound_effect(audio::LEVEL_COMPLETE_EFFECT);
@@ -1782,17 +1330,6 @@ impl ScreenInGame {
                     game_state.play_level_sound_effect(sound_effect);
                 }
             },
-        }
-
-        if self.secret_found_flag {
-            #[cfg(feature = "steam")]
-            Achievement::LEVEL_PACK_SECRET_DISCOVERED.unlock(steam_client.clone());
-
-            game_state.open_dialog(Dialog::new_ok_secret_found("You have found a secret!"));
-
-            if let Err(err) = game_state.on_found_secret() {
-                game_state.open_dialog(Dialog::new_ok_error(format!("Error: {}", err)));
-            }
         }
     }
 }
@@ -1821,13 +1358,8 @@ impl Screen for ScreenInGame {
             console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 16) as f64 * 0.5) as usize, 0);
             console.draw_text("Level completed!");
         }else if self.game_over_flag {
-            if self.secret_found_flag {
-                console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 13) as f64 * 0.5) as usize, 0);
-                console.draw_text("Secret found!");
-            }else {
-                console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 13) as f64 * 0.5) as usize, 0);
-                console.draw_text("You have won!");
-            }
+            console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 13) as f64 * 0.5) as usize, 0);
+            console.draw_text("You have won!");
         }else if self.show_floor {
             console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 14) as f64 * 0.5) as usize, 0);
             console.draw_text("Show tiles (");
@@ -1836,7 +1368,63 @@ impl Screen for ScreenInGame {
             console.draw_text(")");
         }
 
-        if let Some(playing_level) = self.level.as_ref() {
+        if self.game_over_flag {
+            console.set_cursor_pos(17, 6);
+            console.reset_color();
+            console.draw_text("Thank you for playing the ");
+
+            console.set_color(Color::LightYellow, Color::Default);
+            console.draw_text("SokoTerm");
+
+            console.set_color(Color::LightRed, Color::Default);
+            console.draw_text(" Demo");
+
+            console.reset_color();
+            console.draw_text("!");
+
+            console.set_cursor_pos(15, 10);
+            console.reset_color();
+            console.draw_text("You have completed the demo in ");
+
+            console.set_color(Color::LightCyan, Color::Default);
+            match game_state.level_pack.level_pack_best_time_sum() {
+                None => console.draw_text("XX:XX:XX.XXX"),
+                Some(best_time_sum) => {
+                    console.draw_text(format!(
+                        "{:02}:{:02}:{:02}.{:03}",
+                        (best_time_sum/3600000)%24,
+                        (best_time_sum/60000)%60,
+                        (best_time_sum/1000)%60,
+                        best_time_sum%1000
+                    ));
+                },
+            }
+
+            console.set_cursor_pos(28, 11);
+            console.reset_color();
+            console.draw_text("with ");
+
+            console.set_color(Color::LightCyan, Color::Default);
+            match game_state.level_pack.level_pack_best_moves_sum() {
+                None => console.draw_text("XXXXXX"),
+                Some(best_moves_sum) => console.draw_text(format!("{:06}", best_moves_sum)),
+            }
+
+            console.reset_color();
+            console.draw_text(" moves!");
+
+            console.set_cursor_pos(6, 15);
+            console.reset_color();
+            console.draw_text("Press ");
+
+            console.draw_key_input_text("ENTER");
+            console.reset_color();
+            console.draw_text("/");
+            console.draw_key_input_text("SPACEBAR");
+
+            console.reset_color();
+            console.draw_text(" to go back to the level selection screen");
+        }else if let Some(playing_level) = self.level.as_ref() {
             let level = &playing_level.current_playing_level().0;
 
             let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
@@ -2010,18 +1598,6 @@ impl Screen for ScreenInGame {
     }
 
     fn on_dialog_selection(&mut self, game_state: &mut GameState, selection: DialogSelection) {
-        if self.secret_found_flag {
-            self.continue_flag = false;
-            self.game_over_flag = false;
-            self.secret_found_flag = false;
-
-            //Set level pack selection to secret level pack
-            game_state.set_level_pack_index(4);
-            game_state.set_screen(ScreenId::SelectLevelPack);
-
-            return;
-        }
-
         if selection == DialogSelection::Yes {
             self.continue_flag = false;
             self.game_over_flag = false;
@@ -2051,1864 +1627,10 @@ impl Screen for ScreenInGame {
         self.start_level(game_state.get_current_level_pack().as_ref().unwrap().levels().get(
             game_state.get_level_index()).unwrap().level());
 
-        #[cfg(feature = "steam")]
-        if game_state.get_current_level_pack().unwrap().steam_level_pack_data().is_some() {
-            Achievement::STEAM_WORKSHOP_LEVEL_PACK_PLAYED.unlock(game_state.steam_client.clone());
-        }
-
         if let Some(background_music_id) = game_state.get_current_level_pack().as_ref().unwrap().background_music_id() {
             game_state.set_background_music_loop(audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(background_music_id));
         }else {
             game_state.stop_background_music();
         }
-    }
-}
-
-pub struct ScreenSelectLevelPackEditor {
-    level_pack_editor_list: UIList<bool>,
-
-    is_exporting_level_pack: bool,
-    is_deleting_level_pack: bool,
-
-    is_creating_new_level_pack: bool,
-    new_level_pack_id: String,
-}
-
-impl ScreenSelectLevelPackEditor {
-    pub fn new() -> Self {
-        Self {
-            level_pack_editor_list: UIList::new(
-                Rect::new(0, 1, Game::CONSOLE_MIN_WIDTH, Game::CONSOLE_MIN_HEIGHT - 1),
-                vec![
-                    UIListElement::new("<<", Color::White, Color::LightBlue),
-                    //[Level Pack Editor Entries]
-                ],
-                Box::new(|is_creating_new_level_pack: &mut bool, game_state: &mut GameState, cursor_index: usize| {
-                    if cursor_index == 0 {
-                        game_state.play_sound_effect_ui_select();
-                        game_state.set_screen(ScreenId::SelectLevelPack);
-
-                        return;
-                    }
-
-                    let level_pack_index = cursor_index - 1;
-                    if level_pack_index == game_state.editor_state.get_level_pack_count() {
-                        //Level Pack Editor entry
-                        if game_state.editor_state.get_level_pack_count() == LevelPack::MAX_LEVEL_PACK_COUNT {
-                            game_state.open_dialog(Dialog::new_ok_error(format!(
-                                "Cannot create new level packs (Max level pack count ({}) reached)",
-                                LevelPack::MAX_LEVEL_PACK_COUNT,
-                            )));
-                        }else {
-                            game_state.play_sound_effect_ui_select();
-                            *is_creating_new_level_pack = true;
-                        }
-                    }else {
-                        game_state.play_sound_effect_ui_select();
-                        game_state.editor_state.set_level_pack_index(level_pack_index);
-
-                        //Set selected level pack
-                        game_state.editor_state.set_level_index(0);
-                        game_state.set_screen(ScreenId::LevelPackEditor);
-                    }
-                }),
-            ),
-
-            is_exporting_level_pack: Default::default(),
-            is_deleting_level_pack: Default::default(),
-
-            is_creating_new_level_pack: Default::default(),
-            new_level_pack_id: String::new(),
-        }
-    }
-
-    fn update_list_elements(&mut self, game_state: &GameState) {
-        let elements = self.level_pack_editor_list.elements_mut();
-
-        //Remove all level pack editor entries and create new level pack entry
-        elements.drain(1..);
-
-        for (i, level_pack) in game_state.editor_state.level_packs.iter().enumerate() {
-            elements.push(UIListElement::new(
-                utils::number_to_string_leading_ascii(2, i as u32 + 1, false),
-                Color::Black,
-                if level_pack.level_pack_best_moves_sum().is_some() {
-                    Color::Green
-                }else {
-                    Color::Yellow
-                },
-            ));
-        }
-
-        let has_max_level_pack_count = game_state.editor_state.get_level_pack_count() == LevelPack::MAX_LEVEL_PACK_COUNT;
-        elements.push(UIListElement::new(
-            " +",
-            Color::White,
-            if has_max_level_pack_count {
-                Color::LightRed
-            }else {
-                Color::LightBlue
-            },
-        ));
-    }
-}
-
-impl Screen for ScreenSelectLevelPackEditor {
-    fn draw(&self, game_state: &GameState, console: &Console) {
-        console.reset_color();
-        console.set_underline(true);
-        console.draw_text("Edit a level pack:");
-        console.set_underline(false);
-
-        self.level_pack_editor_list.draw(console);
-
-        let has_max_level_pack_count = game_state.editor_state.get_level_pack_count() == LevelPack::MAX_LEVEL_PACK_COUNT;
-
-        let entry_count = self.level_pack_editor_list.elements().len();
-
-        //Draw border for best time and best moves
-        let y = 4 + ((entry_count - 1)/24)*2;
-
-        console.set_cursor_pos(0, y);
-        console.set_color(Color::Cyan, Color::Default);
-        console.draw_text(".------------------------------------------------------------------------.");
-        for i in 1..4 {
-            console.set_cursor_pos(0, y + i);
-            console.draw_text("|                                                                        |");
-        }
-        console.set_cursor_pos(0, y + 4);
-        console.draw_text("\'------------------------------------------------------------------------\'");
-        console.reset_color();
-
-        let cursor_index = self.level_pack_editor_list.cursor_index();
-        if self.is_creating_new_level_pack {
-            console.set_cursor_pos(1, y + 1);
-            console.draw_text("Enter a new level pack ID:");
-
-            console.set_cursor_pos(1, y + 2);
-            console.set_color(Color::Cyan, Color::Default);
-            console.draw_text(format!("> {}", &self.new_level_pack_id));
-        }else if cursor_index == 0 {
-            console.reset_color();
-            console.set_cursor_pos(35, y + 2);
-            console.draw_text("Back");
-        }else if cursor_index - 1 == game_state.editor_state.get_level_pack_count() {
-            //Level Pack Editor entry
-            if has_max_level_pack_count {
-                let error_msg = format!(
-                    "Max level pack count ({}) reached",
-                    LevelPack::MAX_LEVEL_PACK_COUNT,
-                );
-
-                let x_offset = ((Game::CONSOLE_MIN_WIDTH - error_msg.len()) as f64 * 0.5) as usize;
-                console.set_cursor_pos(x_offset, y + 2);
-                console.set_color(Color::LightRed, Color::Default);
-                console.draw_text(error_msg);
-            }else {
-                console.set_cursor_pos(28, y + 2);
-                console.draw_text("Create a level pack");
-            }
-        }else {
-            let level_pack = game_state.editor_state.level_packs.get(cursor_index - 1).unwrap();
-
-            console.set_cursor_pos(1, y + 1);
-            console.draw_text(format!("Level Pack ID: {}", level_pack.id()));
-
-            console.set_cursor_pos(1, y + 2);
-            console.draw_text(format!("Levels: {}", level_pack.level_count()));
-
-            console.set_cursor_pos(1, y + 3);
-            console.draw_text("Background music: ");
-
-            match level_pack.background_music_id().
-                    map(|background_music_id| audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(background_music_id)) {
-                Some(background_music) => {
-                    console.set_color(Color::LightCyan, Color::Default);
-                    console.draw_text(background_music.display_name());
-
-                    console.reset_color();
-                    console.draw_text(" [by ");
-
-                    console.set_color(Color::LightPink, Color::Default);
-                    console.draw_text(background_music.creator());
-
-                    console.reset_color();
-                    console.draw_text("]");
-                },
-
-                None => {
-                    console.draw_text("None");
-                },
-            }
-
-            console.set_cursor_pos(46, y + 1);
-            console.draw_key_input_text("s");
-
-            console.reset_color();
-            console.draw_text(":  Select background music");
-
-            #[cfg(feature = "steam")]
-            {
-                console.set_cursor_pos(46, y + 2);
-                console.draw_key_input_text("u");
-
-                console.reset_color();
-                console.draw_text(": Upload to Steam Workshop");
-            }
-        }
-    }
-
-    fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
-        if self.is_creating_new_level_pack {
-            match key {
-                key if key.is_ascii() && (key.is_alphanumeric() || key == Key::UNDERSCORE || key == Key::MINUS) => {
-                    if self.new_level_pack_id.len() >= LevelPack::MAX_LEVEL_PACK_NAME_LEN {
-                        return;
-                    }
-                    
-                    let _ = write!(self.new_level_pack_id, "{}", key.to_ascii().unwrap() as char);
-                },
-                Key::DELETE => {
-                    self.new_level_pack_id.pop();
-                },
-
-                Key::ENTER => {
-                    if self.new_level_pack_id.len() < 3 {
-                        game_state.open_dialog(Dialog::new_ok_error("Level pack ID must have at least 3 characters!"));
-
-                        return;
-                    }
-
-                    for id in game_state.editor_state.level_packs.iter().
-                            map(|level_pack| level_pack.id()) {
-                        if id == self.new_level_pack_id {
-                            game_state.open_dialog(Dialog::new_ok_error(format!("The level pack with the ID \"{}\" already exists!", id)));
-
-                            return;
-                        }
-                    }
-
-                    let Ok(mut save_game_file) = Game::get_or_create_save_game_folder() else {
-                        game_state.open_dialog(Dialog::new_ok_error("Cannot save!"));
-
-                        return;
-                    };
-                    save_game_file.push(&self.new_level_pack_id);
-                    save_game_file.push(".lvl.edit");
-
-                    let Some(save_game_file) = save_game_file.to_str() else {
-                        game_state.open_dialog(Dialog::new_ok_error("Cannot save!"));
-
-                        return;
-                    };
-
-                    let level_pack = LevelPack::new(&self.new_level_pack_id, &self.new_level_pack_id, save_game_file);
-                    if let Err(err) = level_pack.save_editor_level_pack() {
-                        game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
-                    }
-
-                    game_state.play_sound_effect_ui_select();
-
-                    let index = game_state.editor_state.level_packs.binary_search_by_key(
-                        &level_pack.id().to_string(),
-                        |level_pack| level_pack.id().to_string(),
-                    ).err().unwrap();
-
-                    game_state.editor_state.level_packs.insert(index, level_pack);
-
-                    //self.is_creating_new_level_pack with be set to false in on_set_screen after background music selection
-                    self.new_level_pack_id = String::new();
-
-                    self.level_pack_editor_list.set_cursor_index(index + 1);
-                    game_state.editor_state.set_level_pack_index(index);
-                    game_state.editor_state.set_level_index(0);
-                    game_state.set_screen(ScreenId::SelectLevelPackBackgroundMusic);
-                },
-
-                Key::ESC => {
-                    game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
-
-                    self.is_creating_new_level_pack = false;
-                    self.new_level_pack_id = String::new();
-                },
-
-                _ => {},
-            }
-
-            return;
-        }
-
-        if key == Key::ESC {
-            game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
-
-            game_state.set_screen(ScreenId::SelectLevelPack);
-
-            return;
-        }
-
-        let cursor_index = self.level_pack_editor_list.cursor_index();
-        if cursor_index >= 1 && cursor_index - 1 != game_state.editor_state.get_level_pack_count() {
-            if key == Key::S {
-                game_state.play_sound_effect_ui_dialog_open();
-
-                game_state.editor_state.set_level_pack_index(cursor_index - 1);
-
-                match game_state.editor_state.get_current_level_pack().unwrap().
-                        background_music_id().
-                        map(|background_music_id| audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(background_music_id)) {
-                    Some(background_music) => game_state.set_background_music_loop(background_music),
-                    None => game_state.stop_background_music(),
-                }
-
-                game_state.set_screen(ScreenId::SelectLevelPackBackgroundMusic);
-            }
-
-            if key == Key::E {
-                game_state.editor_state.set_level_pack_index(cursor_index - 1);
-
-                self.is_exporting_level_pack = true;
-
-                game_state.open_dialog(Dialog::new_yes_no("Do you want to export the level pack to the current directory?"));
-            }
-
-            #[cfg(feature = "steam")]
-            if key == Key::U {
-                game_state.editor_state.set_level_pack_index(cursor_index - 1);
-
-                let level_stats = &game_state.editor_state.get_current_level_pack().unwrap();
-                if level_stats.level_pack_best_moves_sum().is_none() {
-                    game_state.open_dialog(Dialog::new_ok_error(
-                        "Level pack was not validated yet! All levels must be validated.",
-                    ));
-
-                    return;
-                }
-
-                let ret = steam::prepare_workshop_upload_temp_data(
-                    game_state.editor_state.get_current_level_pack().unwrap(),
-                );
-                if let Err(err) = ret {
-                    game_state.open_dialog(Dialog::new_ok_error(format!(
-                        "Could not prepare files for upload to steam workshop!\n{err}",
-                    )));
-
-                    return;
-                }
-
-                game_state.play_sound_effect_ui_dialog_open();
-                game_state.show_workshop_upload_popup = true;
-            }
-
-            if key == Key::DELETE {
-                game_state.editor_state.set_level_pack_index(cursor_index - 1);
-
-                self.is_deleting_level_pack = true;
-
-                game_state.open_dialog(Dialog::new_yes_no(format!(
-                    "Do you really want to delete level pack \"{}\"?",
-                    game_state.editor_state.get_current_level_pack().unwrap().id(),
-                )));
-            }
-        }
-
-        self.level_pack_editor_list.on_key_press(&mut self.is_creating_new_level_pack, game_state, key);
-    }
-
-    fn on_mouse_pressed(&mut self, game_state: &mut GameState, column: usize, row: usize) {
-        if row == 0 {
-            return;
-        }
-
-        let element_count = self.level_pack_editor_list.elements().len();
-        let y = 4 + ((element_count - 1)/24)*2;
-        if row == y + 1 && (46..Game::CONSOLE_MIN_WIDTH - 1).contains(&column) {
-            self.on_key_pressed(game_state, Key::S);
-        }
-
-        #[cfg(feature = "steam")]
-        {
-            if row == y + 2 && (46..Game::CONSOLE_MIN_WIDTH - 1).contains(&column) {
-                self.on_key_pressed(game_state, Key::U);
-            }
-        }
-
-        self.level_pack_editor_list.on_mouse_pressed(&mut self.is_creating_new_level_pack, game_state, column, row);
-    }
-
-    fn on_dialog_selection(&mut self, game_state: &mut GameState, selection: DialogSelection) {
-        if self.is_exporting_level_pack {
-            self.is_exporting_level_pack = false;
-
-            if selection == DialogSelection::Yes {
-                let level_pack = game_state.editor_state.get_current_level_pack().unwrap();
-                let path = level_pack.id().to_string() + ".lvl";
-
-                if std::fs::exists(&path).ok().is_none_or(|exists| exists) {
-                    game_state.open_dialog(Dialog::new_ok_error(format!(
-                        "File \"{}\" already exists!",
-                        path,
-                    )));
-
-                    return;
-                }
-
-                if let Err(err) = level_pack.export_editor_level_pack_to_path(path) {
-                    game_state.open_dialog(Dialog::new_ok_error(format!("Cannot export: {}", err)));
-                }else {
-                    game_state.open_dialog(Dialog::new_ok("The level pack was exported successfully"));
-                }
-            }
-        }else if self.is_deleting_level_pack {
-            self.is_deleting_level_pack = false;
-
-            if selection == DialogSelection::Yes {
-                let path = game_state.editor_state.get_current_level_pack().unwrap().path().to_string();
-                let save_game_path = path.clone() + ".sav";
-
-                if let Err(err) = std::fs::remove_file(save_game_path) {
-                    game_state.open_dialog(Dialog::new_ok_error(format!("Cannot delete: {}", err)));
-                }else if let Err(err) = std::fs::remove_file(path) {
-                    game_state.open_dialog(Dialog::new_ok_error(format!("Cannot delete: {}", err)));
-                }else {
-                    game_state.editor_state.level_packs.remove(self.level_pack_editor_list.cursor_index() - 1);
-                }
-            }
-
-            self.update_list_elements(game_state);
-            //Cursor index will always be inbound after level pack deletion because of the Create Level Pack Entry
-        }
-    }
-
-    fn on_set_screen(&mut self, game_state: &mut GameState) {
-        if self.is_creating_new_level_pack {
-            //Background music was selected for newly created level pack -> Do not change music and enter level pack editor
-
-            self.is_creating_new_level_pack = false;
-            game_state.set_screen(ScreenId::LevelPackEditor);
-        }else {
-            self.update_list_elements(game_state);
-
-            if self.level_pack_editor_list.cursor_index() == 0 {
-                //Skip "back" entry and set to first level pack
-                self.level_pack_editor_list.set_cursor_index(1);
-            }
-
-            game_state.set_background_music_loop(&audio::BACKGROUND_MUSIC_FIELDS_OF_ICE);
-        }
-    }
-}
-
-pub struct ScreenSelectLevelPackBackgroundMusic {}
-
-impl ScreenSelectLevelPackBackgroundMusic {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl Screen for ScreenSelectLevelPackBackgroundMusic {
-    fn draw(&self, game_state: &GameState, console: &Console) {
-        console.reset_color();
-        console.set_underline(true);
-        console.draw_text("Select the background music for the level pack:");
-        console.set_underline(false);
-
-        console.set_cursor_pos(0, 1);
-        console.draw_key_input_text("ENTER");
-
-        console.reset_color();
-        console.draw_text(": Save selection");
-
-        console.set_cursor_pos(0, 2);
-        console.draw_key_input_text("ESC");
-
-        console.reset_color();
-        console.draw_text(": Cancel");
-
-        console.reset_color();
-        console.set_cursor_pos(0, 4);
-        console.draw_text("( ) None");
-
-        let current_selected_music_index = game_state.current_background_music_id().
-                map(|id| id.id()).
-                unwrap_or(0);
-
-        for track in audio::BACKGROUND_MUSIC_TRACKS.tracks() {
-            console.reset_color();
-            console.set_cursor_pos(0, track.id().id() + 4);
-            console.reset_color();
-            console.draw_text("( ) ");
-
-            console.set_color(Color::LightCyan, Color::Default);
-            console.draw_text(format!("{:35}", track.display_name()));
-
-            console.reset_color();
-            console.draw_text(" [by ");
-
-            console.set_color(Color::LightPink, Color::Default);
-            console.draw_text(track.creator());
-
-            console.reset_color();
-            console.draw_text("]");
-        }
-
-        console.set_color(Color::Yellow, Color::Default);
-        console.set_cursor_pos(1, current_selected_music_index + 4);
-        console.draw_text("X");
-    }
-
-    fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
-        let current_background_music_id = game_state.current_background_music_id();
-        let mut current_selected_music_index = current_background_music_id.
-                map(|id| id.id()).
-                unwrap_or(0);
-
-        if key == Key::UP && current_selected_music_index > 0 {
-            game_state.play_sound_effect_ui_select();
-
-            current_selected_music_index -= 1;
-        }else if key == Key::DOWN && current_selected_music_index < audio::BACKGROUND_MUSIC_TRACKS.tracks().len() {
-            game_state.play_sound_effect_ui_select();
-
-            current_selected_music_index += 1;
-        }
-
-        if current_selected_music_index == 0 {
-            game_state.stop_background_music();
-        }else {
-            game_state.set_background_music_loop(audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(
-                audio::BACKGROUND_MUSIC_TRACKS.check_id(current_selected_music_index).unwrap(),
-            ));
-        }
-
-        if key == Key::ENTER || key == Key::SPACE {
-            game_state.editor_state.get_current_level_pack_mut().unwrap().set_background_music_id(current_background_music_id);
-
-            if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
-                game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
-            }
-        }
-
-        if key == Key::ENTER || key == Key::SPACE || key == Key::ESC {
-            game_state.play_sound_effect_ui_select();
-
-            game_state.set_screen(ScreenId::SelectLevelPackEditor);
-        }
-    }
-
-    fn on_mouse_pressed(&mut self, game_state: &mut GameState, column: usize, row: usize) {
-        if row == 1 && column < 5 {
-            self.on_key_pressed(game_state, Key::ENTER);
-        }else if row == 2 && column < 3 {
-            self.on_key_pressed(game_state, Key::ESC);
-        }
-
-        if row < 4 {
-            return;
-        }
-
-        let background_music_selection_index = row - 4;
-        if background_music_selection_index > audio::BACKGROUND_MUSIC_TRACKS.tracks().len() {
-            return;
-        }
-
-        if background_music_selection_index == 0 {
-            game_state.play_sound_effect_ui_select();
-
-            game_state.stop_background_music();
-        }else {
-            game_state.play_sound_effect_ui_select();
-
-            game_state.set_background_music_loop(audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(
-                audio::BACKGROUND_MUSIC_TRACKS.check_id(background_music_selection_index).unwrap(),
-            ));
-        }
-    }
-}
-
-pub struct ScreenLevelPackEditor {
-    level_editor_list: UIList<bool>,
-
-    level_preview: bool,
-    is_creating_new_level: bool,
-    is_editing_height: bool,
-    is_deleting_level: bool,
-    new_level_width_str: String,
-    new_level_height_str: String,
-
-    level_clipboard: Option<LevelWithStats>,
-}
-
-impl ScreenLevelPackEditor {
-    pub fn new() -> Self {
-        Self {
-            level_editor_list: UIList::new(
-                Rect::new(0, 1, Game::CONSOLE_MIN_WIDTH, Game::CONSOLE_MIN_HEIGHT - 1),
-                vec![
-                    UIListElement::new("<<", Color::White, Color::LightBlue),
-                    //[Level Editor Entries]
-                ],
-                Box::new(|is_creating_new_level: &mut bool, game_state: &mut GameState, cursor_index: usize| {
-                    if cursor_index == 0 {
-                        game_state.play_sound_effect_ui_select();
-                        game_state.set_screen(ScreenId::SelectLevelPackEditor);
-
-                        return;
-                    }
-
-                    let level_index = cursor_index - 1;
-
-                    if level_index == game_state.editor_state.get_current_level_pack().unwrap().level_count() {
-                        //Level Editor entry
-                        if game_state.editor_state.get_current_level_pack().unwrap().level_count() == LevelPack::MAX_LEVEL_COUNT_PER_PACK {
-                            game_state.open_dialog(Dialog::new_ok_error(format!(
-                                "Cannot create level (Max level count ({}) reached)",
-                                LevelPack::MAX_LEVEL_COUNT_PER_PACK,
-                            )));
-                        }else {
-                            game_state.play_sound_effect_ui_select();
-
-                            *is_creating_new_level = true;
-                        }
-                    }else {
-                        game_state.play_sound_effect_ui_select();
-
-                        game_state.editor_state.set_level_index(level_index);
-
-                        //Set selected level
-                        game_state.set_screen(ScreenId::LevelEditor);
-                    }
-                }),
-            ),
-
-            level_preview: false,
-            is_creating_new_level: Default::default(),
-            is_editing_height: Default::default(),
-            is_deleting_level: Default::default(),
-            new_level_width_str: String::new(),
-            new_level_height_str: String::new(),
-
-            level_clipboard: None,
-        }
-    }
-
-    fn update_list_elements(&mut self, game_state: &GameState) {
-        let elements = self.level_editor_list.elements_mut();
-
-        //Remove all level editor entries and create new level entry
-        elements.drain(1..);
-
-        let level_pack = game_state.editor_state.get_current_level_pack().unwrap();
-        for (i, level) in level_pack.levels().iter().enumerate() {
-            elements.push(UIListElement::new(
-                utils::number_to_string_leading_ascii(2, i as u32 + 1, false),
-                Color::Black,
-                if level.best_moves().is_some() {
-                    Color::Green
-                }else {
-                    Color::Yellow
-                },
-            ));
-        }
-
-        let has_max_level_count = level_pack.level_count() == LevelPack::MAX_LEVEL_COUNT_PER_PACK;
-        elements.push(UIListElement::new(
-            " +",
-            Color::White,
-            if has_max_level_count {
-                Color::LightRed
-            }else {
-                Color::LightBlue
-            },
-        ));
-    }
-
-    fn draw_overview(&self, game_state: &GameState, console: &Console) {
-        console.reset_color();
-        console.set_underline(true);
-        console.draw_text(format!("Edit a level (Level pack \"{}\"):", game_state.editor_state.get_current_level_pack().unwrap().id()));
-        console.set_underline(false);
-
-        self.level_editor_list.draw(console);
-
-        let has_max_level_count = game_state.editor_state.get_current_level_pack().unwrap().level_count() == LevelPack::MAX_LEVEL_COUNT_PER_PACK;
-
-        let entry_count = self.level_editor_list.elements().len();
-
-        //Draw border for best time and best moves
-        let y = 4 + ((entry_count - 1)/24)*2;
-
-        console.set_cursor_pos(0, y);
-        console.set_color(Color::Cyan, Color::Default);
-        console.draw_text(".------------------------------------------------------------------------.");
-        for i in 1..4 {
-            console.set_cursor_pos(0, y + i);
-            console.draw_text("|                                                                        |");
-        }
-        console.set_cursor_pos(0, y + 4);
-        console.draw_text("\'------------------------------------------------------------------------\'");
-        console.reset_color();
-
-        let cursor_index = self.level_editor_list.cursor_index();
-        if self.is_creating_new_level {
-            console.set_cursor_pos(1, y + 1);
-            console.draw_text("Enter width and height for new level:");
-
-            console.set_color(if self.is_editing_height {
-                Color::LightBlue
-            }else {
-                Color::Cyan
-            }, Color::Default);
-            console.set_cursor_pos(1, y + 2);
-            console.draw_text(format!("Width: {}", &self.new_level_width_str));
-
-            console.set_color(if self.is_editing_height {
-                Color::Cyan
-            }else {
-                Color::LightBlue
-            }, Color::Default);
-            console.set_cursor_pos(14, y + 2);
-            console.draw_text(format!("Height: {}", &self.new_level_height_str));
-        }else if cursor_index == 0 {
-            console.reset_color();
-            console.set_cursor_pos(35, y + 2);
-            console.draw_text("Back");
-        }else {
-            let level_pack = game_state.editor_state.get_current_level_pack().unwrap();
-
-            if cursor_index - 1 == level_pack.level_count() {
-                //Level Editor entry
-                if has_max_level_count {
-                    let error_msg = format!(
-                        "Max level count ({}) reached",
-                        LevelPack::MAX_LEVEL_COUNT_PER_PACK,
-                    );
-
-                    let x_offset = ((Game::CONSOLE_MIN_WIDTH - error_msg.len()) as f64 * 0.5) as usize;
-                    console.set_cursor_pos(x_offset, y + 2);
-                    console.set_color(Color::LightRed, Color::Default);
-                    console.draw_text(error_msg);
-                }else {
-                    console.set_cursor_pos(30, y + 2);
-                    console.draw_text("Create a level");
-                }
-            }else {
-                let level = level_pack.levels().get(cursor_index - 1).unwrap();
-
-                //Draw best time and best moves
-                console.set_cursor_pos(1, y + 1);
-                console.draw_text("Selected level: ");
-                console.draw_text(format!("{:03}", cursor_index));
-
-                if level_pack.thumbnail_level_index().is_some_and(|index| index == cursor_index - 1) {
-                    console.draw_text(" [Thumbnail]");
-
-                    console.reset_color();
-                    console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 38, y + 2);
-                    console.draw_text("Press ");
-
-                    console.draw_key_input_text("t");
-
-                    console.reset_color();
-                    console.draw_text(" to unset level pack thumbnail");
-                }else {
-                    console.reset_color();
-                    console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 36, y + 2);
-                    console.draw_text("Press ");
-
-                    console.draw_key_input_text("t");
-
-                    console.reset_color();
-                    console.draw_text(" to set level pack thumbnail");
-                }
-
-                console.set_cursor_pos(1, y + 2);
-                console.draw_text(format!(
-                    "Size: {} x {}",
-                    level.level().width(),
-                    level.level().height(),
-                ));
-
-                console.set_cursor_pos(1, y + 3);
-                console.draw_text("Validation: ");
-                {
-                    if let Some(best_moves) = level.best_moves() {
-                        console.set_color(Color::Green, Color::Default);
-                        console.draw_text(format!("Best moves: {best_moves}"));
-                    }else {
-                        console.set_color(Color::Red, Color::Default);
-                        console.draw_text("You need to complete this level to validate it");
-                    }
-                }
-
-                console.reset_color();
-                console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 26, y + 1);
-                console.draw_text("Press ");
-
-                console.draw_key_input_text("p");
-
-                console.reset_color();
-                console.draw_text(" for level preview");
-            }
-        }
-    }
-
-    fn draw_level_preview(&self, game_state: &GameState, console: &Console) {
-        let cursor_index = self.level_editor_list.cursor_index();
-
-        if cursor_index == 1 {
-            console.draw_key_input_text("<");
-
-            console.reset_color();
-            console.draw_text(" Back");
-        }else if cursor_index > 1 {
-            console.draw_key_input_text("<");
-
-            console.reset_color();
-            console.draw_text(format!(" Level {:03}", cursor_index - 1));
-        }
-
-        if game_state.editor_state.get_current_level_pack().unwrap().level_count() > 0 &&
-                cursor_index < game_state.editor_state.get_current_level_pack().unwrap().level_count() {
-            console.reset_color();
-            console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 11, 0);
-            console.draw_text(format!("Level {:03} ", cursor_index + 1));
-
-            console.draw_key_input_text(">");
-        }
-
-        if game_state.editor_state.get_current_level_pack().unwrap().level_count() > 0 &&
-                cursor_index == game_state.editor_state.get_current_level_pack().unwrap().level_count() {
-            console.reset_color();
-            console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 16, 0);
-            console.draw_text("Create a level ");
-
-            console.draw_key_input_text(">");
-        }
-
-        if cursor_index == 0 {
-            let x = ((Game::CONSOLE_MIN_WIDTH - 40) as f64 * 0.5) as usize;
-            let y = ((Game::CONSOLE_MIN_HEIGHT - 5) as f64 * 0.5) as usize;
-
-            console.set_cursor_pos(x, y);
-            console.set_color(Color::Cyan, Color::Default);
-            console.draw_text(".--------------------------------------.");
-            for i in 1..4 {
-                console.set_cursor_pos(x, y + i);
-                console.draw_text("|                                      |");
-            }
-            console.set_cursor_pos(x, y + 4);
-            console.draw_text("\'--------------------------------------\'");
-
-            console.reset_color();
-            console.set_cursor_pos(35, y + 2);
-            console.draw_text("Back");
-        }else if cursor_index - 1 == game_state.editor_state.get_current_level_pack().unwrap().level_count() {
-            let has_max_level_count = game_state.editor_state.get_current_level_pack().unwrap().level_count() == LevelPack::MAX_LEVEL_COUNT_PER_PACK;
-
-            console.reset_color();
-            console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 11) as f64 * 0.5) as usize, 0);
-            console.draw_text("Preview (");
-
-            console.draw_key_input_text("p");
-
-            console.reset_color();
-            console.draw_text(")");
-
-            let x = ((Game::CONSOLE_MIN_WIDTH - 40) as f64 * 0.5) as usize;
-            let y = ((Game::CONSOLE_MIN_HEIGHT - 5) as f64 * 0.5) as usize;
-
-            console.set_cursor_pos(x, y);
-            console.set_color(Color::Cyan, Color::Default);
-            console.draw_text(".--------------------------------------.");
-            for i in 1..4 {
-                console.set_cursor_pos(x, y + i);
-                console.draw_text("|                                      |");
-            }
-            console.set_cursor_pos(x, y + 4);
-            console.draw_text("\'--------------------------------------\'");
-
-            if has_max_level_count {
-                let error_msg = format!(
-                    "Max level count ({}) reached",
-                    LevelPack::MAX_LEVEL_COUNT_PER_PACK,
-                );
-
-                let x_offset = ((Game::CONSOLE_MIN_WIDTH - error_msg.len()) as f64 * 0.5) as usize;
-                console.set_cursor_pos(x_offset, y + 2);
-                console.set_color(Color::LightRed, Color::Default);
-                console.draw_text(error_msg);
-            }else {
-                console.set_cursor_pos(30, y + 2);
-                console.reset_color();
-                console.draw_text("Create a level");
-            }
-        }else {
-            console.reset_color();
-            console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 23) as f64 * 0.5) as usize, 0);
-            console.draw_text("Preview (");
-
-            console.draw_key_input_text("p");
-
-            console.reset_color();
-            console.draw_text(format!(") [Level {:03}]", cursor_index));
-
-            let level = game_state.editor_state.get_current_level_pack().unwrap().levels()[cursor_index - 1].level();
-
-            let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
-            let y_offset = 1;
-
-            level.draw(console, x_offset, y_offset, game_state.is_player_background(), None);
-        }
-    }
-}
-
-impl Screen for ScreenLevelPackEditor {
-    fn draw(&self, game_state: &GameState, console: &Console) {
-        if self.level_preview {
-            self.draw_level_preview(game_state, console);
-        }else {
-            self.draw_overview(game_state, console);
-        }
-    }
-
-    fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
-        if self.is_creating_new_level {
-            match key {
-                key if key.is_ascii() && key.is_numeric() => {
-                    if self.is_editing_height {
-                        if self.new_level_height_str.len() >= 2 {
-                            return;
-                        }
-
-                        let _ = write!(self.new_level_height_str, "{}", key.to_ascii().unwrap() as char);
-                    }else {
-                        if self.new_level_width_str.len() >= 2 {
-                            return;
-                        }
-
-                        let _ = write!(self.new_level_width_str, "{}", key.to_ascii().unwrap() as char);
-                    }
-                },
-                Key::DELETE => {
-                    if self.is_editing_height {
-                        self.new_level_height_str.pop();
-                    }else {
-                        self.new_level_width_str.pop();
-                    }
-                },
-
-                Key::TAB => {
-                    self.is_editing_height = !self.is_editing_height;
-                },
-
-                Key::ENTER => {
-                    if !(1..=2).contains(&self.new_level_width_str.len()) {
-                        game_state.open_dialog(Dialog::new_ok_error(format!("Width must be >= 3 and <= {}!", Game::LEVEL_MAX_WIDTH)));
-
-                        return;
-                    }
-
-                    let Ok(width) = usize::from_str(&self.new_level_width_str) else {
-                        game_state.open_dialog(Dialog::new_ok_error("Width must be a number"));
-
-                        return;
-                    };
-
-                    if !(3..=Game::LEVEL_MAX_WIDTH).contains(&width) {
-                        game_state.open_dialog(Dialog::new_ok_error(format!("Width must be >= 3 and <= {}!", Game::LEVEL_MAX_WIDTH)));
-
-                        return;
-                    }
-
-                    if self.new_level_height_str.is_empty() && !self.is_editing_height {
-                        self.is_editing_height = true;
-
-                        return;
-                    }
-
-                    if !(1..=2).contains(&self.new_level_height_str.len()) {
-                        game_state.open_dialog(Dialog::new_ok_error(format!("Height must be >= 3 and <= {}!", Game::LEVEL_MAX_HEIGHT)));
-
-                        return;
-                    }
-
-                    let Ok(height) = usize::from_str(&self.new_level_height_str) else {
-                        game_state.open_dialog(Dialog::new_ok_error("Height must be a number"));
-
-                        return;
-                    };
-
-                    if !(3..=Game::LEVEL_MAX_HEIGHT).contains(&height) {
-                        game_state.open_dialog(Dialog::new_ok_error(format!("Height must be >= 3 and <= {}!", Game::LEVEL_MAX_HEIGHT)));
-
-                        return;
-                    }
-
-                    game_state.play_sound_effect_ui_select();
-
-                    game_state.editor_state.get_current_level_pack_mut().unwrap().add_level(Level::new(width, height));
-
-                    self.is_creating_new_level = false;
-                    self.is_editing_height = false;
-                    self.new_level_width_str = String::new();
-                    self.new_level_height_str = String::new();
-
-                    game_state.editor_state.set_level_index(self.level_editor_list.cursor_index() - 1);
-                    game_state.set_screen(ScreenId::LevelEditor);
-                },
-
-                Key::ESC => {
-                    game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
-
-                    self.is_creating_new_level = false;
-                    self.is_editing_height = false;
-                    self.new_level_width_str = String::new();
-                    self.new_level_height_str = String::new();
-                },
-
-                _ => {},
-            }
-
-            return;
-        }
-
-        if key == Key::ESC {
-            game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
-
-            if self.level_preview {
-                self.level_preview = false;
-            }else {
-                game_state.set_screen(ScreenId::SelectLevelPackEditor);
-            }
-
-            return;
-        }
-
-        if key == Key::P {
-            game_state.play_sound_effect_ui_select();
-
-            self.level_preview = !self.level_preview;
-
-            return;
-        }
-
-        let cursor_index = self.level_editor_list.cursor_index();
-        if cursor_index > 0 {
-            let selected_level_index = cursor_index - 1;
-
-            match key {
-                Key::T => {
-                    if selected_level_index != game_state.editor_state.get_current_level_pack().unwrap().level_count() {
-                        game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
-
-                        if game_state.editor_state.get_current_level_pack().unwrap().
-                                thumbnail_level_index().is_some_and(|index| index == selected_level_index) {
-                            game_state.editor_state.get_current_level_pack_mut().unwrap().set_thumbnail_level_index(None);
-                        }else {
-                            game_state.editor_state.get_current_level_pack_mut().unwrap().set_thumbnail_level_index(Some(selected_level_index));
-                        }
-
-                        if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
-                            game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
-                        }
-
-                        self.update_list_elements(game_state);
-                    }
-                },
-
-                Key::C => {
-                    if selected_level_index != game_state.editor_state.get_current_level_pack().unwrap().level_count() {
-                        game_state.play_sound_effect_ui_select();
-
-                        self.level_clipboard = Some(game_state.editor_state.get_current_level_pack().unwrap().levels()[selected_level_index].clone());
-                    }
-                },
-
-                Key::X => {
-                    if selected_level_index != game_state.editor_state.get_current_level_pack().unwrap().level_count() {
-                        game_state.play_sound_effect_ui_select();
-
-                        let level_pack = game_state.editor_state.get_current_level_pack_mut().unwrap();
-                        self.level_clipboard = Some(level_pack.levels_mut().remove(selected_level_index));
-                        level_pack.calculate_stats_sum();
-
-                        if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
-                            game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
-                        }
-                    }
-
-                    self.update_list_elements(game_state);
-                },
-
-                Key::V => {
-                    if let Some(ref level) = self.level_clipboard {
-                        if game_state.editor_state.get_current_level_pack().unwrap().level_count() == LevelPack::MAX_LEVEL_COUNT_PER_PACK {
-                            game_state.open_dialog(Dialog::new_ok_error(format!(
-                                "Cannot paste level (Max level count ({}) reached)",
-                                LevelPack::MAX_LEVEL_COUNT_PER_PACK,
-                            )));
-                        }else {
-                            game_state.play_sound_effect(audio::UI_SELECT_EFFECT);
-
-                            let level_pack = game_state.editor_state.get_current_level_pack_mut().unwrap();
-                            level_pack.levels_mut().insert(selected_level_index, level.clone());
-                            level_pack.calculate_stats_sum();
-
-                            if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
-                                game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
-                            }
-                        }
-                    }else {
-                        game_state.open_dialog(Dialog::new_ok_error("No level in clipboard!\nPlease copy a level by pressing \"C\" or cut a level by pressing \"X\"."));
-                    }
-
-                    self.update_list_elements(game_state);
-                },
-
-                Key::DELETE => {
-                    if game_state.editor_state.selected_level_index != game_state.editor_state.get_current_level_pack().unwrap().level_count() {
-                        self.is_deleting_level = true;
-
-                        game_state.open_dialog(Dialog::new_yes_no(format!("Do you really want to delete level {}?", game_state.editor_state.selected_level_index + 1)));
-                    }
-                },
-
-                _ => {},
-            }
-        }
-
-        self.level_editor_list.on_key_press(&mut self.is_creating_new_level, game_state, key);
-    }
-
-    fn on_mouse_pressed(&mut self, game_state: &mut GameState, column: usize, row: usize) {
-        if self.level_preview {
-            if row == 0 {
-                let center_text_start = ((Game::CONSOLE_MIN_WIDTH - 23) as f64 * 0.5) as usize;
-
-                if column < 11 {
-                    self.on_key_pressed(game_state, Key::LEFT);
-                }else if column >= center_text_start && column < center_text_start + 23 {
-                    self.on_key_pressed(game_state, Key::ENTER);
-                }else if column > Game::CONSOLE_MIN_WIDTH - 12 {
-                    self.on_key_pressed(game_state, Key::RIGHT);
-                }
-
-                let selected_level = game_state.editor_state.get_level_index();
-                if game_state.editor_state.get_current_level_pack().unwrap().level_count() > 0 &&
-                        selected_level == game_state.editor_state.get_current_level_pack().unwrap().level_count() - 1 &&
-                        column > Game::CONSOLE_MIN_WIDTH - 17 {
-                    self.on_key_pressed(game_state, Key::RIGHT);
-                }
-            }
-
-            return;
-        }
-
-        if row == 0 {
-            return;
-        }
-
-        let element_count = self.level_editor_list.elements().len();
-        let y = 4 + ((element_count - 1)/24)*2;
-        if row == y + 1 && (Game::CONSOLE_MIN_WIDTH - 26..Game::CONSOLE_MIN_WIDTH - 1).contains(&column) {
-            self.on_key_pressed(game_state, Key::P);
-        }
-
-        if row == y + 2 && (Game::CONSOLE_MIN_WIDTH - 38..Game::CONSOLE_MIN_WIDTH - 1).contains(&column) {
-            self.on_key_pressed(game_state, Key::T);
-        }
-
-        self.level_editor_list.on_mouse_pressed(&mut self.is_creating_new_level, game_state, column, row);
-    }
-
-    fn on_dialog_selection(&mut self, game_state: &mut GameState, selection: DialogSelection) {
-        if self.is_deleting_level {
-            self.is_deleting_level = false;
-
-            if selection == DialogSelection::Yes {
-                let index = game_state.editor_state.selected_level_index;
-                let level_pack = game_state.editor_state.get_current_level_pack_mut().unwrap();
-                level_pack.levels_mut().remove(index);
-                level_pack.calculate_stats_sum();
-
-                if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
-                    game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
-                }
-            }
-
-            self.update_list_elements(game_state);
-            //Cursor index will always be inbound after level pack deletion because of the Create Level Entry
-        }
-    }
-
-    fn on_set_screen(&mut self, game_state: &mut GameState) {
-        self.update_list_elements(game_state);
-
-        self.level_editor_list.set_cursor_index(game_state.editor_state.get_level_index() + 1);
-
-        if let Some(background_music_id) = game_state.editor_state.get_current_level_pack().as_ref().unwrap().background_music_id() {
-            game_state.set_background_music_loop(audio::BACKGROUND_MUSIC_TRACKS.get_track_by_id(background_music_id));
-        }else {
-            game_state.stop_background_music();
-        }
-
-        self.level_preview = false;
-    }
-}
-
-pub struct ScreenLevelEditor {
-    level: UndoHistory<Level>,
-    is_vertical_input: bool,
-    is_reverse_input: bool,
-    should_exit_after_save: bool,
-    last_saved_history_index: usize,
-    continue_flag: bool,
-    validation_result_history_index: usize,
-    //TODO best time
-    validation_best_moves: Option<u32>,
-    animation_first_frame: bool,
-    playing_level: Option<PlayingLevel>,
-    cursor_pos: (usize, usize),
-
-    show_floor: bool,
-}
-
-impl ScreenLevelEditor {
-    pub const UNDO_HISTORY_SIZE: usize = 1000;
-    pub const UNDO_HISTORY_SIZE_PLAYING: usize = 10000;
-
-    pub fn new() -> Self {
-        Self {
-            level: UndoHistory::new(Self::UNDO_HISTORY_SIZE, Level::new(1, 1)),
-            is_vertical_input: Default::default(),
-            is_reverse_input: Default::default(),
-            should_exit_after_save: false,
-            last_saved_history_index: 0,
-            continue_flag: false,
-            validation_result_history_index: 0,
-            //TODO best time
-            validation_best_moves: None,
-            animation_first_frame: false,
-            playing_level: Default::default(),
-            cursor_pos: Default::default(),
-
-            show_floor: false,
-        }
-    }
-
-    fn on_key_pressed_playing(&mut self, game_state: &mut GameState, key: Key) {
-        if self.continue_flag {
-            if key == Key::ENTER {
-                self.continue_flag = false;
-                self.playing_level = None;
-
-                game_state.open_dialog(Dialog::new_yes_no("Save changes and level validation state?"));
-                self.should_exit_after_save = false;
-            }
-
-            return;
-        }
-
-        if let Some(playing_level) = self.playing_level.as_mut() && !playing_level.is_playing_animation() {
-            if matches!(key, Key::U | Key::Z | Key::Y) {
-                let is_redo = key == Key::Y;
-
-                let level = if is_redo {
-                    playing_level.redo_move()
-                }else {
-                    playing_level.undo_move()
-                };
-
-                if level.is_some() {
-                    game_state.play_sound_effect(audio::UNDO_REDO_EFFECT);
-                }
-            }
-
-            let direction = match key {
-                Key::W | Key::UP => Some(Direction::Up),
-                Key::A | Key::LEFT => Some(Direction::Left),
-                Key::S | Key::DOWN => Some(Direction::Down),
-                Key::D | Key::RIGHT => Some(Direction::Right),
-
-                _ => None,
-            };
-
-            if let Some(direction) = direction {
-                let move_result = playing_level.move_player(direction);
-                if move_result.is_animation() {
-                    self.animation_first_frame = true;
-                }
-                self.handle_move_result(game_state, move_result);
-            }
-        }
-    }
-
-    fn on_key_pressed_editing(&mut self, game_state: &mut GameState, key: Key) {
-        match key {
-            Key::LEFT => {
-                if self.cursor_pos.0 > 0 {
-                    self.cursor_pos.0 -= 1;
-                }else {
-                    self.cursor_pos.0 = self.level.current().width() - 1;
-                }
-            },
-            Key::UP => {
-                if self.cursor_pos.1 > 0 {
-                    self.cursor_pos.1 -= 1;
-                }else {
-                    self.cursor_pos.1 = self.level.current().height() - 1;
-                }
-            },
-            Key::RIGHT => {
-                if self.cursor_pos.0 < self.level.current().width() - 1 {
-                    self.cursor_pos.0 += 1;
-                }else {
-                    self.cursor_pos.0 = 0;
-                }
-            },
-            Key::DOWN => {
-                if self.cursor_pos.1 < self.level.current().height() - 1 {
-                    self.cursor_pos.1 += 1;
-                }else {
-                    self.cursor_pos.1 = 0;
-                }
-            },
-
-            Key::DELETE => {
-                if self.is_vertical_input {
-                    if self.level.current().width() == 3 {
-                        game_state.open_dialog(Dialog::new_ok_error(format!(
-                            "Level width limit reached (min: {})",
-                            3,
-                        )));
-
-                        return;
-                    }
-
-                    let index = self.cursor_pos.0;
-
-                    let level_orig = self.level.current().clone();
-                    let mut new_level = Level::new(level_orig.width() - 1, level_orig.height());
-
-                    if index == new_level.width() {
-                        self.cursor_pos.0 -= 1;
-                    }
-
-                    for i in 0..level_orig.height() {
-                        for mut j in 0..level_orig.width() {
-                            let tile = level_orig.get_tile(j, i).unwrap();
-
-                            if j == index {
-                                continue;
-                            }
-
-                            if j >= index {
-                                j -= 1;
-                            }
-
-                            new_level.set_tile(j, i, tile);
-                        }
-                    }
-
-                    self.level.commit_change(new_level);
-                }else {
-                    if self.level.current().height() == 3 {
-                        game_state.open_dialog(Dialog::new_ok_error(format!(
-                            "Level height limit reached (min: {})",
-                            3,
-                        )));
-
-                        return;
-                    }
-
-                    let index = self.cursor_pos.1;
-
-                    let level_orig = self.level.current().clone();
-                    let mut new_level = Level::new(level_orig.width(), level_orig.height() - 1);
-
-                    if index == new_level.height() {
-                        self.cursor_pos.1 -= 1;
-                    }
-
-                    for i in 0..level_orig.width() {
-                        for mut j in 0..level_orig.height() {
-                            let tile = level_orig.get_tile(i, j).unwrap();
-
-                            if j == index {
-                                continue;
-                            }
-
-                            if j >= index {
-                                j -= 1;
-                            }
-
-                            new_level.set_tile(i, j, tile);
-                        }
-                    }
-
-                    self.level.commit_change(new_level);
-                }
-            },
-
-            Key::W | Key::A | Key::S | Key::D => {
-                self.is_vertical_input = key == Key::W || key == Key::S;
-                self.is_reverse_input = key == Key::W || key == Key::A;
-            },
-
-            Key::C | Key::I => {
-                let is_copy = key == Key::C;
-
-                if self.is_vertical_input {
-                    if self.level.current().height() == Game::LEVEL_MAX_HEIGHT {
-                        game_state.open_dialog(Dialog::new_ok_error(format!(
-                            "Level height limit reached (max: {})",
-                            Game::LEVEL_MAX_HEIGHT,
-                        )));
-
-                        return;
-                    }
-
-                    let index_orig = self.cursor_pos.1;
-                    if !self.is_reverse_input {
-                        self.cursor_pos.1 += 1;
-                    }
-                    let index = self.cursor_pos.1;
-
-                    let level_orig = self.level.current().clone();
-                    let mut new_level = Level::new(level_orig.width(), level_orig.height() + 1);
-
-                    for i in 0..level_orig.width() {
-                        for mut j in 0..level_orig.height() {
-                            let tile = level_orig.get_tile(i, j).unwrap();
-
-                            if j >= index {
-                                j += 1;
-                            }
-
-                            new_level.set_tile(i, j, tile);
-                        }
-
-                        let tile = if is_copy {
-                            level_orig.get_tile(i, index_orig).unwrap()
-                        }else {
-                            Tile::Empty
-                        };
-                        new_level.set_tile(i, index, tile);
-                    }
-
-                    self.level.commit_change(new_level);
-                }else {
-                    if self.level.current().width() == Game::LEVEL_MAX_WIDTH {
-                        game_state.open_dialog(Dialog::new_ok_error(format!(
-                            "Level width limit reached (max: {})",
-                            Game::LEVEL_MAX_WIDTH,
-                        )));
-
-                        return;
-                    }
-
-                    let index_orig = self.cursor_pos.0;
-                    if !self.is_reverse_input {
-                        self.cursor_pos.0 += 1;
-                    }
-                    let index = self.cursor_pos.0;
-
-                    let level_orig = self.level.current().clone();
-                    let mut new_level = Level::new(level_orig.width() + 1, level_orig.height());
-
-                    for i in 0..level_orig.height() {
-                        for mut j in 0..level_orig.width() {
-                            let tile = level_orig.get_tile(j, i).unwrap();
-
-                            if j >= index {
-                                j += 1;
-                            }
-
-                            new_level.set_tile(j, i, tile);
-                        }
-
-                        let tile = if is_copy {
-                            level_orig.get_tile(index_orig, i).unwrap()
-                        }else {
-                            Tile::Empty
-                        };
-                        new_level.set_tile(index, i, tile);
-                    }
-
-                    self.level.commit_change(new_level);
-                }
-            },
-
-            Key::U | Key::Z | Key::Y => {
-                let is_redo = key == Key::Y;
-
-                let level = if is_redo {
-                    self.level.redo()
-                }else {
-                    self.level.undo()
-                };
-
-                if let Some(level) = level {
-                    if self.cursor_pos.0 >= level.width() {
-                        self.cursor_pos.0 = level.width() - 1;
-                    }
-
-                    if self.cursor_pos.1 >= level.height() {
-                        self.cursor_pos.1 = level.height() - 1;
-                    }
-                }
-            },
-
-            Key::ENTER => {
-                game_state.open_dialog(Dialog::new_yes_no("Save changes and level validation state?"));
-                self.should_exit_after_save = false;
-            },
-
-            key if key.is_ascii() => {
-                if let Ok(tile_input) = Tile::from_ascii(key.to_ascii().unwrap()) && tile_input != Tile::Secret {
-                    //Swap input key for Key In Goal and Fragile Floor
-                    let tile_input = match tile_input {
-                        Tile::KeyInGoal => Tile::FragileFloor,
-                        Tile::FragileFloor => Tile::KeyInGoal,
-                        tile => tile,
-                    };
-
-                    let mut level = self.level.current().clone();
-                    let tile = level.get_tile_mut(self.cursor_pos.0, self.cursor_pos.1).unwrap();
-
-                    if *tile != tile_input {
-                        *tile = tile_input;
-
-                        self.level.commit_change(level);
-                    }
-                }
-
-                if self.is_vertical_input {
-                    self.on_key_pressed_editing(game_state, if self.is_reverse_input {
-                        Key::UP
-                    }else {
-                        Key::DOWN
-                    });
-                }else {
-                    self.on_key_pressed_editing(game_state, if self.is_reverse_input {
-                        Key::LEFT
-                    }else {
-                        Key::RIGHT
-                    });
-                }
-            },
-
-            _ => {},
-        }
-    }
-
-    fn handle_move_result(&mut self, game_state: &mut GameState, move_result: MoveResult) {
-        let Some(playing_level) = self.playing_level.as_ref() else {
-            return;
-        };
-
-        match move_result {
-            MoveResult::Valid { has_won, sound_effect, .. } => {
-                if has_won {
-                    self.continue_flag = true;
-
-                    //TODO best time
-
-                    //Use current index of playing level history
-                    let moves = playing_level.current_move_index() as u32;
-                    if self.validation_best_moves.is_none_or(|best_moves| moves < best_moves) ||
-                            self.validation_result_history_index != self.level.current_index() {
-                        //Always update best moves of validation if level was changed
-                        self.validation_best_moves = Some(moves);
-
-                        //Mark level as unsaved
-                        self.last_saved_history_index = Self::UNDO_HISTORY_SIZE + 1;
-                    }
-
-                    //Update validation
-                    self.validation_result_history_index = self.level.current_index(); //Use current index of editor level history
-
-                    game_state.play_sound_effect(audio::LEVEL_COMPLETE_EFFECT);
-                }
-
-                game_state.play_sound_effect(audio::STEP_EFFECT);
-
-                if let Some(sound_effect) = sound_effect {
-                    game_state.play_level_sound_effect(sound_effect);
-                }
-            },
-
-            MoveResult::Invalid => {
-                game_state.play_sound_effect(audio::NO_PATH_EFFECT);
-            },
-
-            MoveResult::Animation { sound_effect, .. } => {
-                if self.animation_first_frame {
-                    game_state.play_sound_effect(audio::STEP_EFFECT);
-                }
-
-                if let Some(sound_effect) = sound_effect {
-                    game_state.play_level_sound_effect(sound_effect);
-                }
-            },
-        };
-    }
-}
-
-impl Screen for ScreenLevelEditor {
-    fn draw(&self, game_state: &GameState, console: &Console) {
-        console.reset_color();
-        if let Some(level_history) = &self.playing_level {
-            console.draw_text("Playing");
-
-            if self.continue_flag {
-                console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 16) as f64 * 0.5) as usize, 0);
-                console.draw_text("Level validated!");
-            }else if self.show_floor {
-                console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 14) as f64 * 0.5) as usize, 0);
-                console.draw_text("Show tiles (");
-                console.draw_key_input_text("q");
-                console.reset_color();
-                console.draw_text(")");
-            }
-
-            console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 11) as f64 * 0.75) as usize, 0);
-            console.draw_text(format!("Moves: {:04}", level_history.current_move_index()));
-        }else {
-            console.draw_text(format!(
-                "Editing ({})",
-                match self.is_vertical_input {
-                    true if self.is_reverse_input => "^",
-                    true => "v",
-                    false if self.is_reverse_input => "<",
-                    false => ">",
-                }
-            ));
-
-            if self.show_floor {
-                console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 14) as f64 * 0.5) as usize, 0);
-                console.draw_text("Show tiles (");
-                console.draw_key_input_text("q");
-                console.reset_color();
-                console.draw_text(")");
-            }else {
-                console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 14) as f64 * 0.5) as usize, 0);
-                console.draw_text(format!("Cursor ({:02}:{:02})", self.cursor_pos.0 + 1, self.cursor_pos.1 + 1));
-            }
-
-            console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 10) as f64 * 0.75) as usize, 0);
-            console.draw_text("Saved: ");
-            if self.last_saved_history_index == self.level.current_index() {
-                console.set_color(Color::Green, Color::Default);
-                console.draw_text("Yes");
-            }else {
-                console.set_color(Color::Red, Color::Default);
-                console.draw_text(" No");
-            }
-
-            console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 14, 0);
-            console.reset_color();
-            console.draw_text("Validated: ");
-            {
-                let validated = self.validation_result_history_index == self.level.current_index() &&
-                        self.validation_best_moves.is_some();
-
-                if validated {
-                    console.set_color(Color::Green, Color::Default);
-                    console.draw_text("Yes");
-                }else {
-                    console.set_color(Color::Red, Color::Default);
-                    console.draw_text(" No");
-                }
-            }
-        }
-
-        console.reset_color();
-        console.set_cursor_pos(((Game::CONSOLE_MIN_WIDTH - 9) as f64 * 0.25) as usize, 0);
-        console.draw_text("Level: ");
-        console.draw_text(utils::number_to_string_leading_ascii(2, game_state.editor_state.selected_level_index as u32 + 1, true));
-
-        let x_offset = ((Game::CONSOLE_MIN_WIDTH - self.level.current().width()) as f64 * 0.5) as usize;
-        let y_offset = 1;
-
-
-        if let Some(playing_level) = self.playing_level.as_ref() {
-            let level = &playing_level.current_playing_level().0;
-
-            if self.show_floor {
-                level.draw_floor(console, x_offset, y_offset, game_state.is_player_background(), playing_level.original_level(), None);
-            }else {
-                level.draw(console, x_offset, y_offset, game_state.is_player_background(), None);
-            }
-        }else {
-            let level = self.level.current();
-
-            if self.show_floor {
-                level.draw_floor(console, x_offset, y_offset, game_state.is_player_background(), level, Some(self.cursor_pos));
-            }else {
-                level.draw(console, x_offset, y_offset, game_state.is_player_background(), Some(self.cursor_pos));
-            }
-        }
-    }
-
-    fn animate(&mut self, game_state: &mut GameState) {
-        if game_state.is_dialog_opened() || self.continue_flag {
-            return;
-        }
-
-        if let Some(playing_level) = &mut self.playing_level &&
-                playing_level.is_playing_animation() && !self.animation_first_frame {
-            let move_result = playing_level.continue_animation();
-            self.handle_move_result(game_state, move_result);
-        }
-        self.animation_first_frame = false;
-    }
-    
-    fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
-        if key == Key::ESC {
-            game_state.open_dialog(Dialog::new_yes_cancel_no("Exiting (Save changes and level validation state?)"));
-            self.should_exit_after_save = true;
-
-            return;
-        }
-
-        if key == Key::R {
-            self.show_floor = false;
-
-            self.playing_level = if self.playing_level.is_some() {
-                game_state.play_sound_effect(audio::LEVEL_RESET);
-
-                None
-            }else {
-                self.animation_first_frame = false;
-                self.continue_flag = false;
-
-                let playing_level = PlayingLevel::new(self.level.current(), Self::UNDO_HISTORY_SIZE_PLAYING);
-                match playing_level {
-                    Ok(playing_level) => {
-                        Some(playing_level)
-                    },
-
-                    Err(err) => {
-                        game_state.open_dialog(Dialog::new_ok_error(err.to_string()));
-
-                        return;
-                    },
-                }
-            };
-
-            return;
-        }
-
-        if key == Key::Q {
-            game_state.play_sound_effect_ui_select();
-            self.show_floor = !self.show_floor;
-
-            return;
-        }
-
-        if self.playing_level.is_none() {
-            let old_history_len = self.level.len();
-            let old_history_index = self.level.current_index();
-            let is_redo = key == Key::Y;
-
-            self.on_key_pressed_editing(game_state, key);
-
-            let new_history_len = self.level.len();
-            let new_history_index = self.level.current_index();
-
-            //Undo: New history len is same and new index is smaller
-            //Redo: New history len is same and new index is larger
-            //Commit change without previous undo: New history len is larger and new index is larger
-            //Commit change with previous undo(s): New history len is same or smaller and new index is larger
-
-            //Level is no longer valid if changed (one or more changes), then validated, then one or more undo(s), and then change again
-            if self.validation_result_history_index >= new_history_index && !is_redo &&
-                    new_history_len <= old_history_len && old_history_index + 1 == new_history_index {
-                self.validation_best_moves = None;
-            }
-        }else {
-            self.on_key_pressed_playing(game_state, key);
-        }
-    }
-
-    fn on_mouse_pressed(&mut self, _: &mut GameState, column: usize, row: usize) {
-        if row == 0 || self.playing_level.is_some() {
-            return;
-        }
-
-        let x_offset = ((Game::CONSOLE_MIN_WIDTH - self.level.current().width()) as f64 * 0.5) as usize;
-        let y_offset = 1;
-
-        if column < x_offset {
-            return;
-        }
-
-        let x = column - x_offset;
-        if x >= self.level.current().width() {
-            return;
-        }
-
-        let y = row - y_offset;
-        if y >= self.level.current().height() {
-            return;
-        }
-
-        self.cursor_pos = (x, y);
-    }
-
-    fn on_dialog_selection(&mut self, game_state: &mut GameState, selection: DialogSelection) {
-        if selection == DialogSelection::Yes {
-            let index = game_state.editor_state.selected_level_index;
-            let level_pack = game_state.editor_state.get_current_level_pack_mut().unwrap();
-            let level = level_pack.levels_mut().get_mut(index).unwrap();
-
-            *level.level_mut() = self.level.current().clone();
-
-            if self.validation_result_history_index == self.level.current_index() {
-                //TODO best time
-                level.set_best_moves(self.validation_best_moves);
-            }else {
-                //Reset validation if editor level current history index does not match validation history index
-                //TODO best time
-                level.set_best_moves(None);
-            }
-            level_pack.calculate_stats_sum();
-
-            if let Err(err) = game_state.editor_state.get_current_level_pack().unwrap().save_editor_level_pack() {
-                game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
-            }else {
-                self.last_saved_history_index = self.level.current_index();
-            }
-        }
-
-        if self.should_exit_after_save && (selection == DialogSelection::Yes || selection == DialogSelection::No) {
-            self.level.clear();
-            game_state.set_screen(ScreenId::LevelPackEditor);
-        }
-
-        //No (should not exit): Close dialog without doing anything
-        //Cancel: Close dialog without doing anything
-    }
-
-    fn on_set_screen(&mut self, game_state: &mut GameState) {
-        self.is_vertical_input = false;
-        self.is_reverse_input = false;
-        self.playing_level = None;
-        self.cursor_pos = (0, 0);
-
-        let level = game_state.editor_state.get_current_level_pack().
-                unwrap().levels().get(game_state.editor_state.selected_level_index).unwrap();
-        self.level.clear_with_new_initial(level.level().clone());
-
-        self.last_saved_history_index = 0;
-
-        //Validation is valid for first history element
-        self.validation_result_history_index = 0;
-        //TODO best time
-        self.validation_best_moves = level.best_moves();
-
-        self.show_floor = false;
     }
 }

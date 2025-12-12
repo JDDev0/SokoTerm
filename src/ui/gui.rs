@@ -11,15 +11,13 @@ use bevy::window::{PrimaryWindow, WindowMode, WindowResized};
 use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use bevy::log::LogPlugin;
 use crate::game::Game;
+use crate::game::level::Tile;
 use crate::game::screen::dialog::Dialog;
 use crate::io::bevy_abstraction::{ConsoleState, Key, COLOR_SCHEMES};
 use crate::io::Console;
 
 #[cfg(feature = "steam")]
 use bevy_steamworks::*;
-#[cfg(feature = "steam")]
-use crate::game::level::LevelPack;
-use crate::game::level::Tile;
 #[cfg(feature = "steam")]
 use crate::ui::gui::steam_plugin::SteamPlugin;
 
@@ -72,15 +70,6 @@ struct CharacterScaling {
 #[derive(Debug, Default, Clone, Copy, Resource)]
 struct CurrentColorSchemeIndex(usize);
 
-#[derive(Debug, Hash, PartialEq, Eq, Clone, Default, States)]
-enum AppState {
-    #[default]
-    InGame,
-
-    #[cfg(feature = "steam")]
-    SteamWorkshopUploadPopup,
-}
-
 pub fn run_game() -> ExitCode {
     let mut app = App::new();
 
@@ -118,27 +107,6 @@ pub fn run_game() -> ExitCode {
 
     #[cfg(feature = "steam")]
     {
-        let subscribed_items_count = steam_client.ugc().subscribed_items(false).len();
-        let mut count_already_loaded_level_packs = game.game_state().level_packs().len();
-        if !game.game_state().level_packs().iter().any(|level_pack| level_pack.id() == "secret") {
-            count_already_loaded_level_packs += 1;
-        }
-
-        let level_count_sum = subscribed_items_count + count_already_loaded_level_packs;
-
-        if level_count_sum > LevelPack::MAX_LEVEL_PACK_COUNT {
-            startup_error::show_startup_error_dialog(&mut app, &format!(
-                "You have subscribed to too many level packs ({}, max: {})!\nPlease unsubscribe from {} level pack(s) to continue playing.\n\n\
-                Sorry, but I'm too lazy to implement scroll bars for now...",
-
-                subscribed_items_count,
-                LevelPack::MAX_LEVEL_PACK_COUNT - count_already_loaded_level_packs,
-                subscribed_items_count - (LevelPack::MAX_LEVEL_PACK_COUNT - count_already_loaded_level_packs),
-            ));
-
-            return ExitCode::FAILURE;
-        }
-
         app.add_plugins(SteamPlugin);
     }
 
@@ -158,8 +126,6 @@ pub fn run_game() -> ExitCode {
                 ..default()
             }).disable::<LogPlugin>()).
 
-            init_state::<AppState>().
-
             insert_resource(Time::<Fixed>::from_seconds(0.040)). //Run FixedUpdate every 40ms
             insert_resource(ClearColor(crate::io::bevy_abstraction::Color::Default.into_bevy_color(&COLOR_SCHEMES[settings.color_scheme_index()]))).
             insert_resource(CharacterScaling::default()).
@@ -169,16 +135,14 @@ pub fn run_game() -> ExitCode {
             add_systems(Startup, update_text_entities).
             insert_non_send_resource(game).
 
-            add_systems(FixedUpdate, update_game.run_if(in_state(AppState::InGame))).
+            add_systems(FixedUpdate, update_game).
 
-            add_systems(Update, draw_console_text.run_if(in_state(AppState::InGame))).
+            add_systems(Update, draw_console_text).
             add_systems(Update, cycle_through_color_schemes.
                     pipe(handle_recoverable_error).
-                    run_if(in_state(AppState::InGame)).
                     before(draw_console_text)).
             add_systems(Update, toggle_tile_mode.
                     pipe(handle_recoverable_error).
-                    run_if(in_state(AppState::InGame)).
                     before(draw_console_text)).
             add_systems(Update, (on_resize, toggle_fullscreen));
 
@@ -209,8 +173,6 @@ pub fn run_game() -> ExitCode {
     insert_embedded_asset!(embedded, assets::textures::tiles::HOLE);
     insert_embedded_asset!(embedded, assets::textures::tiles::BOX_IN_HOLE);
 
-    insert_embedded_asset!(embedded, assets::textures::tiles::SECRET);
-
     //Fonts
     insert_embedded_asset!(embedded, assets::font::JETBRAINS_MONO_BOLD_BYTES);
 
@@ -230,14 +192,10 @@ fn handle_recoverable_error(
     In(result): In<Result<(), Box<dyn Error>>>,
 
     mut game: NonSendMut<Game>,
-
-    mut app_state_next_state: ResMut<NextState<AppState>>,
 ) {
     let Err(err) = result else {
         return;
     };
-
-    app_state_next_state.set(AppState::InGame);
 
     error!("An error occurred: {err}");
     game.game_state_mut().open_dialog(Dialog::new_ok_error(format!("An error occurred:\n{err}")));
@@ -330,9 +288,6 @@ fn update_game(
     mut mouse_event: MessageReader<MouseButtonInput>,
 
     mut app_exit_event_writer: MessageWriter<AppExit>,
-
-    #[cfg(feature = "steam")]
-    mut app_state_next_state: ResMut<NextState<AppState>>,
 ) {
     {
         let window = window_query.single().unwrap();
@@ -383,11 +338,6 @@ fn update_game(
 
     if should_stop {
         app_exit_event_writer.write(AppExit::Success);
-    }
-
-    #[cfg(feature = "steam")]
-    if game.game_state().show_workshop_upload_popup {
-        app_state_next_state.set(AppState::SteamWorkshopUploadPopup);
     }
 }
 
@@ -561,8 +511,6 @@ fn draw_console_text(
 
                     Tile::Hole => asset_server.load("embedded://textures/tiles/hole.png"),
                     Tile::BoxInHole => asset_server.load("embedded://textures/tiles/box_in_hole.png"),
-
-                    Tile::Secret => asset_server.load("embedded://textures/tiles/secret.png"),
 
                     _ => unreachable!(),
                 };

@@ -13,7 +13,6 @@ pub const BOOK_FLIP_EFFECT: &[u8] = include_bytes!("../../assets/audio/book_flip
 
 pub const UNDO_REDO_EFFECT: &[u8] = include_bytes!("../../assets/audio/undo_redo.ogg");
 
-pub const SECRET_FOUND_EFFECT: &[u8] = include_bytes!("../../assets/audio/secret_found.ogg");
 pub const NO_PATH_EFFECT: &[u8] = include_bytes!("../../assets/audio/no_path.ogg");
 pub const LEVEL_COMPLETE_EFFECT: &[u8] = include_bytes!("../../assets/audio/level_complete.ogg");
 pub const LEVEL_PACK_COMPLETE_EFFECT: &[u8] = include_bytes!("../../assets/audio/level_pack_complete.ogg");
