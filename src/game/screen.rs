@@ -956,6 +956,8 @@ impl Screen for ScreenSelectLevelPack {
         if self.level_pack_list.cursor_index() == 0 {
             //Skip "back" entry and set to first level pack
             self.level_pack_list.set_cursor_index(1);
+        }else {
+            self.level_pack_list.set_cursor_index(game_state.current_level_pack_index + 1);
         }
 
         game_state.set_background_music_loop(&audio::BACKGROUND_MUSIC_FIELDS_OF_ICE);
@@ -2013,6 +2015,8 @@ impl Screen for ScreenInGame {
             self.game_over_flag = false;
             self.secret_found_flag = false;
 
+            //Set level pack selection to secret level pack
+            game_state.set_level_pack_index(4);
             game_state.set_screen(ScreenId::SelectLevelPack);
 
             return;
