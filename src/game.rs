@@ -9,7 +9,7 @@ use std::path::Path;
 use std::str::FromStr;
 use crate::game::audio::{AudioHandler, BackgroundMusic, BackgroundMusicId};
 use crate::game::help_page::HelpPage;
-use crate::game::level::{Level, LevelPack};
+use crate::game::level::{Level, LevelPack, SoundEffect};
 use crate::game::screen::*;
 use crate::game::screen::dialog::{DialogType, RenderedDialog, Dialog};
 use crate::io::{Console, Key};
@@ -553,6 +553,16 @@ impl GameState {
     pub fn play_sound_effect(&self, sound_effect: &'static [u8]) {
         if let Some(audio_handler) = &self.audio_handler {
             let _ = audio_handler.play_sound_effect(sound_effect);
+        }
+    }
+
+    pub fn play_level_sound_effect(&self, sound_effect: SoundEffect) {
+        if let Some(audio_handler) = &self.audio_handler {
+            let _ = audio_handler.play_sound_effect(match sound_effect {
+                SoundEffect::BoxFall => audio::BOX_FALL_EFFECT,
+                SoundEffect::DoorUnlocked => audio::DOOR_OPEN_EFFECT,
+                SoundEffect::FloorBroken => audio::FLOOR_BROKEN_EFFECT,
+            });
         }
     }
 

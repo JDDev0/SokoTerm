@@ -20,6 +20,10 @@ pub const LEVEL_PACK_COMPLETE_EFFECT: &[u8] = include_bytes!("../../assets/audio
 pub const LEVEL_RESET: &[u8] = include_bytes!("../../assets/audio/level_reset.ogg");
 pub const STEP_EFFECT: &[u8] = include_bytes!("../../assets/audio/step.ogg");
 
+pub const BOX_FALL_EFFECT: &[u8] = include_bytes!("../../assets/audio/box_fall.ogg");
+pub const DOOR_OPEN_EFFECT: &[u8] = include_bytes!("../../assets/audio/door_open.ogg");
+pub const FLOOR_BROKEN_EFFECT: &[u8] = include_bytes!("../../assets/audio/floor_broken.ogg");
+
 pub const BACKGROUND_MUSIC_TRACKS: BackgroundMusicTracks<6> = BackgroundMusicTracks::new([
     &BACKGROUND_MUSIC_FIELDS_OF_ICE,
     &BACKGROUND_MUSIC_LEAP,

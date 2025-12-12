@@ -1692,7 +1692,7 @@ impl ScreenInGame {
         };
 
         match move_result {
-            MoveResult::Valid { has_won, secret_found } => {
+            MoveResult::Valid { has_won, secret_found, sound_effect } => {
                 self.time_start.get_or_insert_with(SystemTime::now);
 
                 if secret_found {
@@ -1761,15 +1761,23 @@ impl ScreenInGame {
                 }
 
                 game_state.play_sound_effect(audio::STEP_EFFECT);
+
+                if let Some(sound_effect) = sound_effect {
+                    game_state.play_level_sound_effect(sound_effect);
+                }
             },
 
             MoveResult::Invalid => {
                 game_state.play_sound_effect(audio::NO_PATH_EFFECT);
             },
 
-            MoveResult::Animation { .. } => {
+            MoveResult::Animation { sound_effect, .. } => {
                 if self.animation_first_frame {
                     game_state.play_sound_effect(audio::STEP_EFFECT);
+                }
+
+                if let Some(sound_effect) = sound_effect {
+                    game_state.play_level_sound_effect(sound_effect);
                 }
             },
         }
@@ -3597,7 +3605,7 @@ impl ScreenLevelEditor {
         };
 
         match move_result {
-            MoveResult::Valid { has_won, .. } => {
+            MoveResult::Valid { has_won, sound_effect, .. } => {
                 if has_won {
                     self.continue_flag = true;
 
@@ -3621,15 +3629,23 @@ impl ScreenLevelEditor {
                 }
 
                 game_state.play_sound_effect(audio::STEP_EFFECT);
+
+                if let Some(sound_effect) = sound_effect {
+                    game_state.play_level_sound_effect(sound_effect);
+                }
             },
 
             MoveResult::Invalid => {
                 game_state.play_sound_effect(audio::NO_PATH_EFFECT);
             },
 
-            MoveResult::Animation { .. } => {
+            MoveResult::Animation { sound_effect, .. } => {
                 if self.animation_first_frame {
                     game_state.play_sound_effect(audio::STEP_EFFECT);
+                }
+
+                if let Some(sound_effect) = sound_effect {
+                    game_state.play_level_sound_effect(sound_effect);
                 }
             },
         };
