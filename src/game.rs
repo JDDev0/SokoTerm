@@ -992,11 +992,13 @@ impl <'a> Game<'a> {
     ) -> Result<(), Box<dyn Error>> {
         info!("Loading steam workshop level pack (ID: {}, Name: \"{}\")", item.published_file_id.0, item.title);
 
+        let ascii_level_title = item.title.replace(|c: char| !c.is_ascii(), "?");
+
         let install_info = self.game_state.steam_client.ugc().item_install_info(item.published_file_id);
         let Some(install_info) = install_info else {
             return Err(Box::new(GameError::new(format!(
                 "Steam workshop level pack (ID: {}, Name: \"{}\") does not exist or is invalid!",
-                item.published_file_id.0, item.title,
+                item.published_file_id.0, ascii_level_title,
             ))));
         };
 
@@ -1007,7 +1009,7 @@ impl <'a> Game<'a> {
         if !std::fs::exists(level_pack_path)? || !level_pack_path.is_file() {
             return Err(Box::new(GameError::new(format!(
                 "Steam workshop level pack (ID: {}, Name: \"{}\") is invalid!",
-                item.published_file_id.0, item.title,
+                item.published_file_id.0, ascii_level_title,
             ))));
         }
 
@@ -1015,7 +1017,7 @@ impl <'a> Game<'a> {
             Ok(file) => file,
             Err(err) => return Err(Box::new(GameError::new(format!(
                 "Error while loading level pack from steam workshop (ID: {}, Name: \"{}\"): {}",
-                item.published_file_id.0, item.title,
+                item.published_file_id.0, ascii_level_title,
                 err,
             )))),
         };
@@ -1024,16 +1026,14 @@ impl <'a> Game<'a> {
         if let Err(err) = level_pack_file.read_to_string(&mut level_pack_data) {
             return Err(Box::new(GameError::new(format!(
                 "Error while loading level pack from steam workshop (ID: {}, Name: \"{}\"): {}",
-                item.published_file_id.0, item.title,
+                item.published_file_id.0, ascii_level_title,
                 err,
             ))));
         };
 
         let level_pack_id = format!("workshop:{}", item.published_file_id.0);
 
-        let ascii_level_title = item.title.replace(|c: char| !c.is_ascii(), "?");
-
-        let mut truncated_workshop_item_name = ascii_level_title;
+        let mut truncated_workshop_item_name = ascii_level_title.clone();
         if truncated_workshop_item_name.len() > LevelPack::MAX_LEVEL_PACK_NAME_LEN {
             truncated_workshop_item_name = truncated_workshop_item_name[..LevelPack::MAX_LEVEL_PACK_NAME_LEN - 3].to_string() + "...";
         }
@@ -1045,11 +1045,22 @@ impl <'a> Game<'a> {
             }
         }
 
-        let mut level_pack = LevelPack::read_from_save_game(
+        let level_pack = LevelPack::read_from_save_game(
             level_pack_id, level_pack_path.to_str().unwrap(), level_pack_data, false,
 
             Some(item.clone().into()),
-        )?;
+        );
+        let mut level_pack = match level_pack {
+            Ok(level_pack) => level_pack,
+
+            Err(_) => {
+                return Err(Box::new(GameError::new(format!(
+                    "Error while loading level pack from steam workshop (ID: {}, Name: \"{}\")",
+                    item.published_file_id.0, ascii_level_title,
+                ))));
+            },
+        };
+
         level_pack.set_name(truncated_workshop_item_name);
 
         for (i, level) in level_pack.levels().iter().
@@ -1058,7 +1069,7 @@ impl <'a> Game<'a> {
             if level.width() > Self::LEVEL_MAX_WIDTH || level.height() > Self::LEVEL_MAX_HEIGHT {
                 return Err(Box::new(GameError::new(format!(
                     "Error while loading level pack from steam workshop (ID: {}, Name: \"{}\"): Level {} is too large (Max: {}x{})",
-                    item.published_file_id.0, item.title,
+                    item.published_file_id.0, ascii_level_title,
                     i + 1,
                     Self::LEVEL_MAX_WIDTH,
                     Self::LEVEL_MAX_HEIGHT,
