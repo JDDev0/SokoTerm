@@ -11,6 +11,7 @@ use bevy::window::{PrimaryWindow, WindowMode, WindowResized};
 use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use bevy::log::LogPlugin;
 use crate::game::Game;
+use crate::game::level::Tile;
 use crate::game::screen::dialog::Dialog;
 use crate::io::bevy_abstraction::{ConsoleState, Key, COLOR_SCHEMES};
 use crate::io::Console;
@@ -19,7 +20,6 @@ use crate::io::Console;
 use bevy_steamworks::*;
 #[cfg(feature = "steam")]
 use crate::game::level::LevelPack;
-use crate::game::level::Tile;
 #[cfg(feature = "steam")]
 use crate::ui::gui::steam_plugin::SteamPlugin;
 
@@ -294,27 +294,33 @@ fn update_text_entities(
 
             let char = character.get();
 
+            let inverted = bg == crate::io::bevy_abstraction::Color::Black;
+
             commands.spawn((
                 Text2d::new(String::from_utf8_lossy(&[char.unwrap_or(b' ')])),
                 text_font.clone(),
                 Transform::from_translation(Vec3::new(screen_x, screen_y, 1.0)),
                 TextColor(fg.into_bevy_color(color_scheme)),
-                TextBackgroundColor(bg.into_bevy_color(color_scheme)),
+                TextBackgroundColor(bg.into_bevy_color(color_scheme).with_alpha(if char.is_ok() || !inverted { 1.0 } else { 0.9 })),
                 ConsoleTextCharacter { x, y },
-                if char.is_ok() { Visibility::Visible } else { Visibility::Hidden },
+                if char.is_ok() || inverted { Visibility::Visible } else { Visibility::Hidden },
             ));
 
+            let mut sprite = Sprite {
+                custom_size: Some(Vec2::new(character_scaling.char_width, character_scaling.char_height)),
+                ..default()
+            };
+
+            if let Err(tile) = char {
+                sprite.image = tile.into_image(&asset_server);
+            }
+
             commands.spawn((
-                Sprite {
-                    custom_size: Some(Vec2::new(character_scaling.char_width, character_scaling.char_height)),
-                    ..default()
-                },
+                sprite,
                 Transform::from_translation(Vec3::new(screen_x, screen_y, 0.0)),
                 ConsoleTileCharacter { x, y },
                 if char.is_err() { Visibility::Visible } else { Visibility::Hidden },
             ));
-
-            //TODO set sprite image
         }
     }
 }
@@ -544,36 +550,7 @@ fn draw_console_text(
             },
             Err(tile) => {
                 *visibility = Visibility::Visible;
-                sprite.image = match tile {
-                    Tile::Empty => asset_server.load("embedded://textures/tiles/empty.png"),
-                    Tile::FragileFloor => asset_server.load("embedded://textures/tiles/fragile_floor.png"),
-                    Tile::Ice => asset_server.load("embedded://textures/tiles/ice.png"),
-
-                    Tile::OneWayLeft => asset_server.load("embedded://textures/tiles/one_way_left.png"),
-                    Tile::OneWayUp => asset_server.load("embedded://textures/tiles/one_way_up.png"),
-                    Tile::OneWayRight => asset_server.load("embedded://textures/tiles/one_way_right.png"),
-                    Tile::OneWayDown => asset_server.load("embedded://textures/tiles/one_way_down.png"),
-
-                    Tile::Wall => asset_server.load("embedded://textures/tiles/wall.png"),
-
-                    Tile::Key => asset_server.load("embedded://textures/tiles/key.png"),
-                    Tile::KeyInGoal => asset_server.load("embedded://textures/tiles/key_in_goal.png"),
-                    Tile::KeyOnFragileFloor => asset_server.load("embedded://textures/tiles/key_on_fragile_floor.png"),
-                    Tile::KeyOnIce => asset_server.load("embedded://textures/tiles/key_on_ice.png"),
-
-                    Tile::LockedDoor => asset_server.load("embedded://textures/tiles/locked_door.png"),
-
-                    Tile::Box | Tile::BoxOnFragileFloor | Tile::BoxOnIce => asset_server.load("embedded://textures/tiles/box.png"),
-                    Tile::BoxInGoal => asset_server.load("embedded://textures/tiles/box_in_goal.png"),
-                    Tile::Goal => asset_server.load("embedded://textures/tiles/goal.png"),
-
-                    Tile::Hole => asset_server.load("embedded://textures/tiles/hole.png"),
-                    Tile::BoxInHole => asset_server.load("embedded://textures/tiles/box_in_hole.png"),
-
-                    Tile::Secret => asset_server.load("embedded://textures/tiles/secret.png"),
-
-                    _ => unreachable!(),
-                };
+                sprite.image = tile.into_image(&asset_server);
             },
         }
     }
@@ -617,5 +594,44 @@ fn calculate_character_scaling(
 
         x_offset,
         y_offset
+    }
+}
+
+trait TileExtension {
+    fn into_image(self, asset_server: &AssetServer) -> Handle<Image>;
+}
+
+impl TileExtension for Tile {
+    fn into_image(self, asset_server: &AssetServer) -> Handle<Image> {
+        match self {
+            Tile::Empty => asset_server.load("embedded://textures/tiles/empty.png"),
+            Tile::FragileFloor => asset_server.load("embedded://textures/tiles/fragile_floor.png"),
+            Tile::Ice => asset_server.load("embedded://textures/tiles/ice.png"),
+
+            Tile::OneWayLeft => asset_server.load("embedded://textures/tiles/one_way_left.png"),
+            Tile::OneWayUp => asset_server.load("embedded://textures/tiles/one_way_up.png"),
+            Tile::OneWayRight => asset_server.load("embedded://textures/tiles/one_way_right.png"),
+            Tile::OneWayDown => asset_server.load("embedded://textures/tiles/one_way_down.png"),
+
+            Tile::Wall => asset_server.load("embedded://textures/tiles/wall.png"),
+
+            Tile::Key => asset_server.load("embedded://textures/tiles/key.png"),
+            Tile::KeyInGoal => asset_server.load("embedded://textures/tiles/key_in_goal.png"),
+            Tile::KeyOnFragileFloor => asset_server.load("embedded://textures/tiles/key_on_fragile_floor.png"),
+            Tile::KeyOnIce => asset_server.load("embedded://textures/tiles/key_on_ice.png"),
+
+            Tile::LockedDoor => asset_server.load("embedded://textures/tiles/locked_door.png"),
+
+            Tile::Box | Tile::BoxOnFragileFloor | Tile::BoxOnIce => asset_server.load("embedded://textures/tiles/box.png"),
+            Tile::BoxInGoal => asset_server.load("embedded://textures/tiles/box_in_goal.png"),
+            Tile::Goal => asset_server.load("embedded://textures/tiles/goal.png"),
+
+            Tile::Hole => asset_server.load("embedded://textures/tiles/hole.png"),
+            Tile::BoxInHole => asset_server.load("embedded://textures/tiles/box_in_hole.png"),
+
+            Tile::Secret => asset_server.load("embedded://textures/tiles/secret.png"),
+
+            _ => unreachable!(),
+        }
     }
 }
