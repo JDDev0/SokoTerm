@@ -156,6 +156,15 @@ impl Screen for ScreenStartMenu {
         if key == Key::ENTER || key == Key::SPACE {
             game_state.play_sound_effect_ui_select();
 
+            //Select first level which is not yet completed
+            let level_pack = game_state.get_current_level_pack().unwrap();
+            let min_level_not_completed = level_pack.min_level_not_completed();
+            if min_level_not_completed >= level_pack.level_count() {
+                game_state.set_level_index(0);
+            }else {
+                game_state.set_level_index(min_level_not_completed);
+            }
+
             game_state.set_screen(ScreenId::SelectLevel);
         }
     }
