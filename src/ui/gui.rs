@@ -293,10 +293,18 @@ fn update_game(
         let window = window_query.single().unwrap();
 
         let mut state = CONSOLE_STATE.lock().unwrap();
+        let mut last_key_code = None;
         for event in keyboard_event.read() {
             if event.state == ButtonState::Released {
                 continue;
             }
+
+            //Limit repeated key to once per update
+            if last_key_code == Some(event.key_code) && event.repeat {
+                continue;
+            }
+
+            last_key_code = Some(event.key_code);
 
             if event.logical_key == bevy::input::keyboard::Key::F9 ||
                     event.logical_key == bevy::input::keyboard::Key::F10 ||
