@@ -1186,7 +1186,7 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(")");
                 },
-                4 => {
+                4..=6 => {
                     console.set_cursor_pos(28, 11);
                     console.draw_key_input_text("z");
                     console.reset_color();
@@ -1207,7 +1207,7 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(": Restart Level");
                 },
-                6 => {
+                9 => {
                     console.set_cursor_pos(8, 13);
                     console.draw_text("Press ");
 
@@ -1226,20 +1226,6 @@ impl ScreenInGame {
                     console.draw_text(") can be used to open doors (");
 
                     Tile::LockedDoor.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(")");
-                },
-                13 => {
-                    console.set_cursor_pos(21, 13);
-                    console.draw_text("Keys (");
-
-                    Tile::KeyInGoal.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") might be in a goal (");
-
-                    Tile::Goal.draw(console, false, false);
 
                     console.reset_color();
                     console.draw_text(")");
