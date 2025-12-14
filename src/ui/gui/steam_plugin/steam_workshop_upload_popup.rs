@@ -23,6 +23,10 @@ use crate::ui::gui::{handle_recoverable_error, AppState, ConsoleTextCharacter, C
 use crate::ui::gui::steam_plugin::{on_resize_popup_text, PlaySoundEffect, ResizableNodeDimension, ResizableText};
 use crate::utils;
 
+const RADIO_BUTTON_COLOR: Color = Color::srgb_u8(140, 148, 64);
+const LINK_COLOR: Color = Color::srgb_u8(42, 123, 222);
+const LINK_COLOR_HOVERED: Color = Color::srgb_u8(18, 72, 139);
+
 pub struct SteamWorkshopUploadPopupPlugin;
 
 impl Plugin for SteamWorkshopUploadPopupPlugin {
@@ -423,7 +427,7 @@ fn process_and_update_upload_progress(
                             box_sizing: BoxSizing::BorderBox,
                             ..default()
                         },
-                        BorderColor::all(crate::io::bevy_abstraction::Color::LightBlue),
+                        BorderColor::all(LINK_COLOR),
                         children![(
                             Text("workshop terms of service".to_string()),
                             bold_text_font.clone(),
@@ -431,7 +435,7 @@ fn process_and_update_upload_progress(
                             LinkText,
                             Hovered::default(),
                             TabIndex::default(),
-                            TextColor(crate::io::bevy_abstraction::Color::LightBlue.into()),
+                            TextColor(LINK_COLOR),
                             TextLayout::new(Justify::Center, LineBreak::NoWrap),
                             ResizableText::Paragraph,
                             observe(|_: On<Activate>, steam_client: Res<Client>| {
@@ -785,7 +789,7 @@ fn update_ui_styles(
         };
 
         if checked {
-            background_color.0 = crate::io::bevy_abstraction::Color::Green.into();
+            background_color.0 = RADIO_BUTTON_COLOR;
         }else {
             background_color.0 = Srgba::NONE.into();
         }
@@ -867,17 +871,17 @@ fn update_hover_ui_styles(
 
     for (Hovered(hovered), mut text_color, child_of) in link_query {
         if *hovered {
-            text_color.0 = crate::io::bevy_abstraction::Color::Blue.into();
+            text_color.0 = LINK_COLOR_HOVERED;
         }else {
-            text_color.0 = crate::io::bevy_abstraction::Color::LightBlue.into();
+            text_color.0 = LINK_COLOR;
         }
 
         let parent = child_of.parent();
         if let Ok(mut border_color) = border_color_query.get_mut(parent) {
             if *hovered {
-                (border_color).set_all(crate::io::bevy_abstraction::Color::Blue);
+                (border_color).set_all(LINK_COLOR_HOVERED);
             }else {
-                border_color.set_all(crate::io::bevy_abstraction::Color::LightBlue);
+                border_color.set_all(LINK_COLOR);
             }
         }
     }
@@ -1301,7 +1305,7 @@ fn on_open_steam_workshop_upload_popup(
                             box_sizing: BoxSizing::BorderBox,
                             ..default()
                         },
-                        BorderColor::all(crate::io::bevy_abstraction::Color::LightBlue),
+                        BorderColor::all(LINK_COLOR),
                         children![(
                             Text("workshop terms of service".to_string()),
                             bold_text_font.clone(),
@@ -1309,7 +1313,7 @@ fn on_open_steam_workshop_upload_popup(
                             LinkText,
                             Hovered::default(),
                             TabIndex::default(),
-                            TextColor(crate::io::bevy_abstraction::Color::LightBlue.into()),
+                            TextColor(LINK_COLOR),
                             TextLayout::new(Justify::Center, LineBreak::NoWrap),
                             ResizableText::Paragraph,
                             observe(|_: On<Activate>, steam_client: Res<Client>| {
@@ -1702,7 +1706,7 @@ fn checkbox(text_font: TextFont, value: impl Component, label: &str) -> impl Bun
                         ..default()
                     },
                     ResizableNodeDimension::Both(0.5, 0.5),
-                    BackgroundColor(crate::io::bevy_abstraction::Color::Green.into()),
+                    BackgroundColor(RADIO_BUTTON_COLOR),
                 )],
             )],
         ), (
@@ -1760,7 +1764,7 @@ fn radio(text_font: TextFont, value: impl Component, label: &str) -> impl Bundle
                     },
                     ResizableNodeDimension::Both(0.5, 0.5),
                     BorderRadius::MAX,
-                    BackgroundColor(crate::io::bevy_abstraction::Color::Green.into()),
+                    BackgroundColor(RADIO_BUTTON_COLOR),
                 )],
             )],
         ), (
