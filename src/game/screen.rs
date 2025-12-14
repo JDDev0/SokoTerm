@@ -3167,10 +3167,10 @@ impl Screen for ScreenLevelPackEditor {
                 },
 
                 Key::DELETE => {
-                    if game_state.editor_state.selected_level_index != game_state.editor_state.get_current_level_pack().unwrap().level_count() {
+                    if selected_level_index != game_state.editor_state.get_current_level_pack().unwrap().level_count() {
                         self.is_deleting_level = true;
 
-                        game_state.open_dialog(Dialog::new_yes_no(format!("Do you really want to delete level {}?", game_state.editor_state.selected_level_index + 1)));
+                        game_state.open_dialog(Dialog::new_yes_no(format!("Do you really want to delete level {}?", selected_level_index + 1)));
                     }
                 },
 
@@ -3227,7 +3227,7 @@ impl Screen for ScreenLevelPackEditor {
             self.is_deleting_level = false;
 
             if selection == DialogSelection::Yes {
-                let index = game_state.editor_state.selected_level_index;
+                let index = self.level_editor_list.cursor_index() - 1;
                 let level_pack = game_state.editor_state.get_current_level_pack_mut().unwrap();
                 level_pack.levels_mut().remove(index);
                 level_pack.calculate_stats_sum();
