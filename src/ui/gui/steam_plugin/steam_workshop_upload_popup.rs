@@ -1446,7 +1446,7 @@ fn create_level_pack_thumbnail(
 
     commands.spawn((
         Mesh2d(meshes.add(Rectangle::new(window_width, window_height))),
-        MeshMaterial2d(materials.add(Color::srgb_u8(23, 20, 33))),
+        MeshMaterial2d(materials.add(Color::from(crate::io::bevy_abstraction::Color::Black))),
         Transform::from_translation(Vec3::new(0.0, 0.0, 2.0)),
         LevelPackThumbnail,
         render_layer.clone(),
