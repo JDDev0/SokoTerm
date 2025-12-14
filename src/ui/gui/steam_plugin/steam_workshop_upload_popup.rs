@@ -16,10 +16,10 @@ use bevy::text::LineHeight;
 use bevy::ui::Checked;
 use bevy::window::{CursorIcon, PrimaryWindow, SystemCursorIcon};
 use bevy_steamworks::*;
-use crate::game::{audio, steam, Game, GameError, TileMode};
+use crate::game::{audio, steam, Game, GameError};
 use crate::game::steam::achievement::Achievement;
 use crate::ui::gui;
-use crate::ui::gui::{handle_recoverable_error, AppState, CONSOLE_STATE};
+use crate::ui::gui::{handle_recoverable_error, AppState, ConsoleTextCharacter, ConsoleTileCharacter, TileExtension, CONSOLE_STATE};
 use crate::ui::gui::steam_plugin::{on_resize_popup_text, PlaySoundEffect, ResizableNodeDimension, ResizableText};
 use crate::utils;
 
@@ -1399,18 +1399,11 @@ fn create_level_pack_thumbnail(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let mut state = CONSOLE_STATE.lock().unwrap();
-    let tile_mode = state.tile_mode();
-    state.set_tile_mode(TileMode::Ascii);
     //Screenshot is written to secondary buffer
-    state.swap_buffer_selection();
-    drop(state);
+    CONSOLE_STATE.lock().unwrap().swap_buffer_selection();
 
     let dimensions = game.draw_level_pack_thumbnail_screenshot();
-    let mut state = CONSOLE_STATE.lock().unwrap();
-    state.swap_buffer_selection();
-    state.set_tile_mode(tile_mode);
-    drop(state);
+    CONSOLE_STATE.lock().unwrap().swap_buffer_selection();
 
     let Some((level_width, level_height)) = dimensions else {
         //TODO error -> Could not create screenshot
@@ -1473,14 +1466,38 @@ fn create_level_pack_thumbnail(
             let screen_x = character_scaling.x_offset + x as f32 * character_scaling.char_width - window_width * 0.5;
             let screen_y = window_height * 0.5 - (character_scaling.y_offset + y as f32 * character_scaling.char_height);
 
+            let char = character.get();
+
+            let inverted = bg == crate::io::bevy_abstraction::Color::Black;
+
             commands.spawn((
-                Text2d::new(String::from_utf8_lossy(&[character.get().unwrap()])),
+                Text2d::new(String::from_utf8_lossy(&[char.unwrap_or(b' ')])),
                 text_font.clone(),
-                Transform::from_translation(Vec3::new(screen_x, screen_y, 2.0)),
-                TextColor(fg.into()),
-                TextBackgroundColor(bg.into()),
+                Transform::from_translation(Vec3::new(screen_x, screen_y, 3.0)),
+                TextColor(Color::from(fg)),
+                TextBackgroundColor(Color::from(bg).with_alpha(if char.is_ok() || !inverted { 1.0 } else { 0.9 })),
+                ConsoleTextCharacter { x, y },
                 LevelPackThumbnail,
                 render_layer.clone(),
+                if char.is_ok() || inverted { Visibility::Visible } else { Visibility::Hidden },
+            ));
+
+            let mut sprite = Sprite {
+                custom_size: Some(Vec2::new(character_scaling.char_width, character_scaling.char_height)),
+                ..default()
+            };
+
+            if let Err(tile) = char {
+                sprite.image = tile.into_image(&asset_server);
+            }
+
+            commands.spawn((
+                sprite,
+                Transform::from_translation(Vec3::new(screen_x, screen_y, 2.0)),
+                ConsoleTileCharacter { x, y },
+                LevelPackThumbnail,
+                render_layer.clone(),
+                if char.is_err() { Visibility::Visible } else { Visibility::Hidden },
             ));
         }
 
