@@ -513,7 +513,7 @@ impl HelpPage {
                     console.reset_color();
                     console.draw_text(": Select or create a level pack");
                 }, |console| {
-                    console.draw_key_input_text("s");
+                    console.draw_key_input_text("m");
                     console.reset_color();
                     console.draw_text(": Select the background music for the selected level pack");
                 }, |console| {

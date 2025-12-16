@@ -2242,7 +2242,7 @@ impl Screen for ScreenSelectLevelPackEditor {
             }
 
             console.set_cursor_pos(46, y + 1);
-            console.draw_key_input_text("s");
+            console.draw_key_input_text("m");
 
             console.reset_color();
             console.draw_text(":  Select background music");
@@ -2348,7 +2348,7 @@ impl Screen for ScreenSelectLevelPackEditor {
 
         let cursor_index = self.level_pack_editor_list.cursor_index();
         if cursor_index >= 1 && cursor_index - 1 != game_state.editor_state.get_level_pack_count() {
-            if key == Key::S {
+            if key == Key::M {
                 game_state.play_sound_effect_ui_dialog_open();
 
                 game_state.editor_state.set_level_pack_index(cursor_index - 1);
@@ -2422,7 +2422,7 @@ impl Screen for ScreenSelectLevelPackEditor {
         let element_count = self.level_pack_editor_list.elements().len();
         let y = 4 + ((element_count - 1)/24)*2;
         if row == y + 1 && (46..Game::CONSOLE_MIN_WIDTH - 1).contains(&column) {
-            self.on_key_pressed(game_state, Key::S);
+            self.on_key_pressed(game_state, Key::M);
         }
 
         #[cfg(feature = "steam")]
