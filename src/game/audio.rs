@@ -23,13 +23,8 @@ pub const BOX_FALL_EFFECT: &[u8] = include_bytes!("../../assets/audio/box_fall.o
 pub const DOOR_OPEN_EFFECT: &[u8] = include_bytes!("../../assets/audio/door_open.ogg");
 pub const FLOOR_BROKEN_EFFECT: &[u8] = include_bytes!("../../assets/audio/floor_broken.ogg");
 
-pub const BACKGROUND_MUSIC_TRACKS: BackgroundMusicTracks<6> = BackgroundMusicTracks::new([
+pub const BACKGROUND_MUSIC_TRACKS: BackgroundMusicTracks<1> = BackgroundMusicTracks::new([
     &BACKGROUND_MUSIC_FIELDS_OF_ICE,
-    &BACKGROUND_MUSIC_LEAP,
-    &BACKGROUND_MUSIC_TRIANGULAR,
-    &BACKGROUND_MUSIC_LONELY_NIGHT,
-    &BACKGROUND_MUSIC_RESOW,
-    &BACKGROUND_MUSIC_CATCHY,
 ]);
 
 pub const BACKGROUND_MUSIC_FIELDS_OF_ICE: BackgroundMusic = BackgroundMusic {
@@ -38,46 +33,6 @@ pub const BACKGROUND_MUSIC_FIELDS_OF_ICE: BackgroundMusic = BackgroundMusic {
     creator: "Jonathan So",
     intro_audio_data: Some(include_bytes!("../../assets/audio/background_music_fields_of_ice_intro.ogg")),
     main_loop_audio_data: include_bytes!("../../assets/audio/background_music_fields_of_ice.ogg"),
-};
-
-pub const BACKGROUND_MUSIC_LEAP: BackgroundMusic = BackgroundMusic {
-    id: BackgroundMusicId::new(2),
-    display_name: "Leap [8bit]",
-    creator: "nene",
-    intro_audio_data: None,
-    main_loop_audio_data: include_bytes!("../../assets/audio/background_music_leap.ogg"),
-};
-
-pub const BACKGROUND_MUSIC_TRIANGULAR: BackgroundMusic = BackgroundMusic {
-    id: BackgroundMusicId::new(3),
-    display_name: "Triangular Ideology: The Fan Sequel",
-    creator: "Spring Spring",
-    intro_audio_data: None,
-    main_loop_audio_data: include_bytes!("../../assets/audio/background_music_triangular.ogg"),
-};
-
-pub const BACKGROUND_MUSIC_LONELY_NIGHT: BackgroundMusic = BackgroundMusic {
-    id: BackgroundMusicId::new(4),
-    display_name: "Lonely Night",
-    creator: "Centurion_of_war",
-    intro_audio_data: None,
-    main_loop_audio_data: include_bytes!("../../assets/audio/background_music_lonely_night.ogg"),
-};
-
-pub const BACKGROUND_MUSIC_RESOW: BackgroundMusic = BackgroundMusic {
-    id: BackgroundMusicId::new(5),
-    display_name: "Re-Sow",
-    creator: "Chasersgaming",
-    intro_audio_data: None,
-    main_loop_audio_data: include_bytes!("../../assets/audio/background_music_resow.ogg"),
-};
-
-pub const BACKGROUND_MUSIC_CATCHY: BackgroundMusic = BackgroundMusic {
-    id: BackgroundMusicId::new(6),
-    display_name: "Catchy",
-    creator: "Spring Spring",
-    intro_audio_data: None,
-    main_loop_audio_data: include_bytes!("../../assets/audio/background_music_catchy.ogg"),
 };
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
