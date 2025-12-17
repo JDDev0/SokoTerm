@@ -778,7 +778,7 @@ impl ScreenSelectLevelPack {
                             unreachable!();
                         }else {
                             //Level Pack Editor entry
-                            game_state.set_level_index(0);
+                            game_state.set_level_pack_index(game_state.get_level_pack_count());
 
                             game_state.set_screen(ScreenId::SelectLevelPackEditor);
                         }
