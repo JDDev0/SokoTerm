@@ -1239,7 +1239,7 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(")");
                 },
-                29 => {
+                34 => {
                     if !self.game_over_flag {
                         console.set_cursor_pos(11, 9);
                         console.draw_text("Ice (");
