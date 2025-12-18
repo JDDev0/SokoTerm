@@ -340,7 +340,7 @@ impl HelpPage {
                 }],
             ),
             Section::new(
-                section_label_builder.new_sub_sub_section("Level (pack) selection"), &[|console| {
+                section_label_builder.new_sub_sub_section("Level selection"), &[|console| {
                     console.reset_color();
                     console.draw_text("[");
                     console.set_color(Color::Default, Color::Yellow);
