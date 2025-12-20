@@ -3178,7 +3178,11 @@ impl Screen for ScreenLevelPackEditor {
             }
         }
 
+        let is_creating_new_level_orig = self.is_creating_new_level;
         self.level_editor_list.on_key_press(&mut self.is_creating_new_level, game_state, key);
+        if is_creating_new_level_orig != self.is_creating_new_level && self.is_creating_new_level {
+            self.level_preview = false;
+        }
     }
 
     fn on_mouse_pressed(&mut self, game_state: &mut GameState, column: usize, row: usize) {
@@ -3219,7 +3223,11 @@ impl Screen for ScreenLevelPackEditor {
             self.on_key_pressed(game_state, Key::T);
         }
 
+        let is_creating_new_level_orig = self.is_creating_new_level;
         self.level_editor_list.on_mouse_pressed(&mut self.is_creating_new_level, game_state, column, row);
+        if is_creating_new_level_orig != self.is_creating_new_level && self.is_creating_new_level {
+            self.level_preview = false;
+        }
     }
 
     fn on_dialog_selection(&mut self, game_state: &mut GameState, selection: DialogSelection) {
