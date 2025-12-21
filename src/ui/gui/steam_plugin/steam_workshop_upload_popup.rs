@@ -19,7 +19,7 @@ use bevy_steamworks::*;
 use crate::game::{audio, steam, Game, GameError};
 use crate::game::steam::achievement::Achievement;
 use crate::ui::gui;
-use crate::ui::gui::{handle_recoverable_error, AppState, ConsoleTextCharacter, ConsoleTileCharacter, TileExtension, CONSOLE_STATE};
+use crate::ui::gui::{handle_recoverable_error, AppState, ConsoleTextCharacter, ConsoleTileCharacter, CONSOLE_STATE};
 use crate::ui::gui::steam_plugin::{on_resize_popup_text, PlaySoundEffect, ResizableNodeDimension, ResizableText};
 use crate::utils;
 
