@@ -2,6 +2,8 @@ use std::{cmp, mem};
 use std::collections::VecDeque;
 use std::marker::PhantomData;
 use std::sync::{Arc, Mutex};
+use bevy::asset::{AssetServer, Handle};
+use bevy::image::Image;
 use smol_str::SmolStr;
 use crate::game::level::Tile;
 use crate::game::TileMode;
@@ -158,17 +160,143 @@ pub const COLOR_SCHEMES: [ColorScheme; 4] = [
 ];
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
+#[repr(u8)]
+pub enum GraphicalCharacter {
+    Empty = 0,
+    FragileFloor = 1,
+    Ice = 2,
+
+    OneWayLeft = 3,
+    OneWayUp = 4,
+    OneWayRight = 5,
+    OneWayDown = 6,
+
+    Wall = 7,
+
+    Key = 8,
+    KeyInGoal = 9,
+    KeyOnFragileFloor = 10,
+    KeyOnIce = 11,
+    LockedDoor = 12,
+
+    Box = 13,
+    BoxInGoal = 14,
+    Goal = 15,
+
+    Hole = 16,
+    BoxInHole = 17,
+}
+
+impl GraphicalCharacter {
+    pub fn id(self) -> u8 {
+        self as u8
+    }
+
+    pub fn from_id(val: u8) -> Option<Self> {
+        match val {
+            0 => Some(GraphicalCharacter::Empty),
+            1 => Some(GraphicalCharacter::FragileFloor),
+            2 => Some(GraphicalCharacter::Ice),
+
+            3 => Some(GraphicalCharacter::OneWayLeft),
+            4 => Some(GraphicalCharacter::OneWayUp),
+            5 => Some(GraphicalCharacter::OneWayRight),
+            6 => Some(GraphicalCharacter::OneWayDown),
+
+            7 => Some(GraphicalCharacter::Wall),
+
+            8 => Some(GraphicalCharacter::Key),
+            9 => Some(GraphicalCharacter::KeyInGoal),
+            10 => Some(GraphicalCharacter::KeyOnFragileFloor),
+            11 => Some(GraphicalCharacter::KeyOnIce),
+            12 => Some(GraphicalCharacter::LockedDoor),
+
+            13 => Some(GraphicalCharacter::Box),
+            14 => Some(GraphicalCharacter::BoxInGoal),
+            15 => Some(GraphicalCharacter::Goal),
+
+            16 => Some(GraphicalCharacter::Hole),
+            17 => Some(GraphicalCharacter::BoxInHole),
+
+            _ => None,
+        }
+    }
+
+    pub fn from_tile(val: Tile) -> Option<Self> {
+        match val {
+            Tile::Empty => Some(GraphicalCharacter::Empty),
+            Tile::FragileFloor => Some(GraphicalCharacter::FragileFloor),
+            Tile::Ice => Some(GraphicalCharacter::Ice),
+
+            Tile::OneWayLeft => Some(GraphicalCharacter::OneWayLeft),
+            Tile::OneWayUp => Some(GraphicalCharacter::OneWayUp),
+            Tile::OneWayRight => Some(GraphicalCharacter::OneWayRight),
+            Tile::OneWayDown => Some(GraphicalCharacter::OneWayDown),
+
+            Tile::Wall => Some(GraphicalCharacter::Wall),
+
+            Tile::Key => Some(GraphicalCharacter::Key),
+            Tile::KeyInGoal => Some(GraphicalCharacter::KeyInGoal),
+            Tile::KeyOnFragileFloor => Some(GraphicalCharacter::KeyOnFragileFloor),
+            Tile::KeyOnIce => Some(GraphicalCharacter::KeyOnIce),
+            Tile::LockedDoor => Some(GraphicalCharacter::LockedDoor),
+
+            Tile::Box | Tile::BoxOnFragileFloor | Tile::BoxOnIce  => Some(GraphicalCharacter::Box),
+            Tile::BoxInGoal  => Some(GraphicalCharacter::BoxInGoal),
+            Tile::Goal => Some(GraphicalCharacter::Goal),
+
+            Tile::Hole => Some(GraphicalCharacter::Hole),
+            Tile::BoxInHole => Some(GraphicalCharacter::BoxInHole),
+
+            //TODO player tiles
+            Tile::Player | Tile::PlayerOnFragileFloor | Tile::PlayerOnIce => None,
+
+            Tile::DecorationBlank => None,
+        }
+    }
+
+    pub fn into_image(self, asset_server: &AssetServer) -> Handle<Image> {
+        match self {
+            GraphicalCharacter::Empty => asset_server.load("embedded://textures/tiles/empty.png"),
+            GraphicalCharacter::FragileFloor => asset_server.load("embedded://textures/tiles/fragile_floor.png"),
+            GraphicalCharacter::Ice => asset_server.load("embedded://textures/tiles/ice.png"),
+
+            GraphicalCharacter::OneWayLeft => asset_server.load("embedded://textures/tiles/one_way_left.png"),
+            GraphicalCharacter::OneWayUp => asset_server.load("embedded://textures/tiles/one_way_up.png"),
+            GraphicalCharacter::OneWayRight => asset_server.load("embedded://textures/tiles/one_way_right.png"),
+            GraphicalCharacter::OneWayDown => asset_server.load("embedded://textures/tiles/one_way_down.png"),
+
+            GraphicalCharacter::Wall => asset_server.load("embedded://textures/tiles/wall.png"),
+
+            GraphicalCharacter::Key => asset_server.load("embedded://textures/tiles/key.png"),
+            GraphicalCharacter::KeyInGoal => asset_server.load("embedded://textures/tiles/key_in_goal.png"),
+            GraphicalCharacter::KeyOnFragileFloor => asset_server.load("embedded://textures/tiles/key_on_fragile_floor.png"),
+            GraphicalCharacter::KeyOnIce => asset_server.load("embedded://textures/tiles/key_on_ice.png"),
+
+            GraphicalCharacter::LockedDoor => asset_server.load("embedded://textures/tiles/locked_door.png"),
+
+            GraphicalCharacter::Box => asset_server.load("embedded://textures/tiles/box.png"),
+            GraphicalCharacter::BoxInGoal => asset_server.load("embedded://textures/tiles/box_in_goal.png"),
+            GraphicalCharacter::Goal => asset_server.load("embedded://textures/tiles/goal.png"),
+
+            GraphicalCharacter::Hole => asset_server.load("embedded://textures/tiles/hole.png"),
+            GraphicalCharacter::BoxInHole => asset_server.load("embedded://textures/tiles/box_in_hole.png"),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct ConsoleCharacter {
     data: u8,
 }
 
 impl ConsoleCharacter {
-    ///Returns Ok(u8) for simple ASCII char and Err(Tile) for tile char
-    pub fn get(self) -> Result<u8, Tile> {
+    ///Returns Ok(u8) for simple ASCII char and Err(GraphicalCharacter) for graphical char
+    pub fn get(self) -> Result<u8, GraphicalCharacter> {
         if self.data & 128 == 0 {
             Ok(self.data)
         }else {
-            Tile::from_ascii(self.data - 128).map(Err).unwrap_or_else(|_| Ok(b'?'))
+            GraphicalCharacter::from_id(self.data - 128).map(Err).unwrap_or_else(|| Ok(b'?'))
         }
     }
 }
@@ -179,9 +307,9 @@ impl From<u8> for ConsoleCharacter {
     }
 }
 
-impl From<Tile> for ConsoleCharacter {
-    fn from(value: Tile) -> Self {
-        ConsoleCharacter { data: 128 + value.to_ascii() }
+impl From<GraphicalCharacter> for ConsoleCharacter {
+    fn from(value: GraphicalCharacter) -> Self {
+        ConsoleCharacter { data: 128 + value.id() }
     }
 }
 
@@ -406,25 +534,30 @@ impl <'a> Console<'a> {
     }
 
     pub fn draw_tile_internal(&self, tile: Tile, is_player_background: bool, inverted: bool) {
-        let mut state = self.state.lock().unwrap();
-        if state.tile_mode == TileMode::Graphical && !matches!(tile, Tile::DecorationBlank) &&
-                //TODO player tiles
-                !matches!(tile,  Tile::Player| Tile::PlayerOnFragileFloor| Tile::PlayerOnIce) {
-            let (width, _) = self.get_console_size();
-
-            let index = state.curser_pos.0 + width * state.curser_pos.1;
-
-            state.current_buffer_mut().text_buffer[index] = ConsoleCharacter::from(tile);
-            state.current_buffer_mut().text_color_buffer[index] = (
+        let tile_mode = self.state.lock().unwrap().tile_mode;
+        if tile_mode == TileMode::Graphical &&
+                let Some(graphical_character) = GraphicalCharacter::from_tile(tile) {
+            self.draw_graphical_character(
+                graphical_character,
                 if is_player_background { Color::Yellow } else { Color::Default },
                 if inverted { Color::Black } else { Color::Default },
             );
-            state.curser_pos.0 += 1;
         }else {
-            drop(state);
-
             tile.draw_raw(self, is_player_background, inverted);
         }
+    }
+
+    pub fn draw_graphical_character(&self, graphical_tile: GraphicalCharacter, fg: Color, bg: Color) {
+        let mut state = self.state.lock().unwrap();
+
+        let (width, _) = self.get_console_size();
+
+        let index = state.curser_pos.0 + width * state.curser_pos.1;
+
+        state.current_buffer_mut().text_buffer[index] = ConsoleCharacter::from(graphical_tile);
+        state.current_buffer_mut().text_color_buffer[index] = (fg, bg);
+
+        state.curser_pos.0 += 1;
     }
 
     /// Sets the color for foreground and background
