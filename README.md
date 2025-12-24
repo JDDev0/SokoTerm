@@ -1,13 +1,17 @@
 # SokoTerm
 
-A sokoban game for Linux terminal/TTY and with the Windows CMD and PowerShell.
-There is also an GUI version available for Linux and Windows.
+Test your puzzle game with more than 200 brand-new puzzles across 5 built-in level packs with unique challenges which get
+progressively harder. In the GUI version you can play this game with Graphical Tiles:
+![Animated SokoTerm Gameplay - Pack 04 - Level 03 - Graphical](https://github.com/user-attachments/assets/3a5fbcbd-ac14-426f-a44a-71a5ef78e208)
+or traditional ASCII tiles:
+![Animated SokoTerm Gameplay - Pack 04 - Level 03 - ASCII](https://github.com/user-attachments/assets/264f4528-2a71-4db5-ae31-b6b393d9ad5a)
 
-Download on Steam: [SokoTerm](https://store.steampowered.com/app/4160140/SokoTerm/)<br>
-Download on itch.io: [SokoTerm](https://jddev0.itch.io/sokoterm)
+Test your puzzle solving skills with new gameplay mechanics like one-way doors and wraparound levels.
+![SokoTerm Gameplay - Pack 03 - Level 19 - Graphical](https://github.com/user-attachments/assets/75d1edea-4149-46b7-8434-f9b851412723)
+![SokoTerm Gameplay - Pack 03 - Level 31 - Graphical](https://github.com/user-attachments/assets/e4baea50-800f-4a4f-b8d0-89d7027b7b5d)
 
-## Gameplay
-![image](https://github.com/user-attachments/assets/4772dc3d-3258-4bf9-8ca5-86df9296a852)
+Get it on Steam: [SokoTerm](https://store.steampowered.com/app/4160140/SokoTerm/)<br>
+Get it on itch.io: [SokoTerm](https://jddev0.itch.io/sokoterm)
 
 ## Compile & Run
 
