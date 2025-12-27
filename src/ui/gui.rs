@@ -1,5 +1,6 @@
 use std::cmp;
 use std::error::Error;
+use std::mem::ManuallyDrop;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::{Arc, LazyLock, Mutex};
@@ -12,7 +13,7 @@ use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use bevy::log::LogPlugin;
 use crate::game::Game;
 use crate::game::screen::dialog::Dialog;
-use crate::io::bevy_abstraction::{ConsoleState, Key, COLOR_SCHEMES};
+use crate::io::bevy_abstraction::{ConsoleState, GraphicalCharacter, Key, COLOR_SCHEMES};
 use crate::io::Console;
 
 #[cfg(feature = "steam")]
@@ -131,6 +132,7 @@ pub fn run_game() -> ExitCode {
             insert_resource(CurrentColorSchemeIndex(settings.color_scheme_index())).
 
             add_systems(Startup, spawn_camera).
+            add_systems(Startup, preload_tiles).
             add_systems(Startup, update_text_entities).
             insert_non_send_resource(game).
 
@@ -204,6 +206,16 @@ fn spawn_camera(
     mut commands: Commands,
 ) {
     commands.spawn(Camera2d);
+}
+
+fn preload_tiles(
+    asset_server: Res<AssetServer>,
+) {
+    for value in GraphicalCharacter::VALUES {
+        //Preload tile images and prevent unloading
+        let image = value.into_image(&asset_server);
+        let _ = ManuallyDrop::new(image);
+    }
 }
 
 #[expect(clippy::type_complexity)]

@@ -188,6 +188,27 @@ pub enum GraphicalCharacter {
 }
 
 impl GraphicalCharacter {
+    pub const VALUES: [Self; 18] = [
+        GraphicalCharacter::Empty,
+        GraphicalCharacter::FragileFloor,
+        GraphicalCharacter::Ice,
+        GraphicalCharacter::OneWayLeft,
+        GraphicalCharacter::OneWayUp,
+        GraphicalCharacter::OneWayRight,
+        GraphicalCharacter::OneWayDown,
+        GraphicalCharacter::Wall,
+        GraphicalCharacter::Key,
+        GraphicalCharacter::KeyInGoal,
+        GraphicalCharacter::KeyOnFragileFloor,
+        GraphicalCharacter::KeyOnIce,
+        GraphicalCharacter::LockedDoor,
+        GraphicalCharacter::Box,
+        GraphicalCharacter::BoxInGoal,
+        GraphicalCharacter::Goal,
+        GraphicalCharacter::Hole,
+        GraphicalCharacter::BoxInHole,
+    ];
+
     pub fn id(self) -> u8 {
         self as u8
     }
