@@ -1096,9 +1096,16 @@ impl <'a> Game<'a> {
 
         if !self.game_state.is_help {
             let screen = self.screens.get_mut(&self.game_state.current_screen_id);
-            if let Some(screen) = screen {
-                if mem::replace(&mut self.game_state.should_call_on_set_screen, false) {
+            if let Some(mut screen) = screen {
+                //"while" instead of "if": This supports setting the screen in "on_set_screen"
+                //Otherwise "on_set_screen" would not be called for the new screen
+                while mem::replace(&mut self.game_state.should_call_on_set_screen, false) {
                     screen.on_set_screen(&mut self.game_state);
+
+                    if self.game_state.should_call_on_set_screen {
+                        //Change local current screen if screen was set in "on_set_screen"
+                        screen = self.screens.get_mut(&self.game_state.current_screen_id).unwrap();
+                    }
                 }
 
                 screen.update(&mut self.game_state);
