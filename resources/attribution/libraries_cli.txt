@@ -1,0 +1,90 @@
+alsa-sys v0.3.1;MIT;https://github.com/diwic/alsa-sys
+alsa v0.9.1;Apache-2.0/MIT;https://github.com/diwic/alsa-rs
+arrayvec v0.7.6;MIT OR Apache-2.0;https://github.com/bluss/arrayvec
+assert_type_match v0.1.1 (proc-macro);MIT OR Apache-2.0;https://github.com/MrGVSV/assert_type_match
+async-executor v1.13.3;Apache-2.0 OR MIT;https://github.com/smol-rs/async-executor
+async-task v4.7.1;Apache-2.0 OR MIT;https://github.com/smol-rs/async-task
+atomic-waker v1.1.2;Apache-2.0 OR MIT;https://github.com/smol-rs/atomic-waker
+bevy_app v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_derive v0.17.3 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_ecs_macros v0.17.3 (proc-macro);MIT OR Apache-2.0;
+bevy_ecs v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_macro_utils v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_platform v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_ptr v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_reflect_derive v0.17.3 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_reflect v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_tasks v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_time v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_utils v0.17.3;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bitflags v1.3.2;MIT/Apache-2.0;https://github.com/bitflags/bitflags
+bitflags v2.9.1;MIT OR Apache-2.0;https://github.com/bitflags/bitflags
+bumpalo v3.17.0;MIT OR Apache-2.0;https://github.com/fitzgen/bumpalo
+bytemuck v1.23.0;Zlib OR Apache-2.0 OR MIT;https://github.com/Lokathor/bytemuck
+byteorder v1.5.0;Unlicense OR MIT;https://github.com/BurntSushi/byteorder
+cfg-if v1.0.0;MIT/Apache-2.0;https://github.com/alexcrichton/cfg-if
+claxon v0.4.3;Apache-2.0;https://github.com/ruuda/claxon
+concurrent-queue v2.5.0;Apache-2.0 OR MIT;https://github.com/smol-rs/concurrent-queue
+console-lib v0.3.0;MIT;https://github.com/JDDev0/ConsoleLib
+cpal v0.15.3;Apache-2.0;https://github.com/rustaudio/cpal
+crossbeam-channel v0.5.15;MIT OR Apache-2.0;https://github.com/crossbeam-rs/crossbeam
+crossbeam-queue v0.3.12;MIT OR Apache-2.0;https://github.com/crossbeam-rs/crossbeam
+crossbeam-utils v0.8.21;MIT OR Apache-2.0;https://github.com/crossbeam-rs/crossbeam
+ctrlc v3.5.1;MIT/Apache-2.0;https://github.com/Detegr/rust-ctrlc.git
+dasp_sample v0.11.0;MIT OR Apache-2.0;https://github.com/rustaudio/sample.git
+derive_more-impl v2.0.1 (proc-macro);MIT;https://github.com/JelteF/derive_more
+derive_more v2.0.1;MIT;https://github.com/JelteF/derive_more
+disqualified v1.0.0;MIT OR Apache-2.0;https://github.com/bevyengine/disqualified
+downcast-rs v2.0.2;MIT OR Apache-2.0;https://github.com/marcianx/downcast-rs
+encoding_rs v0.8.35;(Apache-2.0 OR MIT) AND BSD-3-Clause;https://github.com/hsivonen/encoding_rs
+equivalent v1.0.2;Apache-2.0 OR MIT;https://github.com/indexmap-rs/equivalent
+erased-serde v0.4.8;MIT OR Apache-2.0;https://github.com/dtolnay/erased-serde
+fastrand v2.3.0;Apache-2.0 OR MIT;https://github.com/smol-rs/fastrand
+fixedbitset v0.5.7;MIT OR Apache-2.0;https://github.com/petgraph/fixedbitset
+foldhash v0.2.0;Zlib;https://github.com/orlp/foldhash
+futures-core v0.3.31;MIT OR Apache-2.0;https://github.com/rust-lang/futures-rs
+futures-io v0.3.31;MIT OR Apache-2.0;https://github.com/rust-lang/futures-rs
+futures-lite v2.6.1;Apache-2.0 OR MIT;https://github.com/smol-rs/futures-lite
+hashbrown v0.16.0;MIT OR Apache-2.0;https://github.com/rust-lang/hashbrown
+hound v3.5.1;Apache-2.0;https://github.com/ruuda/hound
+indexmap v2.12.0;Apache-2.0 OR MIT;https://github.com/indexmap-rs/indexmap
+lazy_static v1.5.0;MIT OR Apache-2.0;https://github.com/rust-lang-nursery/lazy-static.rs
+lewton v0.10.2;MIT OR Apache-2.0;https://github.com/RustAudio/lewton
+libc v0.2.177;MIT OR Apache-2.0;https://github.com/rust-lang/libc
+lock_api v0.4.14;MIT OR Apache-2.0;https://github.com/Amanieu/parking_lot
+log v0.4.27;MIT OR Apache-2.0;https://github.com/rust-lang/log
+nix v0.30.1;MIT;https://github.com/nix-rust/nix
+nonmax v0.5.5;MIT OR Apache-2.0;https://github.com/LPGhatguy/nonmax
+ogg v0.8.0;BSD-3-Clause;https://github.com/RustAudio/ogg
+parking_lot_core v0.9.12;MIT OR Apache-2.0;https://github.com/Amanieu/parking_lot
+parking_lot v0.12.5;MIT OR Apache-2.0;https://github.com/Amanieu/parking_lot
+parking v2.2.1;Apache-2.0 OR MIT;https://github.com/smol-rs/parking
+pin-project-lite v0.2.16;Apache-2.0 OR MIT;https://github.com/taiki-e/pin-project-lite
+proc-macro2 v1.0.95;MIT OR Apache-2.0;https://github.com/dtolnay/proc-macro2
+quote v1.0.40;MIT OR Apache-2.0;https://github.com/dtolnay/quote
+rodio v0.20.1;MIT OR Apache-2.0;https://github.com/RustAudio/rodio
+scopeguard v1.2.0;MIT OR Apache-2.0;https://github.com/bluss/scopeguard
+serde_core v1.0.228;MIT OR Apache-2.0;https://github.com/serde-rs/serde
+serde v1.0.228;MIT OR Apache-2.0;https://github.com/serde-rs/serde
+slab v0.4.11;MIT;https://github.com/tokio-rs/slab
+slotmap v1.0.7;Zlib;https://github.com/orlp/slotmap
+smallvec v1.15.1;MIT OR Apache-2.0;https://github.com/servo/rust-smallvec
+spin v0.10.0;MIT;https://github.com/mvdnes/spin-rs.git
+symphonia-bundle-mp3 v0.5.4;MPL-2.0;https://github.com/pdeljanov/Symphonia
+symphonia-core v0.5.4;MPL-2.0;https://github.com/pdeljanov/Symphonia
+symphonia-metadata v0.5.4;MPL-2.0;https://github.com/pdeljanov/Symphonia
+symphonia v0.5.4;MPL-2.0;https://github.com/pdeljanov/Symphonia
+syn v2.0.101;MIT OR Apache-2.0;https://github.com/dtolnay/syn
+thiserror-impl v2.0.17 (proc-macro);MIT OR Apache-2.0;https://github.com/dtolnay/thiserror
+thiserror v2.0.17;MIT OR Apache-2.0;https://github.com/dtolnay/thiserror
+thread_local v1.1.9;MIT OR Apache-2.0;https://github.com/Amanieu/thread_local-rs
+tinyvec_macros v0.1.1;MIT OR Apache-2.0 OR Zlib;https://github.com/Soveu/tinyvec_macros
+tinyvec v1.9.0;Zlib OR Apache-2.0 OR MIT;https://github.com/Lokathor/tinyvec
+toml_datetime v0.7.3;MIT OR Apache-2.0;https://github.com/toml-rs/toml
+toml_edit v0.23.7;MIT OR Apache-2.0;https://github.com/toml-rs/toml
+toml_parser v1.0.4;MIT OR Apache-2.0;https://github.com/toml-rs/toml
+typeid v1.0.3;MIT OR Apache-2.0;https://github.com/dtolnay/typeid
+unicode-ident v1.0.18;(MIT OR Apache-2.0) AND Unicode-3.0;https://github.com/dtolnay/unicode-ident
+unicode-xid v0.2.6;MIT OR Apache-2.0;https://github.com/unicode-rs/unicode-xid
+variadics_please v1.1.0 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/variadics_please
+winnow v0.7.13;MIT;https://github.com/winnow-rs/winnow

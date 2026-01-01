@@ -1,8 +1,79 @@
 [package]
-name = "ConsoleSokoban"
-version = "2.3.0-dev"
+name = "SokoTerm"
+version = "1.0.1-demo"
 edition = "2024"
 
 [dependencies]
 rodio = "0.20.1"
-console-lib = { version = "0.3.0", features = ["custom_panic_hook"] }
+bevy_ecs = { version = "0.17.3" }
+
+console-lib = { version = "0.3.0", features = ["custom_panic_hook"], optional = true }
+bevy_app = { version = "0.17.3", optional = true }
+bevy_time = { version = "0.17.3", optional = true }
+
+bevy = { version = "0.17.3", default-features = false, features = [
+    "std",
+    "async_executor",
+    "animation",
+    "bevy_asset",
+    "bevy_color",
+    "bevy_core_pipeline",
+    "bevy_post_process",
+    "bevy_anti_alias",
+    "bevy_gilrs",
+    "bevy_gizmos",
+    "bevy_gltf",
+    "bevy_input_focus",
+    "bevy_log",
+    "bevy_mesh_picking_backend",
+    "bevy_pbr",
+    "bevy_picking",
+    "bevy_render",
+    "bevy_scene",
+    "bevy_image",
+    "bevy_mesh",
+    "bevy_camera",
+    "bevy_light",
+    "bevy_shader",
+    "bevy_sprite",
+    "bevy_sprite_picking_backend",
+    "bevy_sprite_render",
+    "bevy_state",
+    "bevy_text",
+    "bevy_ui",
+    "bevy_ui_picking_backend",
+    "bevy_ui_render",
+    "experimental_bevy_ui_widgets",
+    "bevy_window",
+    "bevy_winit",
+    "custom_cursor",
+    "default_font",
+    "hdr",
+    "ktx2",
+    "multi_threaded",
+    "png",
+    "reflect_auto_register",
+    "smaa_luts",
+    "sysinfo_plugin",
+    "tonemapping_luts",
+    "webgl2",
+    "x11",
+    "debug",
+    "zstd_rust",
+], optional = true}
+bevy-steamworks = { version = "0.15.0", optional = true }
+smol_str = { version = "0.2.2", optional = true }
+
+[build-dependencies]
+embed-resource = "3.0.6"
+
+[features]
+cli = ["dep:console-lib", "dep:bevy_app", "dep:bevy_time"]
+gui = ["dep:bevy", "dep:smol_str"]
+steam = ["gui", "dep:bevy-steamworks"]
+
+[profile.dev.package."*"]
+opt-level = 3
+
+# TODO: [profile.release]
+# TODO: lto = true

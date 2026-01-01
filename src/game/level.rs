@@ -1,14 +1,20 @@
-use crate::game::Game;
+use crate::game::{audio, Game, GameError};
 use std::error::Error;
+use std::ffi::OsString;
 use std::fmt::{Debug, Display, Formatter, Write as _};
 use std::fs::File;
 use std::io::Write;
 use std::str::FromStr;
+use crate::collections::UndoHistory;
+use crate::game::audio::BackgroundMusicId;
+use crate::game::console_extension::ConsoleExtension;
 use crate::io::{Color, Console};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Tile {
     Empty,
+    FragileFloor,
+    Ice,
 
     OneWayLeft,
     OneWayUp,
@@ -18,27 +24,70 @@ pub enum Tile {
     Wall,
 
     Player,
+    PlayerOnFragileFloor,
+    PlayerOnIce,
 
     Key,
     KeyInGoal,
+    KeyOnFragileFloor,
+    KeyOnIce,
     LockedDoor,
 
     Box,
     BoxInGoal,
+    BoxOnFragileFloor,
+    BoxOnIce,
     Goal,
 
     Hole,
     BoxInHole,
 
     DecorationBlank,
-
-    Secret,
 }
 
 impl Tile {
+    pub fn floor_tile(self) -> Self {
+        match self {
+            Tile::Empty => Tile::Empty,
+            Tile::FragileFloor => Tile::FragileFloor,
+            Tile::Ice => Tile::Ice,
+
+            Tile::OneWayLeft => Tile::OneWayLeft,
+            Tile::OneWayUp => Tile::OneWayUp,
+            Tile::OneWayRight => Tile::OneWayRight,
+            Tile::OneWayDown => Tile::OneWayDown,
+
+            Tile::Wall => Tile::Wall,
+
+            Tile::Player => Tile::Player,
+            Tile::PlayerOnFragileFloor => Tile::FragileFloor,
+            Tile::PlayerOnIce => Tile::Ice,
+
+            Tile::Key => Tile::Key,
+            Tile::KeyInGoal => Tile::Goal,
+            Tile::KeyOnFragileFloor => Tile::FragileFloor,
+            Tile::KeyOnIce => Tile::Ice,
+            Tile::LockedDoor => Tile::LockedDoor,
+
+            Tile::Box => Tile::Box,
+            Tile::BoxInGoal => Tile::Goal,
+            Tile::BoxOnFragileFloor => Tile::FragileFloor,
+            Tile::BoxOnIce => Tile::Ice,
+            Tile::Goal => Tile::Goal,
+
+            Tile::Hole => Tile::Hole,
+            Tile::BoxInHole => Tile::BoxInHole,
+
+            Tile::DecorationBlank => Tile::DecorationBlank,
+        }
+    }
+
     pub fn from_ascii(a: u8) -> Result<Self, LevelLoadingError> {
         match a {
             b'-' => Ok(Tile::Empty),
+            //Different ASCII char than display for compatibility with old level packs
+            b':' => Ok(Tile::FragileFloor),
+            b'%' => Ok(Tile::Ice),
 
             b'<' => Ok(Tile::OneWayLeft),
             b'^' => Ok(Tile::OneWayUp),
@@ -48,13 +97,19 @@ impl Tile {
             b'#' => Ok(Tile::Wall),
 
             b'p' | b'P' => Ok(Tile::Player),
+            b',' => Ok(Tile::PlayerOnFragileFloor),
+            b'&' => Ok(Tile::PlayerOnIce),
 
             b'*' => Ok(Tile::Key),
             b'~' => Ok(Tile::KeyInGoal),
+            b';' => Ok(Tile::KeyOnFragileFloor),
+            b'\\' => Ok(Tile::KeyOnIce),
             b'=' => Ok(Tile::LockedDoor),
 
             b'@' => Ok(Tile::Box),
             b'+' => Ok(Tile::BoxInGoal),
+            b'!' => Ok(Tile::BoxOnFragileFloor),
+            b'/' => Ok(Tile::BoxOnIce),
             b'x' | b'X' => Ok(Tile::Goal),
 
             b'o' | b'O' => Ok(Tile::Hole),
@@ -62,15 +117,16 @@ impl Tile {
 
             b'b' | b'B' => Ok(Tile::DecorationBlank),
 
-            b's' | b'S' => Ok(Tile::Secret),
-
             _ => Err(LevelLoadingError::new("Invalid tile")),
         }
     }
 
-    pub fn to_ascii(&self) -> u8 {
+    pub fn to_ascii(self) -> u8 {
         match self {
             Tile::Empty => b'-',
+            //Different ASCII char than display for compatibility with old level packs
+            Tile::FragileFloor => b':',
+            Tile::Ice => b'%',
 
             Tile::OneWayLeft => b'<',
             Tile::OneWayUp => b'^',
@@ -80,29 +136,45 @@ impl Tile {
             Tile::Wall => b'#',
 
             Tile::Player => b'P',
+            Tile::PlayerOnFragileFloor => b',',
+            Tile::PlayerOnIce => b'&',
 
             Tile::Key => b'*',
             Tile::KeyInGoal => b'~',
+            Tile::KeyOnFragileFloor => b';',
+            Tile::KeyOnIce => b'\\',
             Tile::LockedDoor => b'=',
 
             Tile::Box => b'@',
             Tile::BoxInGoal => b'+',
+            Tile::BoxOnFragileFloor => b'!',
+            Tile::BoxOnIce => b'/',
             Tile::Goal => b'x',
 
             Tile::Hole => b'o',
             Tile::BoxInHole => b'.',
 
             Tile::DecorationBlank => b'b',
-
-            Tile::Secret => b's',
         }
     }
 
-    pub fn draw(&self, console: &Console, is_player_background: bool, inverted: bool) {
+    pub fn draw(self, console: &Console, is_player_background: bool, inverted: bool) {
+        console.draw_tile(self, is_player_background, inverted);
+    }
+
+    pub fn draw_raw(self, console: &Console, is_player_background: bool, inverted: bool) {
         match self {
             Tile::Empty => {
                 console.set_color_invertible(Color::LightBlue, Color::Default, inverted);
                 console.draw_text("-");
+            },
+            Tile::FragileFloor => {
+                console.set_color_invertible(Color::LightBlue, Color::Default, inverted);
+                console.draw_text("~");
+            },
+            Tile::Ice => {
+                console.set_color_invertible(Color::LightBlue, Color::Default, inverted);
+                console.draw_text("%");
             },
             Tile::OneWayLeft => {
                 console.set_color_invertible(Color::LightBlue, Color::Default, inverted);
@@ -124,7 +196,7 @@ impl Tile {
                 console.set_color_invertible(Color::LightGreen, Color::Default, inverted);
                 console.draw_text("#");
             },
-            Tile::Player => {
+            Tile::Player | Tile::PlayerOnFragileFloor | Tile::PlayerOnIce => {
                 if is_player_background {
                     console.set_color_invertible(Color::Default, Color::Yellow, inverted);
                 }else {
@@ -132,7 +204,7 @@ impl Tile {
                 }
                 console.draw_text("P");
             },
-            Tile::Key => {
+            Tile::Key | Tile::KeyOnFragileFloor | Tile::KeyOnIce => {
                 console.set_color_invertible(Color::LightCyan, Color::Default, inverted);
                 console.draw_text("*");
             },
@@ -144,7 +216,7 @@ impl Tile {
                 console.set_color_invertible(Color::LightRed, Color::Default, inverted);
                 console.draw_text("=");
             },
-            Tile::Box => {
+            Tile::Box | Tile::BoxOnFragileFloor | Tile::BoxOnIce => {
                 console.set_color_invertible(Color::LightCyan, Color::Default, inverted);
                 console.draw_text("@");
             },
@@ -168,11 +240,105 @@ impl Tile {
                 console.set_color_invertible(Color::LightBlue, Color::Default, inverted);
                 console.draw_text(" ");
             },
-            Tile::Secret => {
-                console.set_color_invertible(Color::LightBlue, Color::Default, inverted);
-                console.draw_text("+");
-            },
         };
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Direction {
+    Left,
+    Up,
+    Right,
+    Down,
+}
+
+impl Direction {
+    pub fn update_x(self, x: usize, width: usize) -> usize {
+        match self {
+            Direction::Left => if x == 0 {
+                width - 1
+            }else {
+                x - 1
+            },
+            Direction::Right => if x == width - 1 {
+                0
+            }else {
+                x + 1
+            },
+            _ => x,
+        }
+    }
+
+    pub fn update_y(self, y: usize, height: usize) -> usize {
+        match self {
+            Direction::Up => if y == 0 {
+                height - 1
+            }else {
+                y - 1
+            },
+            Direction::Down => if y == height - 1 {
+                0
+            }else {
+                y + 1
+            },
+            _ => y,
+        }
+    }
+
+    pub fn update_xy(self, x: usize, y: usize, width: usize, height: usize) -> (usize, usize) {
+        (self.update_x(x, width), self.update_y(y, height))
+    }
+}
+
+#[derive(Debug, Clone)]
+enum AnimationState {
+    Player {
+        last_valid_move_result: MoveResult,
+        direction: Direction,
+    },
+    BoxOrKey {
+        last_valid_move_result: MoveResult,
+        x_from: usize,
+        y_from: usize,
+        direction: Direction,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SoundEffect {
+    BoxFall,
+    DoorUnlocked,
+    FloorBroken,
+}
+
+#[derive(Debug, Clone)]
+pub enum MoveResult {
+    Valid {
+        has_won: bool,
+        sound_effect: Option<SoundEffect>,
+    },
+    Invalid,
+    Animation {
+        player_animation: bool,
+        sound_effect: Option<SoundEffect>,
+    },
+}
+
+impl MoveResult {
+    pub fn is_valid(&self) -> bool {
+        matches!(self, MoveResult::Valid { .. })
+    }
+
+    pub fn has_won(&self) -> bool {
+        matches!(self, MoveResult::Valid {has_won: true, ..})
+    }
+
+    pub fn is_invalid(&self) -> bool {
+        matches!(self, MoveResult::Invalid)
+    }
+
+    pub fn is_animation(&self) -> bool {
+        matches!(self, MoveResult::Animation {..})
     }
 }
 
@@ -210,8 +376,8 @@ impl Level {
         &self.tiles
     }
 
-    pub fn get_tile(&self, x: usize, y: usize) -> Option<&Tile> {
-        self.tiles.get(x + y * self.width)
+    pub fn get_tile(&self, x: usize, y: usize) -> Option<Tile> {
+        self.tiles.get(x + y * self.width).copied()
     }
 
     pub fn get_tile_mut(&mut self, x: usize, y: usize) -> Option<&mut Tile> {
@@ -222,92 +388,6 @@ impl Level {
         self.tiles[x + y * self.width] = tile;
     }
 
-    pub fn move_box_or_key(&mut self, level_original: &Level, has_won: &mut bool, from_pos_x: usize, from_pos_y: usize, to_pos_x: usize, to_pos_y: usize) -> bool {
-        if self.width != level_original.width || self.height != level_original.height {
-            panic!("Original level must have the same width and height as the modified level!");
-        }
-
-        let move_x = to_pos_x as isize - from_pos_x as isize;
-        let move_y = to_pos_y as isize - from_pos_y as isize;
-        let index_from = to_pos_x + to_pos_y * self.width;
-        let index_to = ((to_pos_x as isize + move_x + self.width as isize) % self.width as isize) as usize +
-                ((to_pos_y as isize + move_y + self.height as isize) % self.height as isize) as usize * self.width;
-
-        let Some(tile_from) = self.tiles.get(index_from) else {
-            return false;
-        };
-        let Some(tile_to) = self.tiles.get(index_to) else {
-            return false;
-        };
-
-        let is_box = *tile_from == Tile::Box || *tile_from == Tile::BoxInGoal;
-
-        let tile_from_new_value;
-        let tile_to_new_value;
-
-        if *tile_to == Tile::Empty ||*tile_to == Tile::Goal ||  *tile_to == Tile::BoxInHole ||
-                *tile_to == Tile::Hole || (!is_box && *tile_to == Tile::LockedDoor) {
-            if is_box && *tile_to == Tile::Goal {
-                tile_to_new_value = Tile::BoxInGoal;
-
-                *has_won = true;
-                for (index, tile) in self.tiles.iter().
-                        enumerate() {
-                    if index == index_to {
-                        continue;
-                    }
-
-                    if *tile == Tile::Goal || *tile == Tile::KeyInGoal {
-                        *has_won = false;
-
-                        break;
-                    }
-
-                    let tile_original = &level_original.tiles[index];
-
-                    //If player is on GOAL -> check level field
-                    if index == index_from && (*tile_original == Tile::Goal ||
-                            *tile_original == Tile::BoxInGoal || *tile_original == Tile::KeyInGoal) {
-                        *has_won = false;
-
-                        break;
-                    }
-                }
-            }else if !is_box && *tile_to == Tile::Goal {
-                tile_to_new_value = Tile::KeyInGoal;
-            }else if *tile_to == Tile::Hole {
-                if is_box {
-                    tile_to_new_value = Tile::BoxInHole;
-                }else {
-                    //Key will be destroyed, only boxes can fill holes
-                    tile_to_new_value = Tile::Hole;
-                }
-            }else if is_box {
-                tile_to_new_value = Tile::Box;
-            }else if *tile_to == Tile::LockedDoor {
-                //Open door and destroy key
-                tile_to_new_value = Tile::Empty;
-            }else {
-                tile_to_new_value = Tile::Key;
-            }
-
-            if *tile_from == Tile::Box || *tile_from == Tile::Key {
-                tile_from_new_value = Tile::Empty;
-            }else if *tile_from == Tile::BoxInHole {
-                tile_from_new_value = Tile::BoxInHole;
-            }else {
-                tile_from_new_value = Tile::Goal;
-            }
-
-            self.tiles[index_from] = tile_from_new_value;
-            self.tiles[index_to] = tile_to_new_value;
-
-            return true;
-        }
-
-        false
-    }
-
     pub fn draw(&self, console: &Console, x_offset: usize, y_offset: usize, is_player_background: bool, cursor_pos: Option<(usize, usize)>) {
         let mut tile_iter = self.tiles.iter();
 
@@ -316,6 +396,50 @@ impl Level {
 
             for j in 0..self.width {
                 if let Some(tile) = tile_iter.next() {
+                    tile.draw(console, is_player_background, cursor_pos.is_some_and(|(x, y)| x == j && y == i));
+                }
+            }
+
+            console.draw_text("\n");
+        }
+    }
+
+    pub fn draw_floor(&self, console: &Console, x_offset: usize, y_offset: usize, is_player_background: bool, original_level: &Level, cursor_pos: Option<(usize, usize)>) {
+        let mut tile_iter = self.tiles.iter().copied();
+
+        for i in 0..self.height {
+            console.set_cursor_pos(x_offset, i + y_offset);
+
+            for j in 0..self.width {
+                if let Some(tile) = tile_iter.next() {
+                    let tile = match tile.floor_tile() {
+                        Tile::Player => match original_level.get_tile(j, i) {
+                            Some(Tile::KeyOnIce | Tile::BoxOnIce | Tile::Ice | Tile::PlayerOnIce) => Tile::Ice,
+
+                            Some(Tile::OneWayLeft) => Tile::OneWayLeft,
+                            Some(Tile::OneWayUp) => Tile::OneWayUp,
+                            Some(Tile::OneWayRight) => Tile::OneWayRight,
+                            Some(Tile::OneWayDown) => Tile::OneWayDown,
+
+                            Some(Tile::KeyInGoal | Tile::BoxInGoal | Tile::Goal) => Tile::Goal,
+
+                            Some(
+                                Tile::Hole | Tile::BoxInHole |
+                                Tile::KeyOnFragileFloor | Tile::BoxOnFragileFloor
+                            ) => Tile::BoxInHole,
+
+                            _ => Tile::Empty,
+                        },
+
+                        Tile::Box | Tile::Key => match original_level.get_tile(j, i) {
+                            Some(Tile::Hole | Tile::BoxInHole) => Tile::BoxInHole,
+
+                            _ => Tile::Empty,
+                        },
+
+                        tile => tile,
+                    };
+
                     tile.draw(console, is_player_background, cursor_pos.is_some_and(|(x, y)| x == j && y == i));
                 }
             }
@@ -392,6 +516,344 @@ impl FromStr for Level {
 }
 
 #[derive(Debug)]
+pub struct PlayingLevel {
+    original_level: Level,
+    animation_state: Option<AnimationState>,
+    playing_level: UndoHistory<(Level, (usize, usize))>,
+}
+
+impl PlayingLevel {
+    pub fn new(level: &Level, history_size: usize) -> Result<Self, LevelLoadingError> {
+        let player_tile_count = level.tiles().iter().filter(|tile| matches!(tile, Tile::Player | Tile::PlayerOnFragileFloor | Tile::PlayerOnIce)).count();
+        if player_tile_count == 0 {
+            return Err(LevelLoadingError::new("Level does not contain a player tile!"));
+        }else if player_tile_count > 1 {
+            return Err(LevelLoadingError::new("Level contains too many player tiles!"));
+        }
+
+        let mut player_pos = None;
+
+        'outer:
+        for i in 0..level.width() {
+            for j in 0..level.height() {
+                if let Some(tile) = level.get_tile(i, j) && matches!(tile, Tile::Player | Tile::PlayerOnFragileFloor | Tile::PlayerOnIce) {
+                    player_pos = Some((i, j));
+
+                    break 'outer;
+                }
+            }
+        }
+
+        Ok(PlayingLevel {
+            original_level: level.clone(),
+            animation_state: None,
+            playing_level: UndoHistory::new(history_size, (level.clone(), player_pos.unwrap())),
+        })
+    }
+
+    pub fn is_playing_animation(&self) -> bool {
+        self.animation_state.is_some()
+    }
+
+    #[must_use]
+    pub fn continue_animation(&mut self) -> MoveResult {
+        let Some(animation_state) = self.animation_state.clone() else {
+            return MoveResult::Invalid;
+        };
+
+        let move_result = match animation_state {
+            AnimationState::Player {
+                last_valid_move_result, direction,
+            } => {
+                let move_result = self.move_player_internal(direction);
+                if move_result.is_invalid() {
+                    //Animation finished
+                    self.animation_state = None;
+
+                    //No changes happened to level -> return result directly
+                    return last_valid_move_result;
+                }
+
+                if move_result.is_valid() {
+                    //Animation finished
+                    self.animation_state = None;
+                }
+
+                move_result
+            },
+
+            AnimationState::BoxOrKey {
+                last_valid_move_result,
+                x_from, y_from,
+                direction,
+            } => {
+                let (mut level, player_pos) = self.playing_level.current().clone();
+
+                let move_result = self.move_box_or_key(&mut level, x_from, y_from, direction);
+                if move_result.is_invalid() {
+                    //Animation finished
+                    self.animation_state = None;
+
+                    //No changes happened to level -> return result directly
+                    return last_valid_move_result;
+                }
+
+                if move_result.is_valid() {
+                    //Animation finished
+                    self.animation_state = None;
+                }
+
+                self.playing_level.commit_change((level, player_pos));
+
+                move_result
+            },
+        };
+
+        //Undo temporary change from last animation iteration
+        let current_playing_level = self.playing_level.current().clone();
+        self.playing_level.undo();
+        self.playing_level.undo();
+        self.playing_level.commit_change(current_playing_level);
+
+        move_result
+    }
+
+    #[must_use]
+    pub fn move_player(&mut self, direction: Direction) -> MoveResult {
+        if self.is_playing_animation() {
+            return MoveResult::Invalid;
+        }
+
+        self.move_player_internal(direction)
+    }
+
+    #[must_use]
+    fn move_player_internal(&mut self, direction: Direction) -> MoveResult {
+        let (mut level, mut player_pos) = self.playing_level.current().clone();
+
+        let (x_from, y_from) = player_pos;
+        let (x_to, y_to) = direction.update_xy(x_from, y_from, level.width, level.height);
+
+        let one_way_door_tile = match direction {
+            Direction::Left => Tile::OneWayLeft,
+            Direction::Up => Tile::OneWayUp,
+            Direction::Right => Tile::OneWayRight,
+            Direction::Down => Tile::OneWayDown,
+        };
+
+        //Set players old position to old level data
+        let mut tile = self.original_level.get_tile(x_from, y_from).unwrap();
+        let player_tile = level.get_tile(x_from, y_from).unwrap();
+        if matches!(tile, Tile::Player | Tile::Box | Tile::Key | Tile::LockedDoor) {
+            tile = Tile::Empty;
+        }else if matches!(tile, Tile::BoxInGoal | Tile::KeyInGoal) {
+            tile = Tile::Goal;
+        }else if matches!(tile, Tile::Hole | Tile::BoxInHole) {
+            tile = Tile::BoxInHole;
+        }else if matches!(tile, Tile::FragileFloor | Tile::PlayerOnFragileFloor | Tile::BoxOnFragileFloor | Tile::KeyOnFragileFloor) {
+            tile = if player_tile == Tile::PlayerOnFragileFloor {
+                Tile::Hole //First time player is on tile -> Replace with Hole
+            }else {
+                Tile::BoxInHole //Hole from Fragile Floor usage must already have been filled with box
+            };
+        }else if matches!(tile, Tile::Ice | Tile::PlayerOnIce | Tile::BoxOnIce | Tile::KeyOnIce) {
+            tile = Tile::Ice;
+        }
+
+        level.set_tile(x_from, y_from, tile);
+
+        let was_floor_broken = tile == Tile::Hole;
+
+        let tile = level.get_tile(x_to, y_to).unwrap();
+        let move_result = if matches!(tile, Tile::Empty | Tile::FragileFloor | Tile::Ice | Tile::Goal | Tile::BoxInHole) || tile == one_way_door_tile {
+            MoveResult::Valid { has_won: false, sound_effect: was_floor_broken.then_some(SoundEffect::FloorBroken) }
+        }else if matches!(tile, Tile::Box | Tile::BoxInGoal | Tile::BoxOnFragileFloor | Tile::BoxOnIce | Tile::Key | Tile::KeyInGoal | Tile::KeyOnFragileFloor | Tile::KeyOnIce) {
+            let move_result = self.move_box_or_key(&mut level, x_to, y_to, direction);
+            match move_result {
+                MoveResult::Valid {
+                    has_won, sound_effect,
+                } if was_floor_broken && sound_effect.is_none() => MoveResult::Valid {
+                    has_won, sound_effect: Some(SoundEffect::FloorBroken),
+                },
+
+                _ => move_result,
+            }
+        }else {
+            MoveResult::Invalid
+        };
+
+        if move_result.is_valid() || move_result.is_animation() {
+            player_pos = (x_to, y_to);
+        }
+
+        //Set player to new position
+        if matches!(level.get_tile(x_to, y_to).unwrap(), Tile::FragileFloor | Tile::PlayerOnFragileFloor | Tile::BoxOnFragileFloor | Tile::KeyOnFragileFloor) {
+            level.set_tile(player_pos.0, player_pos.1, Tile::PlayerOnFragileFloor);
+        }else {
+            level.set_tile(player_pos.0, player_pos.1, Tile::Player);
+        }
+
+        if move_result.is_valid() || move_result.is_animation() {
+            self.playing_level.commit_change((level, player_pos));
+
+            //If ice tile: move forwards until no longer ice (Start animation)
+            if tile == Tile::Ice {
+                self.animation_state = Some(AnimationState::Player {
+                    last_valid_move_result: move_result,
+                    direction,
+                });
+
+                return MoveResult::Animation { player_animation: true, sound_effect: was_floor_broken.then_some(SoundEffect::FloorBroken) };
+            }
+        }
+
+        move_result
+    }
+
+    #[must_use]
+    fn move_box_or_key(&mut self, level: &mut Level, x_from: usize, y_from: usize, direction: Direction) -> MoveResult {
+        if level.width != self.original_level.width || level.height != self.original_level.height {
+            panic!("Original level must have the same width and height as the modified level!");
+        }
+
+        let (x_to, y_to) = direction.update_xy(x_from, y_from, level.width, level.height);
+
+        let index_from = x_from + y_from * level.width;
+        let index_to = x_to + y_to * level.width;
+
+        let Some(tile_from) = level.tiles.get(index_from) else {
+            return MoveResult::Invalid;
+        };
+        let Some(tile_to) = level.tiles.get(index_to) else {
+            return MoveResult::Invalid;
+        };
+
+        let is_box = matches!(*tile_from, Tile::Box | Tile::BoxInGoal | Tile::BoxOnFragileFloor | Tile::BoxOnIce);
+
+        let tile_from_new_value;
+        let tile_to_new_value;
+
+        let mut has_won = false;
+
+        if matches!(*tile_to, Tile::Empty | Tile::FragileFloor | Tile::Ice | Tile::Goal | Tile::BoxInHole | Tile::Hole) ||
+                (!is_box && *tile_to == Tile::LockedDoor) {
+            if is_box && *tile_to == Tile::Goal {
+                tile_to_new_value = Tile::BoxInGoal;
+
+                has_won = true;
+                for (index, tile) in level.tiles.iter().
+                        enumerate() {
+                    if index == index_to {
+                        continue;
+                    }
+
+                    if *tile == Tile::Goal || *tile == Tile::KeyInGoal {
+                        has_won = false;
+
+                        break;
+                    }
+
+                    let tile_original = &self.original_level.tiles[index];
+
+                    //If player is on GOAL -> check level field
+                    if (*tile == Tile::Player || index == index_from) &&
+                            matches!(*tile_original, Tile::Goal | Tile::BoxInGoal | Tile::KeyInGoal) {
+                        has_won = false;
+
+                        break;
+                    }
+                }
+            }else if !is_box && *tile_to == Tile::Goal {
+                tile_to_new_value = Tile::KeyInGoal;
+            }else if *tile_to == Tile::FragileFloor {
+                if is_box {
+                    tile_to_new_value = Tile::BoxOnFragileFloor;
+                }else {
+                    tile_to_new_value = Tile::KeyOnFragileFloor;
+                }
+            }else if *tile_to == Tile::Ice {
+                if is_box {
+                    tile_to_new_value = Tile::BoxOnIce;
+                }else {
+                    tile_to_new_value = Tile::KeyOnIce;
+                }
+            }else if *tile_to == Tile::Hole {
+                if is_box {
+                    tile_to_new_value = Tile::BoxInHole;
+                }else {
+                    //Key will be destroyed, only boxes can fill holes
+                    tile_to_new_value = Tile::Hole;
+                }
+            }else if is_box {
+                tile_to_new_value = Tile::Box;
+            }else if *tile_to == Tile::LockedDoor {
+                //Open door and destroy key
+                tile_to_new_value = Tile::Empty;
+            }else {
+                tile_to_new_value = Tile::Key;
+            }
+
+            if *tile_from == Tile::Box || *tile_from == Tile::Key {
+                tile_from_new_value = Tile::Empty;
+            }else if *tile_from == Tile::BoxInHole {
+                tile_from_new_value = Tile::BoxInHole;
+            }else if *tile_from == Tile::BoxOnFragileFloor || *tile_from == Tile::KeyOnFragileFloor {
+                tile_from_new_value = Tile::FragileFloor;
+            }else if *tile_from == Tile::BoxOnIce || *tile_from == Tile::KeyOnIce {
+                tile_from_new_value = Tile::Ice;
+            }else {
+                tile_from_new_value = Tile::Goal;
+            }
+
+            level.tiles[index_from] = tile_from_new_value;
+            level.tiles[index_to] = tile_to_new_value;
+
+            let move_result = MoveResult::Valid { has_won, sound_effect: match tile_to_new_value {
+                Tile::BoxInHole => Some(SoundEffect::BoxFall),
+                Tile::Empty => Some(SoundEffect::DoorUnlocked),
+
+                _ => None,
+            }};
+
+            //If ice tile: move forwards until no longer ice
+            if matches!(tile_to_new_value, Tile::BoxOnIce | Tile::KeyOnIce) {
+                self.animation_state = Some(AnimationState::BoxOrKey {
+                    last_valid_move_result: move_result,
+                    x_from: x_to, y_from: y_to,
+                    direction,
+                });
+
+                return MoveResult::Animation { player_animation: false, sound_effect: None };
+            }
+
+            return move_result;
+        }
+
+        MoveResult::Invalid
+    }
+
+    pub fn original_level(&self) -> &Level {
+        &self.original_level
+    }
+
+    pub fn current_playing_level(&self) -> &(Level, (usize, usize)) {
+        self.playing_level.current()
+    }
+
+    pub fn current_move_index(&self) -> usize {
+        self.playing_level.current_index()
+    }
+
+    pub fn undo_move(&mut self) -> Option<&(Level, (usize, usize))> {
+        self.playing_level.undo()
+    }
+
+    pub fn redo_move(&mut self) -> Option<&(Level, (usize, usize))> {
+        self.playing_level.redo()
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct LevelWithStats {
     level: Level,
     best_time: Option<u64>,
@@ -418,12 +880,25 @@ impl LevelWithStats {
     pub fn best_moves(&self) -> Option<u32> {
         self.best_moves
     }
+
+    pub fn set_best_time(&mut self, best_time: Option<u64>) {
+        self.best_time = best_time;
+    }
+
+    pub fn set_best_moves(&mut self, best_moves: Option<u32>) {
+        self.best_moves = best_moves;
+    }
 }
 
 #[derive(Debug)]
 pub struct LevelPack {
+    name: String,
     id: String,
     path: String,
+
+    thumbnail_level_index: Option<usize>,
+    background_music_id: Option<BackgroundMusicId>,
+
     levels: Vec<LevelWithStats>,
 
     min_level_not_completed: usize,
@@ -433,14 +908,19 @@ pub struct LevelPack {
 }
 
 impl LevelPack {
-    pub const MAX_LEVEL_PACK_COUNT: usize = 64;
-    pub const MAX_LEVEL_COUNT_PER_PACK: usize = 191;
+    pub const MAX_LEVEL_PACK_NAME_LEN: usize = 25;
 
-    pub fn new(id: impl Into<String>, path: impl Into<String>) -> Self {
+    pub const MAX_LEVEL_COUNT_PER_PACK: usize = 190;
+
+    pub fn new(name: impl Into<String>, id: impl Into<String>, path: impl Into<String>) -> Self {
         Self {
+            name: name.into(),
             id: id.into(),
             path: path.into(),
             levels: vec![],
+
+            thumbnail_level_index: None,
+            background_music_id: None,
 
             min_level_not_completed: Default::default(),
             level_pack_best_time_sum: Default::default(),
@@ -448,9 +928,16 @@ impl LevelPack {
         }
     }
 
-    pub fn read_from_save_game(id: impl Into<String>, path: impl Into<String>, lvl_data: impl Into<String>) -> Result<Self, Box<dyn Error>> {
+    pub fn read_from_save_game(
+        id: impl Into<String>, path: impl Into<String>, lvl_data: impl Into<String>, editor_level_pack: bool,
+    ) -> Result<Self, Box<dyn Error>> {
+        let mut lvl_name = None;
         let id = id.into();
         let path = path.into();
+
+        let mut pack_thumbnail_level_index = None;
+        let mut pack_background_music_id = None;
+
         let lvl_data = lvl_data.into();
 
         let mut levels = Vec::with_capacity(Self::MAX_LEVEL_COUNT_PER_PACK);
@@ -462,7 +949,70 @@ impl LevelPack {
                 ))));
             }
 
-            let line = lines.first().unwrap().trim();
+            let mut lines = lines.into_iter();
+
+            let mut line = lines.next().unwrap().trim();
+            if let Some(name) = line.strip_prefix("Name: ") {
+                let name = name.trim();
+                if name.len() > Self::MAX_LEVEL_PACK_NAME_LEN {
+                    return Err(Box::new(LevelLoadingError::new(format!(
+                        "The level pack name \"{name}\" is too long!"
+                    ))));
+                }
+
+                lvl_name = Some(name);
+
+                let next_line = lines.next();
+                let Some(next_line) = next_line else {
+                    return Err(Box::new(LevelLoadingError::new(format!(
+                        "The level pack file \"{path}\" does not contain level count!"
+                    ))));
+                };
+                line = next_line.trim();
+            }
+
+            if let Some(thumbnail_level) = line.strip_prefix("Thumbnail Level: ") {
+                let Ok(thumbnail_level_index) = usize::from_str(thumbnail_level.trim()) else {
+                    return Err(Box::new(LevelLoadingError::new(format!(
+                        "The thumbnail level index \"{line}\" is invalid in the level pack file \"{path}\"!"
+                    ))));
+                };
+
+                pack_thumbnail_level_index = Some(thumbnail_level_index);
+
+                let next_line = lines.next();
+                let Some(next_line) = next_line else {
+                    return Err(Box::new(LevelLoadingError::new(format!(
+                        "The level pack file \"{path}\" does not contain level count!"
+                    ))));
+                };
+                line = next_line.trim();
+            }
+
+            if let Some(background_music) = line.strip_prefix("Background Music: ") {
+                let Ok(background_music_id) = usize::from_str(background_music.trim()) else {
+                    return Err(Box::new(LevelLoadingError::new(format!(
+                        "The background music id \"{line}\" is invalid in the level pack file \"{path}\"!"
+                    ))));
+                };
+
+                pack_background_music_id = audio::BACKGROUND_MUSIC_TRACKS.check_id(background_music_id);
+                if pack_background_music_id.is_none() {
+                    return Err(Box::new(LevelLoadingError::new(format!(
+                        "The background music \"{background_music_id}\" from level pack file \"{path}\" does not exist \
+                        (Make sure that you are playing the latest version of SokoTerm)!"
+                    ))));
+                }
+
+                let next_line = lines.next();
+                let Some(next_line) = next_line else {
+                    return Err(Box::new(LevelLoadingError::new(format!(
+                        "The level pack file \"{path}\" does not contain level count!"
+                    ))));
+                };
+                line = next_line.trim();
+            }
+
             if !line.starts_with("Levels: ") {
                 return Err(Box::new(LevelLoadingError::new(format!(
                     "The level count is missing in the level pack file \"{path}\"!"
@@ -486,8 +1036,13 @@ impl LevelPack {
                 ))));
             };
 
-            let mut line_iter = lines.into_iter().
-                    skip(1).
+            if let Some(index) = pack_thumbnail_level_index && level_count <= index {
+                return Err(Box::new(LevelLoadingError::new(format!(
+                    "The thumbnail level index {index} is out of bounds (Should be less then {level_count}) in the level pack file \"{path}\"!"
+                ))));
+            }
+
+            let mut line_iter = lines.
                     filter(|line| !line.trim().is_empty());
             for i in 0..level_count {
                 let line = line_iter.next();
@@ -529,15 +1084,34 @@ impl LevelPack {
                 }
 
                 let level = Level::from_str(&level_str.join("\n"));
-                match level {
-                    Ok(level) => levels.push(level),
+                let level = match level {
+                    Ok(level) => level,
                     Err(err) => {
                         return Err(Box::new(LevelLoadingError::new(format!(
                             "\"{}\" occurred during parsing of level {} is invalid in the level pack file \"{path}\"!",
                             err, i + 1
                         ))));
                     },
+                };
+
+                if !editor_level_pack {
+                    let player_tile_count = level.tiles().iter().filter(|tile| matches!(tile, Tile::Player | Tile::PlayerOnFragileFloor | Tile::PlayerOnIce)).count();
+                    if player_tile_count == 0 {
+                        return Err(Box::new(GameError::new(format!(
+                            "Error while loading level pack \"{}\": Level {} does not contain a player tile",
+                            id,
+                            i + 1,
+                        ))));
+                    }else if player_tile_count > 1 {
+                        return Err(Box::new(GameError::new(format!(
+                            "Error while loading level pack \"{}\": Level {} contains too many player tiles",
+                            id,
+                            i + 1,
+                        ))));
+                    }
                 }
+
+                levels.push(level);
             }
 
             if line_iter.next().is_some() {
@@ -547,9 +1121,24 @@ impl LevelPack {
             }
         }
 
+        if !editor_level_pack && levels.is_empty() {
+            return Err(Box::new(GameError::new(format!(
+                "Error while loading level pack \"{}\": Level pack contains no levels",
+                id,
+            ))));
+        }
+
+        let level_save_file_postfix = if editor_level_pack {
+            ".lvl.edit.sav"
+        }else {
+            ".lvl.sav"
+        };
+
         let mut save_game_file = Game::get_or_create_save_game_folder()?;
-        save_game_file.push(&id);
-        save_game_file.push(".lvl.sav");
+        {
+            save_game_file.push(&id);
+            save_game_file.push(level_save_file_postfix);
+        }
 
         let mut min_level_not_completed= Default::default();
         let mut level_stats: Vec<(Option<u64>, Option<u32>)> = vec![Default::default(); Self::MAX_LEVEL_COUNT_PER_PACK];
@@ -559,23 +1148,25 @@ impl LevelPack {
 
                 let lines = save_game_data.lines().collect::<Vec<_>>();
                 if lines.is_empty() {
-                    //TODO add warning message (could not load save file '&id + ".lvl.sav"')
+                    //TODO add warning message (could not load save file '&id + level_save_file_postfix')
 
                     break 'read_save_game;
                 }
 
                 let line = lines.first().unwrap().trim();
 
-                min_level_not_completed = if let Ok(min_level_not_completed) = usize::from_str(line) {
-                    min_level_not_completed
-                }else {
-                    //TODO add warning message (could not load save file '&id + ".lvl.sav"')
+                if !editor_level_pack {
+                    min_level_not_completed = if let Ok(min_level_not_completed) = usize::from_str(line) {
+                        min_level_not_completed
+                    }else {
+                        //TODO add warning message (could not load save file '&id + level_save_file_postfix')
 
-                    break 'read_save_game;
-                };
+                        break 'read_save_game;
+                    };
+                }
 
                 for (i, mut line) in lines.iter().
-                        skip(1).
+                        skip(if editor_level_pack { 0 } else { 1 }).
                         take(Self::MAX_LEVEL_COUNT_PER_PACK).
                         map(|line| line.trim()).
                         enumerate() {
@@ -610,8 +1201,13 @@ impl LevelPack {
                 }).collect::<Vec<_>>();
 
         let mut level_pack = Self {
+            name: lvl_name.map(ToString::to_string).unwrap_or_else(|| id.clone()),
             id,
             path,
+
+            thumbnail_level_index: pack_thumbnail_level_index,
+            background_music_id: pack_background_music_id,
+
             levels,
 
             min_level_not_completed,
@@ -623,12 +1219,26 @@ impl LevelPack {
         Ok(level_pack)
     }
 
+    /// This function is used for saving level pack editor state to the default save path, validation results are included
     pub fn save_editor_level_pack(&self) -> Result<(), Box<dyn Error>> {
-        self.save_editor_level_pack_to_path(&self.path)
+        self.export_editor_level_pack_to_path(&self.path)?;
+
+        self.save_save_game(true)
     }
 
-    pub fn save_editor_level_pack_to_path(&self, path: impl Into<String>) -> Result<(), Box<dyn Error>> {
+    /// This function is used for saving level pack editor state and exporting, validation results are not included
+    pub fn export_editor_level_pack_to_path(&self, path: impl Into<OsString>) -> Result<(), Box<dyn Error>> {
         let mut file = File::create(path.into())?;
+
+        writeln!(file, "Name: {}", self.name)?;
+
+        if let Some(thumbnail_level_index) = self.thumbnail_level_index && thumbnail_level_index < self.levels.len() {
+            writeln!(file, "Thumbnail Level: {}", thumbnail_level_index)?;
+        }
+
+        if let Some(background_music_id) = self.background_music_id {
+            writeln!(file, "Background Music: {}", background_music_id.id())?;
+        }
 
         writeln!(file, "Levels: {}", self.levels.len())?;
 
@@ -641,17 +1251,31 @@ impl LevelPack {
         Ok(())
     }
 
-    pub fn save_save_game(&self) -> Result<(), Box<dyn Error>> {
+    pub fn save_save_game(&self, editor_validation: bool) -> Result<(), Box<dyn Error>> {
+        let level_save_file_postfix = if editor_validation {
+            ".lvl.edit.sav"
+        }else {
+            ".lvl.sav"
+        };
+
         let mut save_game_file = Game::get_or_create_save_game_folder()?;
+        {
         save_game_file.push(&self.id);
-        save_game_file.push(".lvl.sav");
+        save_game_file.push(level_save_file_postfix);
+        }
 
         let mut file = File::create(save_game_file)?;
 
-        writeln!(file, "{}", self.min_level_not_completed)?;
+        let level_score_count = if editor_validation {
+            self.levels.len()
+        }else {
+            writeln!(file, "{}", self.min_level_not_completed)?;
+
+            self.min_level_not_completed
+        };
 
         for level in self.levels.iter().
-                take(self.min_level_not_completed) {
+                take(level_score_count) {
             writeln!(
                 file, "ms{},{}",
                 level.best_time.map_or(-1, |best_time| best_time as i64),
@@ -663,12 +1287,36 @@ impl LevelPack {
         Ok(())
     }
 
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn set_name(&mut self, name: impl Into<String>) {
+        self.name = name.into();
+    }
+
     pub fn id(&self) -> &str {
         &self.id
     }
 
     pub fn path(&self) -> &str {
         &self.path
+    }
+
+    pub fn thumbnail_level_index(&self) -> Option<usize> {
+        self.thumbnail_level_index
+    }
+
+    pub fn set_thumbnail_level_index(&mut self, thumbnail_level_index: Option<usize>) {
+        self.thumbnail_level_index = thumbnail_level_index;
+    }
+
+    pub fn background_music_id(&self) -> Option<BackgroundMusicId> {
+        self.background_music_id
+    }
+
+    pub fn set_background_music_id(&mut self, background_music_id: Option<BackgroundMusicId>) {
+        self.background_music_id = background_music_id;
     }
 
     pub fn levels(&self) -> &[LevelWithStats] {
@@ -725,7 +1373,7 @@ impl LevelPack {
         self.calculate_stats_sum();
     }
 
-    fn calculate_stats_sum(&mut self) {
+    pub(super) fn calculate_stats_sum(&mut self) {
         if self.levels.is_empty() {
             self.level_pack_best_time_sum = None;
             self.level_pack_best_moves_sum = None;

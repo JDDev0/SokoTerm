@@ -1,0 +1,1 @@
+JetBrainsMono-Bold;The JetBrains Mono Project Authors;OFL-1.1;https://github.com/JetBrains/JetBrainsMono

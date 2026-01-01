@@ -64,6 +64,15 @@ impl<T> UndoHistory<T> {
         self.current_index
     }
 
+    #[expect(clippy::len_without_is_empty)]
+    pub fn len(&self) -> usize {
+        self.history.len()
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.history.capacity()
+    }
+
     pub fn clear(&mut self) {
         //Last element of history is current value and should be the new initial value
         self.history.swap_remove_back(0);

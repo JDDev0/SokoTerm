@@ -1,3 +1,7 @@
-pub type Key = console_lib::Key;
-pub type Color = console_lib::Color;
-pub type Console<'a> = console_lib::Console<'a>;
+#[cfg(feature = "cli")]
+pub use console_lib::{Console, Key, Color};
+
+#[cfg(feature = "gui")]
+pub mod bevy_abstraction;
+#[cfg(feature = "gui")]
+pub use bevy_abstraction::{Console, Key, Color};

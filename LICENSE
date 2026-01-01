@@ -1,6 +1,7 @@
-All assets in the assets directory are licensed under CC0 1.0 Universal (See assets/LICENSE).
+All audio assets in the assets/audio directory are licensed under CC0 1.0 Universal (See assets/audio/AUDIO_LICENSE).
+All fonts in the assets/font directory are licensed under OFL-1.1 (See assets/font/FONT_LICENSE).
 
-All other files are licensed under the GPL-v3-only (See below).
+All other files (including assets/textures/tiles) are licensed under the GPL-v3-only (See below).
 
 ========================================================================
 
