@@ -1119,6 +1119,30 @@ impl ScreenInGame {
         //Draw special help text for tutorial levels
         if game_state.get_level_pack_index() == 0 { //Built-in Demo pack
             console.reset_color();
+
+            if matches!(game_state.current_level_index, 3 | 4..6 | 15) {
+                console.set_cursor_pos(47, 3);
+                console.draw_key_input_text("z");
+                console.reset_color();
+                console.draw_text("/");
+                console.draw_key_input_text("u");
+
+                console.reset_color();
+                console.draw_text(": Undo");
+
+                console.set_cursor_pos(47, 4);
+                console.draw_key_input_text("y");
+
+                console.reset_color();
+                console.draw_text(": Redo");
+
+                console.set_cursor_pos(47, 5);
+                console.draw_key_input_text("r");
+
+                console.reset_color();
+                console.draw_text(": Restart Level");
+            }
+
             match game_state.current_level_index {
                 0 => {
                     if self.continue_flag {
@@ -1220,36 +1244,6 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(")");
                 },
-                4..=6 => {
-                    console.set_cursor_pos(28, 11);
-                    console.draw_key_input_text("z");
-                    console.reset_color();
-                    console.draw_text("/");
-                    console.draw_key_input_text("u");
-
-                    console.reset_color();
-                    console.draw_text(": Undo, ");
-
-                    console.draw_key_input_text("y");
-
-                    console.reset_color();
-                    console.draw_text(": Redo");
-
-                    console.set_cursor_pos(29, 12);
-                    console.draw_key_input_text("r");
-
-                    console.reset_color();
-                    console.draw_text(": Restart Level");
-                },
-                9 => {
-                    console.set_cursor_pos(8, 13);
-                    console.draw_text("Press ");
-
-                    console.draw_key_input_text("F9");
-
-                    console.reset_color();
-                    console.draw_text(" to toggle between Graphical and ASCII tile modes");
-                },
                 10 => {
                     console.set_cursor_pos(18, 11);
                     console.draw_text("Keys (");
@@ -1263,6 +1257,10 @@ impl ScreenInGame {
 
                     console.reset_color();
                     console.draw_text(")");
+                },
+                15 => {
+                    console.set_cursor_pos(35, 7);
+                    console.draw_text("???");
                 },
                 34 => {
                     if !self.game_over_flag {
