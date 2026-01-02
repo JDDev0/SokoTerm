@@ -741,9 +741,19 @@ impl Screen for ScreenSettings {
 
         console.reset_color();
         console.draw_text(")");
+
+        console.set_cursor_pos(0, 12);
+        console.draw_key_input_text("r");
+
+        console.reset_color();
+        console.draw_text(": Reset Demo");
     }
 
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
+        if key == Key::R {
+            game_state.open_dialog(Dialog::new_yes_no("Do you really want to reset the level progression of the demo?\n\nThis action can not be undone!"));
+        }
+
         if key == Key::ESC {
             game_state.play_sound_effect_ui_select();
 
@@ -753,6 +763,21 @@ impl Screen for ScreenSettings {
 
     fn on_mouse_pressed(&mut self, _game_state: &mut GameState, _column: usize, _row: usize) {
         //TODO
+    }
+
+    fn on_dialog_selection(&mut self, game_state: &mut GameState, selection: DialogSelection) {
+        if selection == DialogSelection::Yes {
+            game_state.level_pack.set_min_level_not_completed(0);
+
+            for level in game_state.level_pack.levels_mut() {
+                level.set_best_moves(None);
+                level.set_best_time(None);
+            }
+
+            if let Err(err) = game_state.level_pack.save_save_game(false) {
+                game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
+            }
+        }
     }
 }
 
