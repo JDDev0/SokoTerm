@@ -774,6 +774,8 @@ impl Screen for ScreenSettings {
                 level.set_best_time(None);
             }
 
+            game_state.level_pack.calculate_stats_sum();
+
             if let Err(err) = game_state.level_pack.save_save_game(false) {
                 game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
             }
