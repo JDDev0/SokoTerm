@@ -1578,6 +1578,14 @@ impl Screen for ScreenInGame {
 
         //Prevent movement during animation
         if self.level.as_mut().unwrap().is_playing_animation() {
+            //Allow undo while animation is playing
+            if key == Key::U || key == Key::Z {
+                let level = self.level.as_mut().unwrap().cancel_animation_and_undo_move();
+                if level.is_some() {
+                    game_state.play_sound_effect(audio::UNDO_REDO_EFFECT);
+                }
+            }
+
             return;
         }
 
