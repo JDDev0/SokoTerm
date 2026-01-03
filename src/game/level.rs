@@ -638,6 +638,24 @@ impl PlayingLevel {
         move_result
     }
 
+    pub fn cancel_animation_and_undo_move(&mut self) -> Option<&(Level, (usize, usize))> {
+        if !self.is_playing_animation() {
+            return None;
+        }
+
+        self.animation_state = None;
+
+        //Undo temporary change from last animation iteration
+        self.playing_level.undo();
+
+        //Prevent redo into animation frame by commiting change after undo
+        let current_playing_level = self.playing_level.current().clone();
+        self.playing_level.undo();
+        self.playing_level.commit_change(current_playing_level);
+
+        Some(self.playing_level.current())
+    }
+
     #[must_use]
     pub fn move_player(&mut self, direction: Direction) -> MoveResult {
         if self.is_playing_animation() {
@@ -865,10 +883,18 @@ impl PlayingLevel {
     }
 
     pub fn undo_move(&mut self) -> Option<&(Level, (usize, usize))> {
+        if self.is_playing_animation() {
+            return None;
+        }
+
         self.playing_level.undo()
     }
 
     pub fn redo_move(&mut self) -> Option<&(Level, (usize, usize))> {
+        if self.is_playing_animation() {
+            return None;
+        }
+
         self.playing_level.redo()
     }
 }

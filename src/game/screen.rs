@@ -1972,6 +1972,14 @@ impl Screen for ScreenInGame {
 
         //Prevent movement during animation
         if self.level.as_mut().unwrap().is_playing_animation() {
+            //Allow undo while animation is playing
+            if key == Key::U || key == Key::Z {
+                let level = self.level.as_mut().unwrap().cancel_animation_and_undo_move();
+                if level.is_some() {
+                    game_state.play_sound_effect(audio::UNDO_REDO_EFFECT);
+                }
+            }
+
             return;
         }
 
@@ -3318,7 +3326,19 @@ impl ScreenLevelEditor {
             return;
         }
 
-        if let Some(playing_level) = self.playing_level.as_mut() && !playing_level.is_playing_animation() {
+        if let Some(playing_level) = self.playing_level.as_mut() {
+            if playing_level.is_playing_animation() {
+                //Allow undo while animation is playing
+                if key == Key::U || key == Key::Z {
+                    let level = playing_level.cancel_animation_and_undo_move();
+                    if level.is_some() {
+                        game_state.play_sound_effect(audio::UNDO_REDO_EFFECT);
+                    }
+                }
+
+                return;
+            }
+
             if matches!(key, Key::U | Key::Z | Key::Y) {
                 let is_redo = key == Key::Y;
 
