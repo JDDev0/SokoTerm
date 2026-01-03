@@ -1573,7 +1573,7 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(")");
                 },
-                8 => {
+                13 => {
                     console.set_cursor_pos(23, 8);
                     console.draw_text("Holes (");
 
@@ -1582,7 +1582,7 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(") cannot be crossed");
                 },
-                9 => {
+                14 => {
                     console.set_cursor_pos(21, 8);
                     console.draw_text("Filled holes (");
 
@@ -1591,7 +1591,7 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(") can be crossed");
                 },
-                10 => {
+                15 => {
                     console.set_cursor_pos(23, 8);
                     console.draw_text("Boxes (");
 
@@ -1605,7 +1605,7 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(")");
                 },
-                11 => {
+                16 => {
                     console.set_cursor_pos(13, 8);
                     console.draw_text("Keys (");
 
@@ -1619,7 +1619,7 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(") and will be lost");
                 },
-                19 => {
+                22 => {
                     console.set_cursor_pos(2, 8);
                     console.draw_text("Fragile Floor (");
 
@@ -1646,8 +1646,8 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(" to view floor tiles");
                 },
-                25 => {
-                    console.set_cursor_pos(17, 8);
+                28 => {
+                    console.set_cursor_pos(17, 10);
                     console.draw_text("Ice (");
 
                     Tile::Ice.draw(console, false, false);
@@ -1658,28 +1658,22 @@ impl ScreenInGame {
                     Tile::Player.draw(console, false, false);
 
                     console.reset_color();
-                    console.draw_text(") to slide");
-                },
-                26 => {
-                    console.set_cursor_pos(10, 8);
-                    console.draw_text("Ice (");
-
-                    Tile::Ice.draw(console, false, false);
-
-                    console.reset_color();
-                    console.draw_text(") causes keys (");
+                    console.draw_text("), keys (");
 
                     Tile::KeyOnIce.draw(console, false, false);
 
                     console.reset_color();
-                    console.draw_text(") and boxes (");
+                    console.draw_text("),");
+
+                    console.set_cursor_pos(26, 11);
+                    console.draw_text("and boxes (");
 
                     Tile::BoxOnIce.draw(console, false, false);
 
                     console.reset_color();
-                    console.draw_text(") to slide as well");
+                    console.draw_text(") to slide");
                 },
-                27 => {
+                29 => {
                     console.set_cursor_pos(14, 8);
                     console.draw_text("If a box (");
 
@@ -1714,7 +1708,7 @@ impl ScreenInGame {
                     console.reset_color();
                     console.draw_text(" to view floor tiles");
                 },
-                28 => {
+                30 => {
                     console.set_cursor_pos(23, 11);
                     console.draw_text("Press ");
 
