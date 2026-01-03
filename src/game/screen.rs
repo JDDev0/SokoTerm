@@ -1781,7 +1781,7 @@ impl ScreenInGame {
                             "tutorial" => {
                                 Achievement::LEVEL_PACK_TUTORIAL_COMPLETED.unlock(steam_client.clone());
 
-                                if level_pack.level_pack_best_time_sum().unwrap() < 4000 {
+                                if level_pack.level_pack_best_time_sum().unwrap() < 6000 {
                                     Achievement::LEVEL_PACK_TUTORIAL_FAST.unlock(steam_client.clone());
                                 }
                             },
