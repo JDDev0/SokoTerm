@@ -915,6 +915,12 @@ impl Screen for ScreenSelectLevelPack {
                 None => console.draw_text("XXXXXXX"),
                 Some(best_moves_sum) => console.draw_text(format!("{:07}", best_moves_sum)),
             }
+
+            console.set_cursor_pos(45, y + 3);
+            console.draw_key_input_text("r");
+
+            console.reset_color();
+            console.draw_text(": Reset level pack progress");
         }
     }
 
@@ -943,11 +949,60 @@ impl Screen for ScreenSelectLevelPack {
             game_state.steam_client.friends().activate_game_overlay_to_web_page(&format!("steam://url/CommunityFilePage/{}", id.0));
         }
 
+        if key == Key::R && self.level_pack_list.cursor_index() >= 1 && self.level_pack_list.cursor_index() <= game_state.get_level_pack_count() {
+            let level_pack = game_state.level_packs().get(self.level_pack_list.cursor_index() - 1).unwrap();
+
+            game_state.open_dialog(Dialog::new_yes_no(format!(
+                "Do you really want to reset the level pack progress of\n\"{}\"?\n\nThis action can not be undone!",
+                level_pack.name(),
+            )));
+        }
+
         self.level_pack_list.on_key_press(&mut (), game_state, key);
+    }
+
+    fn on_dialog_selection(&mut self, game_state: &mut GameState, selection: DialogSelection) {
+        if selection == DialogSelection::Yes {
+            game_state.set_level_pack_index(self.level_pack_list.cursor_index() - 1);
+            let level_pack = game_state.get_current_level_pack_mut().unwrap();
+
+            level_pack.set_min_level_not_completed(0);
+
+            for level in level_pack.levels_mut() {
+                level.set_best_moves(None);
+                level.set_best_time(None);
+            }
+
+            level_pack.calculate_stats_sum();
+
+            if let Err(err) = level_pack.save_save_game(false) {
+                game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
+            }
+
+            self.update_list_elements(game_state);
+        }
     }
 
     fn on_mouse_pressed(&mut self, game_state: &mut GameState, column: usize, row: usize) {
         self.level_pack_list.on_mouse_pressed(&mut (), game_state, column, row);
+
+        let entry_count = self.level_pack_list.elements().len();
+        let y = 4 + (entry_count/24)*2;
+
+        #[cfg(feature = "steam")]
+        if row == y + 1 && game_state.level_packs().get(self.level_pack_list.cursor_index() - 1).and_then(LevelPack::steam_level_pack_data).is_some() {
+            let name_len = game_state.level_packs.get(self.level_pack_list.cursor_index() - 1).unwrap().name().len();
+
+            let start_x = 22 + name_len + 2;
+            if column >= start_x && column < start_x + 22 {
+                self.on_key_pressed(game_state, Key::O);
+            }
+        }
+
+        if row == y + 3 && (45..73).contains(&column) && self.level_pack_list.cursor_index() >= 1 &&
+                self.level_pack_list.cursor_index() <= game_state.get_level_pack_count() {
+            self.on_key_pressed(game_state, Key::R);
+        }
     }
 
     fn on_set_screen(&mut self, game_state: &mut GameState) {
