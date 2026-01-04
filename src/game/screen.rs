@@ -747,6 +747,7 @@ impl Screen for ScreenSettings {
 
 pub struct ScreenSelectLevelPack {
     level_pack_list: UIList,
+    code_index: usize,
 }
 
 impl ScreenSelectLevelPack {
@@ -798,6 +799,7 @@ impl ScreenSelectLevelPack {
                     }
                 }),
             ),
+            code_index: 0,
         }
     }
 
@@ -959,27 +961,37 @@ impl Screen for ScreenSelectLevelPack {
         }
 
         self.level_pack_list.on_key_press(&mut (), game_state, key);
-    }
 
-    fn on_dialog_selection(&mut self, game_state: &mut GameState, selection: DialogSelection) {
-        if selection == DialogSelection::Yes {
-            game_state.set_level_pack_index(self.level_pack_list.cursor_index() - 1);
-            let level_pack = game_state.get_current_level_pack_mut().unwrap();
+        pub const CODE: [Key; 10] = [
+            Key::UP, Key::UP,
+            Key::DOWN, Key::DOWN,
+            Key::LEFT, Key::RIGHT,
+            Key::LEFT, Key::RIGHT,
+            Key::B, Key::A
+        ];
+        if CODE.get(self.code_index).is_some_and(|k| *k == key) {
+            self.code_index += 1;
 
-            level_pack.set_min_level_not_completed(0);
+            if self.code_index == CODE.len() {
+                self.code_index = 0;
 
-            for level in level_pack.levels_mut() {
-                level.set_best_moves(None);
-                level.set_best_time(None);
+                game_state.set_level_pack_index(1);
+
+                #[cfg(feature = "steam")]
+                Achievement::LEVEL_PACK_SECRET_DISCOVERED.unlock(game_state.steam_client.clone());
+
+                game_state.open_dialog(Dialog::new_ok_secret_found("You have found a secret!"));
+
+                if let Err(err) = game_state.on_found_secret() {
+                    game_state.open_dialog(Dialog::new_ok_error(format!("Error: {}", err)));
+                }
+
+                self.level_pack_list.set_cursor_index(1);
+                game_state.set_level_pack_index(4);
+                game_state.set_screen(ScreenId::SelectLevelPack);
             }
-
-            level_pack.calculate_stats_sum();
-
-            if let Err(err) = level_pack.save_save_game(false) {
-                game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
-            }
-
-            self.update_list_elements(game_state);
+        }else {
+            self.code_index = 0;
         }
     }
 
@@ -1005,7 +1017,31 @@ impl Screen for ScreenSelectLevelPack {
         }
     }
 
+    fn on_dialog_selection(&mut self, game_state: &mut GameState, selection: DialogSelection) {
+        if selection == DialogSelection::Yes {
+            game_state.set_level_pack_index(self.level_pack_list.cursor_index() - 1);
+            let level_pack = game_state.get_current_level_pack_mut().unwrap();
+
+            level_pack.set_min_level_not_completed(0);
+
+            for level in level_pack.levels_mut() {
+                level.set_best_moves(None);
+                level.set_best_time(None);
+            }
+
+            level_pack.calculate_stats_sum();
+
+            if let Err(err) = level_pack.save_save_game(false) {
+                game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
+            }
+
+            self.update_list_elements(game_state);
+        }
+    }
+
     fn on_set_screen(&mut self, game_state: &mut GameState) {
+        self.code_index = 0;
+
         self.update_list_elements(game_state);
 
         if self.level_pack_list.cursor_index() == 0 {
