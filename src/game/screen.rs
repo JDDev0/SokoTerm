@@ -790,7 +790,14 @@ impl ScreenSelectLevelPack {
                         let level_pack = game_state.get_current_level_pack().unwrap();
                         let min_level_not_completed = level_pack.min_level_not_completed();
                         if min_level_not_completed >= level_pack.level_count() {
-                            game_state.set_level_index(0);
+                            let first_skipped_level = level_pack.levels().
+                                    iter().
+                                    enumerate().
+                                    find(|(_, level)| level.best_moves().is_none()).
+                                    map(|(index, _)| index).
+                                    unwrap_or(0);
+
+                            game_state.set_level_index(first_skipped_level);
                         }else {
                             game_state.set_level_index(min_level_not_completed);
                         }
@@ -1087,6 +1094,10 @@ impl ScreenSelectLevel {
 
                         game_state.set_level_index(level_index);
                         game_state.set_screen(ScreenId::InGame);
+
+                        if level_index == min_level_not_completed {
+                            game_state.allow_skip_level = true;
+                        }
                     }else {
                         game_state.play_sound_effect_ui_error();
                     }
@@ -1109,7 +1120,13 @@ impl ScreenSelectLevel {
                 utils::number_to_string_leading_ascii(2, i as u32 + 1, false),
                 Color::Black,
                 match i.cmp(&min_level_not_completed) {
-                    Ordering::Less => Color::Green,
+                    Ordering::Less => {
+                        if level_pack.levels()[i].best_moves().is_some() {
+                            Color::Green
+                        }else {
+                            Color::Yellow
+                        }
+                    },
                     Ordering::Equal => Color::Yellow,
                     Ordering::Greater => Color::Red,
                 },
@@ -1185,6 +1202,18 @@ impl ScreenSelectLevel {
 
             console.reset_color();
             console.draw_text(" for level preview");
+
+            if game_state.allow_skip_level && cursor_index - 1 == level_pack.min_level_not_completed() &&
+                    cursor_index < level_pack.level_count()  {
+                console.reset_color();
+                console.set_cursor_pos(29, y + 3);
+                console.draw_text("Press ");
+
+                console.draw_key_input_text("n");
+
+                console.reset_color();
+                console.draw_text(" to skip this level");
+            }
         }
     }
 
@@ -1298,6 +1327,14 @@ impl Screen for ScreenSelectLevel {
             return;
         }
 
+        if key == Key::N && game_state.allow_skip_level &&
+                self.level_list.cursor_index() - 1 == game_state.get_current_level_pack().as_ref().unwrap().min_level_not_completed() &&
+                self.level_list.cursor_index() < game_state.get_current_level_pack().as_ref().unwrap().level_count() {
+            game_state.open_dialog(Dialog::new_yes_no("Do you really want to skip this level?"));
+
+            return;
+        }
+
         self.level_list.on_key_press(&mut (), game_state, key);
     }
 
@@ -1322,9 +1359,27 @@ impl Screen for ScreenSelectLevel {
         let y = 4 + ((element_count - 1)/24)*2;
         if row == y + 1 && (29..54).contains(&column) {
             self.on_key_pressed(game_state, Key::P);
+        }else if row == y + 3 && (29..55).contains(&column) {
+            self.on_key_pressed(game_state, Key::N);
         }
 
         self.level_list.on_mouse_pressed(&mut (), game_state, column, row);
+    }
+
+    fn on_dialog_selection(&mut self, game_state: &mut GameState, selection: DialogSelection) {
+        if selection == DialogSelection::Yes {
+            let level_pack = game_state.get_current_level_pack_mut().unwrap();
+            level_pack.set_min_level_not_completed(level_pack.min_level_not_completed() + 1);
+
+            if let Err(err) = level_pack.save_save_game(false) {
+                game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save: {}", err)));
+            }
+
+            game_state.allow_skip_level = false;
+
+            self.level_list.set_cursor_index(self.level_list.cursor_index() + 1);
+            self.update_list_elements(game_state);
+        }
     }
 
     fn on_set_screen(&mut self, game_state: &mut GameState) {

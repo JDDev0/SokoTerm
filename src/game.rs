@@ -364,6 +364,7 @@ pub struct GameState {
     level_packs: Vec<LevelPack>,
 
     current_level_index: usize,
+    allow_skip_level: bool,
 
     is_player_background: bool,
     player_background_tmp: i32,
@@ -406,6 +407,7 @@ impl GameState {
             level_packs,
 
             current_level_index: Default::default(),
+            allow_skip_level: false,
 
             is_player_background: Default::default(),
             player_background_tmp: Default::default(),
