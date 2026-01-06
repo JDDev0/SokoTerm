@@ -912,8 +912,8 @@ fn update_focus_styles(
             if focus.0 == Some(ui_element_id) {
                 commands.entity(ui_element_id).insert(Outline {
                     color: Color::WHITE,
-                    width: px(5),
-                    offset: px(5),
+                    width: vmin(0.25),
+                    offset: vmin(0.25),
                 });
             }else {
                 commands.entity(ui_element_id).remove::<Outline>();
@@ -1019,8 +1019,8 @@ fn on_validate_and_start_upload(
                         min_height: px(240),
                         align_items: AlignItems::Center,
                         grid_template_rows: vec![GridTrack::auto(), GridTrack::fr(1.0), GridTrack::auto()],
-                        row_gap: px(10),
-                        padding: UiRect::all(px(30)),
+                        row_gap: vmin(0.5),
+                        padding: UiRect::all(vmin(1.5)),
                         ..default()
                     },
                     BackgroundColor(Color::srgb_u8(180, 180, 180)),
@@ -1113,8 +1113,8 @@ fn on_open_steam_workshop_upload_popup(
                 min_height: px(340),
                 align_items: AlignItems::Center,
                 grid_template_rows: vec![GridTrack::auto(), GridTrack::fr(1.0), GridTrack::auto()],
-                row_gap: px(10),
-                padding: UiRect::all(px(30)),
+                row_gap: vmin(0.5),
+                padding: UiRect::all(vmin(1.5)),
                 ..default()
             },
             BackgroundColor(Color::srgb_u8(180, 180, 180)),
