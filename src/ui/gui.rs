@@ -472,7 +472,7 @@ fn cycle_through_color_schemes(
     if keyboard_input.just_pressed(KeyCode::F10) {
         current_color_scheme_index.0 = (current_color_scheme_index.0 + 1) % COLOR_SCHEMES.len();
         game.game_state_mut().set_and_save_color_scheme_index(current_color_scheme_index.0)?;
-        game.game_state().play_sound_effect_ui_select();
+        game.game_state_mut().play_sound_effect_ui_select();
 
         commands.insert_resource(ClearColor(crate::io::bevy_abstraction::Color::Default.into_bevy_color(&COLOR_SCHEMES[current_color_scheme_index.0])));
     }
@@ -491,7 +491,7 @@ fn toggle_tile_mode(
         state.set_tile_mode(tile_mode);
 
         game.game_state_mut().set_and_save_tile_mode(tile_mode)?;
-        game.game_state().play_sound_effect_ui_select();
+        game.game_state_mut().play_sound_effect_ui_select();
     }
 
     Ok(())

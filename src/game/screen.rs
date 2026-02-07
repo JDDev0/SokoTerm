@@ -952,9 +952,10 @@ impl Screen for ScreenSelectLevelPack {
         #[cfg(feature = "steam")]
         if key == Key::O && self.level_pack_list.cursor_index() >= 1 &&
                 let Some(steam_level_pack_data) = game_state.level_packs().get(self.level_pack_list.cursor_index() - 1).and_then(LevelPack::steam_level_pack_data) {
+            let id = steam_level_pack_data.workshop_id();
+
             game_state.play_sound_effect_ui_dialog_open();
 
-            let id = steam_level_pack_data.workshop_id();
             game_state.steam_client.friends().activate_game_overlay_to_web_page(&format!("steam://url/CommunityFilePage/{}", id.0));
         }
 

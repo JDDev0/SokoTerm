@@ -320,7 +320,7 @@ enum AnimationState {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SoundEffect {
+pub enum LevelSoundEffect {
     BoxFall,
     DoorUnlocked,
     FloorBroken,
@@ -331,12 +331,12 @@ pub enum MoveResult {
     Valid {
         has_won: bool,
         secret_found: bool,
-        sound_effect: Option<SoundEffect>,
+        sound_effect: Option<LevelSoundEffect>,
     },
     Invalid,
     Animation {
         player_animation: bool,
-        sound_effect: Option<SoundEffect>,
+        sound_effect: Option<LevelSoundEffect>,
     },
 }
 
@@ -704,14 +704,14 @@ impl PlayingLevel {
 
         let tile = level.get_tile(x_to, y_to).unwrap();
         let move_result = if matches!(tile, Tile::Empty | Tile::FragileFloor | Tile::Ice | Tile::Goal | Tile::Secret | Tile::BoxInHole) || tile == one_way_door_tile {
-            MoveResult::Valid { has_won: false, secret_found: tile == Tile::Secret, sound_effect: was_floor_broken.then_some(SoundEffect::FloorBroken) }
+            MoveResult::Valid { has_won: false, secret_found: tile == Tile::Secret, sound_effect: was_floor_broken.then_some(LevelSoundEffect::FloorBroken) }
         }else if matches!(tile, Tile::Box | Tile::BoxInGoal | Tile::BoxOnFragileFloor | Tile::BoxOnIce | Tile::Key | Tile::KeyInGoal | Tile::KeyOnFragileFloor | Tile::KeyOnIce) {
             let move_result = self.move_box_or_key(&mut level, x_to, y_to, direction);
             match move_result {
                 MoveResult::Valid {
                     has_won, secret_found, sound_effect,
                 } if was_floor_broken && sound_effect.is_none() => MoveResult::Valid {
-                    has_won, secret_found, sound_effect: Some(SoundEffect::FloorBroken),
+                    has_won, secret_found, sound_effect: Some(LevelSoundEffect::FloorBroken),
                 },
 
                 _ => move_result,
@@ -741,7 +741,7 @@ impl PlayingLevel {
                     direction,
                 });
 
-                return MoveResult::Animation { player_animation: true, sound_effect: was_floor_broken.then_some(SoundEffect::FloorBroken) };
+                return MoveResult::Animation { player_animation: true, sound_effect: was_floor_broken.then_some(LevelSoundEffect::FloorBroken) };
             }
         }
 
@@ -847,8 +847,8 @@ impl PlayingLevel {
             level.tiles[index_to] = tile_to_new_value;
 
             let move_result = MoveResult::Valid { has_won, secret_found: false, sound_effect: match tile_to_new_value {
-                Tile::BoxInHole => Some(SoundEffect::BoxFall),
-                Tile::Empty => Some(SoundEffect::DoorUnlocked),
+                Tile::BoxInHole => Some(LevelSoundEffect::BoxFall),
+                Tile::Empty => Some(LevelSoundEffect::DoorUnlocked),
 
                 _ => None,
             }};
