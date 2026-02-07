@@ -68,7 +68,7 @@ pub fn show_startup_error_dialog(app: &mut App, error_message: &str) {
 fn play_error_sound() {
     let output_stream = OutputStream::try_default();
     if let Ok((stream, stream_handle)) = output_stream {
-        let cursor = Cursor::new(audio::UI_ERROR_EFFECT);
+        let cursor = Cursor::new(audio::UI_ERROR_EFFECT.sound_effects()[0]);
         if let Ok(source) = Decoder::new(cursor) {
             let _ = stream_handle.play_raw(source.convert_samples());
         }

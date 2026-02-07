@@ -2,26 +2,59 @@ use std::error::Error;
 use std::io::Cursor;
 use std::num::NonZeroUsize;
 use std::time::Duration;
+use rand::prelude::IndexedRandom;
+use rand::{Rng, SeedableRng};
+use rand_chacha::ChaCha8Rng;
 use rodio::{Decoder, OutputStream, OutputStreamHandle, Sink, Source};
 
-pub const UI_SELECT_EFFECT: &[u8] = include_bytes!("../../assets/audio/ui_select.ogg");
-pub const UI_ERROR_EFFECT: &[u8] = include_bytes!("../../assets/audio/ui_error.ogg");
-pub const UI_DIALOG_OPEN_EFFECT: &[u8] = include_bytes!("../../assets/audio/ui_dialog_open.ogg");
+pub const UI_SELECT_EFFECT: &SoundEffect = &SoundEffect::new(&[
+    include_bytes!("../../assets/audio/ui_select.ogg"),
+]);
+pub const UI_ERROR_EFFECT: &SoundEffect = &SoundEffect::new(&[
+    include_bytes!("../../assets/audio/ui_error.ogg"),
+]);
+pub const UI_DIALOG_OPEN_EFFECT: &SoundEffect = &SoundEffect::new(&[
+    include_bytes!("../../assets/audio/ui_dialog_open.ogg"),
+]);
 
-pub const BOOK_OPEN_EFFECT: &[u8] = include_bytes!("../../assets/audio/book_open.ogg");
-pub const BOOK_FLIP_EFFECT: &[u8] = include_bytes!("../../assets/audio/book_flip.ogg");
+pub const BOOK_OPEN_EFFECT: &SoundEffect = &SoundEffect::new(&[
+    include_bytes!("../../assets/audio/book_open.ogg"),
+]);
+pub const BOOK_FLIP_EFFECT: &SoundEffect = &SoundEffect::new(&[
+    include_bytes!("../../assets/audio/book_flip.ogg"),
+]);
 
-pub const UNDO_REDO_EFFECT: &[u8] = include_bytes!("../../assets/audio/undo_redo.ogg");
+pub const UNDO_REDO_EFFECT: &SoundEffect = &SoundEffect::new(&[
+    include_bytes!("../../assets/audio/undo_redo.ogg"),
+]);
 
-pub const NO_PATH_EFFECT: &[u8] = include_bytes!("../../assets/audio/no_path.ogg");
-pub const LEVEL_COMPLETE_EFFECT: &[u8] = include_bytes!("../../assets/audio/level_complete.ogg");
-pub const LEVEL_PACK_COMPLETE_EFFECT: &[u8] = include_bytes!("../../assets/audio/level_pack_complete.ogg");
-pub const LEVEL_RESET: &[u8] = include_bytes!("../../assets/audio/level_reset.ogg");
-pub const STEP_EFFECT: &[u8] = include_bytes!("../../assets/audio/step.ogg");
+pub const NO_PATH_EFFECT: &SoundEffect = &SoundEffect::new(&[
+    include_bytes!("../../assets/audio/no_path.ogg"),
+]);
+pub const LEVEL_COMPLETE_EFFECT: &SoundEffect = &SoundEffect::new(&[
+    include_bytes!("../../assets/audio/level_complete.ogg"),
+]);
+pub const LEVEL_PACK_COMPLETE_EFFECT: &SoundEffect = &SoundEffect::new(&[
+    include_bytes!("../../assets/audio/level_pack_complete.ogg"),
+]);
+pub const LEVEL_RESET: &SoundEffect = &SoundEffect::new(&[
+    include_bytes!("../../assets/audio/level_reset.ogg"),
+]);
+pub const STEP_EFFECT: &SoundEffect = &SoundEffect::new(&[
+    include_bytes!("../../assets/audio/step_1.ogg"),
+    include_bytes!("../../assets/audio/step_2.ogg"),
+    include_bytes!("../../assets/audio/step_3.ogg"),
+]);
 
-pub const BOX_FALL_EFFECT: &[u8] = include_bytes!("../../assets/audio/box_fall.ogg");
-pub const DOOR_OPEN_EFFECT: &[u8] = include_bytes!("../../assets/audio/door_open.ogg");
-pub const FLOOR_BROKEN_EFFECT: &[u8] = include_bytes!("../../assets/audio/floor_broken.ogg");
+pub const BOX_FALL_EFFECT: &SoundEffect = &SoundEffect::new(&[
+    include_bytes!("../../assets/audio/box_fall.ogg"),
+]);
+pub const DOOR_OPEN_EFFECT: &SoundEffect = &SoundEffect::new(&[
+    include_bytes!("../../assets/audio/door_open.ogg"),
+]);
+pub const FLOOR_BROKEN_EFFECT: &SoundEffect = &SoundEffect::new(&[
+    include_bytes!("../../assets/audio/floor_broken.ogg"),
+]);
 
 pub const BACKGROUND_MUSIC_TRACKS: BackgroundMusicTracks<1> = BackgroundMusicTracks::new([
     &BACKGROUND_MUSIC_FIELDS_OF_ICE,
@@ -34,6 +67,25 @@ pub const BACKGROUND_MUSIC_FIELDS_OF_ICE: BackgroundMusic = BackgroundMusic {
     intro_audio_data: Some(include_bytes!("../../assets/audio/background_music_fields_of_ice_intro.ogg")),
     main_loop_audio_data: include_bytes!("../../assets/audio/background_music_fields_of_ice.ogg"),
 };
+
+#[derive(Debug)]
+pub struct SoundEffect {
+    sound_effects: &'static [&'static [u8]],
+}
+
+impl SoundEffect {
+    const fn new(sound_effects: &'static [&'static [u8]]) -> Self {
+        if sound_effects.is_empty() {
+            panic!("At least one sound effect must be present!");
+        }
+
+        Self { sound_effects }
+    }
+
+    pub fn sound_effects(&self) -> &'static [&'static [u8]] {
+        self.sound_effects
+    }
+}
 
 #[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash)]
 pub struct BackgroundMusicId(NonZeroUsize);
@@ -116,6 +168,8 @@ pub struct AudioHandler {
     stream_handle: OutputStreamHandle,
 
     background_music_sink: Sink,
+
+    rand: ChaCha8Rng,
 }
 
 impl AudioHandler {
@@ -124,19 +178,24 @@ impl AudioHandler {
         let (_stream, stream_handle) = output_stream?;
 
         let background_music_sink = Sink::try_new(&stream_handle)?;
+        let rand = ChaCha8Rng::from_os_rng();
 
         Ok(Self {
             _stream,
 
             stream_handle,
 
-            background_music_sink
+            background_music_sink,
+
+            rand,
         })
     }
 
-    pub fn play_sound_effect(&self, sound_effect: &'static [u8]) -> Result<(), Box<dyn Error>> {
+    pub fn play_sound_effect(&mut self, sound_effect: &'static SoundEffect) -> Result<(), Box<dyn Error>> {
+        let sound_effect = *sound_effect.sound_effects.choose(&mut self.rand).unwrap();
+
         let cursor = Cursor::new(sound_effect);
-        let source = Decoder::new(cursor)?;
+        let source = Decoder::new(cursor)?.speed(self.rand.random_range(0.99..1.01));
 
         self.stream_handle.play_raw(source.convert_samples())?;
 

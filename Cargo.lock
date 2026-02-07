@@ -13,6 +13,8 @@ dependencies = [
  "bevy_time",
  "console-lib",
  "embed-resource",
+ "rand",
+ "rand_chacha",
  "rodio",
  "smol_str",
 ]
