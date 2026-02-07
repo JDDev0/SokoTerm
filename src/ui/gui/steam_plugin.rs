@@ -1,6 +1,7 @@
 use bevy::prelude::*;
 use bevy_steamworks::*;
 use crate::game::{steam, Game, GameError};
+use crate::game::audio::SoundEffect;
 use crate::ui::gui::{on_resize, CharacterScaling};
 
 #[cfg(unix)]
@@ -47,7 +48,7 @@ enum ResizableText {
 
 #[derive(Debug, Message)]
 struct PlaySoundEffect {
-    sound_effect: &'static [u8],
+    sound_effect: &'static SoundEffect,
 }
 
 fn on_resize_popup_text(
@@ -66,9 +67,9 @@ fn on_resize_popup_text(
 fn on_play_sound_effect(
     mut sound_effect_event: MessageReader<PlaySoundEffect>,
 
-    game: NonSend<Game>,
+    mut game: NonSendMut<Game>,
 ) {
     for event in sound_effect_event.read() {
-        game.game_state().play_sound_effect(event.sound_effect);
+        game.game_state_mut().play_sound_effect(event.sound_effect);
     }
 }
