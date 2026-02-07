@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "SokoTerm"
-version = "1.1.1-demo-dev"
+version = "1.1.1-demo"
 dependencies = [
  "bevy",
  "bevy-steamworks",
