@@ -322,6 +322,7 @@ enum AnimationState {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LevelSoundEffect {
     BoxFall,
+    KeyFall,
     DoorUnlocked,
     FloorBroken,
 }
@@ -848,6 +849,7 @@ impl PlayingLevel {
 
             let move_result = MoveResult::Valid { has_won, secret_found: false, sound_effect: match tile_to_new_value {
                 Tile::BoxInHole => Some(LevelSoundEffect::BoxFall),
+                Tile::Hole => Some(LevelSoundEffect::KeyFall),
                 Tile::Empty => Some(LevelSoundEffect::DoorUnlocked),
 
                 _ => None,
