@@ -125,6 +125,7 @@ fn create_error_dialog_menu(
                 width: px(100),
                 height: px(50),
                 border: UiRect::all(px(2)),
+                border_radius: BorderRadius::all(px(10)),
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
                 ..default()
@@ -134,7 +135,6 @@ fn create_error_dialog_menu(
             Hovered::default(),
             TabIndex::default(),
             BorderColor::all(crate::io::bevy_abstraction::Color::White),
-            BorderRadius::all(px(10)),
             BackgroundColor(crate::io::bevy_abstraction::Color::Black.into()),
             children![(
                 Text::new("Ok"),
