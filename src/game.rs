@@ -456,6 +456,7 @@ impl GameState {
         if let Some(audio_handler) = &mut self.audio_handler {
             let _ = audio_handler.play_sound_effect(match sound_effect {
                 LevelSoundEffect::BoxFall => audio::BOX_FALL_EFFECT,
+                LevelSoundEffect::KeyFall => audio::KEY_FALL_EFFECT,
                 LevelSoundEffect::DoorUnlocked => audio::DOOR_OPEN_EFFECT,
                 LevelSoundEffect::FloorBroken => audio::FLOOR_BROKEN_EFFECT,
             });

@@ -49,6 +49,9 @@ pub const STEP_EFFECT: &SoundEffect = &SoundEffect::new(&[
 pub const BOX_FALL_EFFECT: &SoundEffect = &SoundEffect::new(&[
     include_bytes!("../../assets/audio/box_fall.ogg"),
 ]);
+pub const KEY_FALL_EFFECT: &SoundEffect = &SoundEffect::new(&[
+    include_bytes!("../../assets/audio/key_fall.ogg"),
+]);
 pub const DOOR_OPEN_EFFECT: &SoundEffect = &SoundEffect::new(&[
     include_bytes!("../../assets/audio/door_open.ogg"),
 ]);
