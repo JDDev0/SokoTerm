@@ -28,6 +28,8 @@ const RADIO_BUTTON_COLOR: Color = Color::srgb_u8(140, 148, 64);
 const LINK_COLOR: Color = Color::srgb_u8(42, 123, 222);
 const LINK_COLOR_HOVERED: Color = Color::srgb_u8(18, 72, 139);
 
+const TEXT_CURSOR_CHARACTER: &str = "\u{258F}";
+
 pub struct SteamWorkshopUploadPopupPlugin;
 
 impl Plugin for SteamWorkshopUploadPopupPlugin {
@@ -1176,7 +1178,7 @@ fn on_open_steam_workshop_upload_popup(
                         TextColor(Color::BLACK),
                         ResizableText::Paragraph,
                         children![(
-                            TextSpan("|".to_string()),
+                            TextSpan(TEXT_CURSOR_CHARACTER.to_string()),
                             TextCursor,
                             text_font.clone(),
                             LineHeight::RelativeToFont(1.1),
@@ -1216,7 +1218,7 @@ fn on_open_steam_workshop_upload_popup(
                         TextColor(Color::BLACK),
                         ResizableText::Paragraph,
                         children![(
-                            TextSpan("|".to_string()),
+                            TextSpan(TEXT_CURSOR_CHARACTER.to_string()),
                             TextCursor,
                             text_font.clone(),
                             LineHeight::RelativeToFont(1.1),
