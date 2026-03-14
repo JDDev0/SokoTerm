@@ -78,6 +78,7 @@ enum SteamWorkshopUploadWorkingData {
     #[default]
     Idle,
     Waiting,
+    ValidationFailed(String),
     CreateItemResult(Result<(PublishedFileId, bool), SteamError>),
     SubmitItemResult((PublishedFileId, Result<bool, SteamError>)),
 }
@@ -198,6 +199,81 @@ fn process_and_update_upload_progress(
 ) -> Result<(), Box<dyn Error>> {
     let current_data = STEAM_WORKSHOP_UPLOAD_WORKING_DATA.lock().unwrap().clone();
     match current_data {
+        SteamWorkshopUploadWorkingData::ValidationFailed(error_text) => {
+            *STEAM_WORKSHOP_UPLOAD_WORKING_DATA.lock().unwrap() = SteamWorkshopUploadWorkingData::Waiting;
+
+            play_sound_effect.write(PlaySoundEffect {
+                sound_effect: audio::UI_ERROR_EFFECT,
+            });
+
+            if let Ok(window_id) = window_query.single() {
+                commands.entity(window_id).insert(CursorIcon::System(SystemCursorIcon::Default));
+            }
+
+            set_upload_progress_popup_title.write(SetUploadProgressPopupTitle {
+                title: "Validation failed!".to_string(),
+                error: true,
+            });
+
+            set_upload_progress_popup_content.write(SetUploadProgressPopupContent {
+                text: format!("An error occurred during level pack creation:\n{error_text}"),
+                error: true,
+            });
+
+            let Ok(popup_button_container_id) = upload_progress_popup_button_container_query.single() else {
+                return Err(Box::new(GameError::new("Invalid popup status")));
+            };
+
+            let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
+            let text_font = TextFont {
+                font: font.clone(),
+                font_size: 1.0, //Dummy value
+                ..default()
+            };
+
+            commands.entity(popup_button_container_id).with_child((
+                Node {
+                    width: percent(100),
+                    border: UiRect::all(px(2)),
+                    border_radius: BorderRadius::all(px(10)),
+                    justify_content: JustifyContent::Center,
+                    align_items: AlignItems::Center,
+                    ..default()
+                },
+                Button,
+                Hovered::default(),
+                TabIndex::default(),
+                BorderColor::all(crate::io::bevy_abstraction::Color::White),
+                BackgroundColor(crate::io::bevy_abstraction::Color::Black.into()),
+                children![(
+                    Text::new("Close"),
+                    text_font.clone(),
+                    LineHeight::RelativeToFont(1.1),
+                    TextColor(crate::io::bevy_abstraction::Color::White.into()),
+                    ResizableText::Paragraph,
+                )],
+                observe(
+                    |_: On<Activate>,
+
+                     commands: Commands,
+
+                     upload_progress_popup_elements: Query<Entity, With<UploadProgressPopup>>,
+
+                     mut play_sound_effect: MessageWriter<PlaySoundEffect>| {
+                        *STEAM_WORKSHOP_UPLOAD_WORKING_DATA.lock().unwrap() = SteamWorkshopUploadWorkingData::Idle;
+
+                        play_sound_effect.write(PlaySoundEffect {
+                            sound_effect: audio::UI_SELECT_EFFECT,
+                        });
+
+                        close_upload_progress_popup(commands, upload_progress_popup_elements);
+                    },
+                ),
+            ));
+
+            return Ok(());
+        },
+
         SteamWorkshopUploadWorkingData::CreateItemResult(Ok((id, _needs_to_accept_workshop_terms))) => {
             let level_pack_name = {
                 let Ok(children) = level_pack_name_text_input_field_query.single() else {
@@ -959,6 +1035,13 @@ fn on_validate_and_start_upload(
 
     mut event_reader: MessageReader<ValidateAndStartUpload>,
 
+    level_pack_name_text_input_field_query: Query<
+        &Children,
+        With<LevelPackName>,
+    >,
+
+    text_query: Query<&Text>,
+
     window_query: Query<Entity, With<PrimaryWindow>>,
 
     asset_server: Res<AssetServer>,
@@ -1049,7 +1132,24 @@ fn on_validate_and_start_upload(
             )],
         ));
 
-        //TODO validate inputs (title, description) [Not empty {title with warning: should be english characters only}]
+        'early_ret: {
+            let Ok(children) = level_pack_name_text_input_field_query.single() else {
+                break 'early_ret;
+            };
+
+            let Some(text_entity_id) = children.first() else {
+                break 'early_ret;
+            };
+
+            let Ok(level_pack_name) = text_query.get(*text_entity_id) else {
+                break 'early_ret;
+            };
+
+            if level_pack_name.trim().is_empty() {
+                *STEAM_WORKSHOP_UPLOAD_WORKING_DATA.lock().unwrap() = SteamWorkshopUploadWorkingData::ValidationFailed("Level pack name must not be empty".to_string());
+                return;
+            }
+        }
 
         *STEAM_WORKSHOP_UPLOAD_WORKING_DATA.lock().unwrap() = SteamWorkshopUploadWorkingData::Waiting;
 
