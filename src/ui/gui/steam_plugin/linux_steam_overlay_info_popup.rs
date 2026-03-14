@@ -42,7 +42,6 @@ fn on_overlay_activated(
                 let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
                 let text_font = TextFont {
                     font: font.clone(),
-                    line_height: LineHeight::RelativeToFont(1.1),
                     font_size: 1.0, //Dummy value
                     ..default()
                 };
@@ -89,6 +88,7 @@ fn on_overlay_activated(
                                 height: percent(80),
                                 min_width: px(460),
                                 min_height: px(340),
+                                border_radius: BorderRadius::all(percent(5)),
                                 align_items: AlignItems::Center,
                                 grid_template_rows: vec![GridTrack::auto(), GridTrack::fr(1.0), GridTrack::auto()],
                                 row_gap: px(10),
@@ -96,7 +96,6 @@ fn on_overlay_activated(
                                 ..default()
                             },
                             BackgroundColor(Color::srgb_u8(180, 180, 180)),
-                            BorderRadius::all(percent(5)),
                             children![(
                                 Text("Steam Overlay is currently broken on Linux...".to_string()),
                                 heading_font.clone(),
@@ -109,6 +108,7 @@ fn on_overlay_activated(
                                     Even tough the Steam Overlay is invisible, it will still block all inputs from reaching the game.\n\n".to_string(),
                                 ),
                                 text_font.clone(),
+                                LineHeight::RelativeToFont(1.1),
                                 TextColor(Color::BLACK),
                                 TextLayout::new(Justify::Center, LineBreak::WordBoundary),
                                 ResizableText::Paragraph,
@@ -126,6 +126,7 @@ fn on_overlay_activated(
                                         through Proton which works just as good as the native Linux version!".to_string(),
                                     ),
                                     text_font.clone(),
+                                    LineHeight::RelativeToFont(1.1),
                                     TextColor(Color::BLACK),
                                     ResizableText::Paragraph,
                                 )],

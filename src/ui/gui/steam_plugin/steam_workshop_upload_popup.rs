@@ -2,6 +2,7 @@ use std::error::Error;
 use std::ops::Deref;
 use std::path::Path;
 use std::sync::{Arc, LazyLock, Mutex};
+use bevy::camera::RenderTarget;
 use bevy::camera::visibility::RenderLayers;
 use bevy::input::ButtonState;
 use bevy::input::keyboard::{Key, KeyboardInput};
@@ -308,7 +309,6 @@ fn process_and_update_upload_progress(
             let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
             let text_font = TextFont {
                 font: font.clone(),
-                line_height: LineHeight::RelativeToFont(1.1),
                 font_size: 1.0, //Dummy value
                 ..default()
             };
@@ -317,6 +317,7 @@ fn process_and_update_upload_progress(
                 Node {
                     width: percent(100),
                     border: UiRect::all(px(2)),
+                    border_radius: BorderRadius::all(px(10)),
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
                     ..default()
@@ -325,11 +326,11 @@ fn process_and_update_upload_progress(
                 Hovered::default(),
                 TabIndex::default(),
                 BorderColor::all(crate::io::bevy_abstraction::Color::White),
-                BorderRadius::all(px(10)),
                 BackgroundColor(crate::io::bevy_abstraction::Color::Black.into()),
                 children![(
                     Text::new("Close"),
                     text_font.clone(),
+                    LineHeight::RelativeToFont(1.1),
                     TextColor(crate::io::bevy_abstraction::Color::White.into()),
                     ResizableText::Paragraph,
                 )],
@@ -395,7 +396,6 @@ fn process_and_update_upload_progress(
             let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
             let text_font = TextFont {
                 font: font.clone(),
-                line_height: LineHeight::RelativeToFont(1.1),
                 font_size: 1.0, //Dummy value
                 ..default()
             };
@@ -422,26 +422,19 @@ fn process_and_update_upload_progress(
                         TextLayout::new(Justify::Center, LineBreak::NoWrap),
                         ResizableText::Paragraph,
                     ), (
-                        Node {
-                            border: UiRect::bottom(px(5)),
-                            box_sizing: BoxSizing::BorderBox,
-                            ..default()
-                        },
-                        BorderColor::all(LINK_COLOR),
-                        children![(
-                            Text("workshop terms of service".to_string()),
-                            bold_text_font.clone(),
-                            Button,
-                            LinkText,
-                            Hovered::default(),
-                            TabIndex::default(),
-                            TextColor(LINK_COLOR),
-                            TextLayout::new(Justify::Center, LineBreak::NoWrap),
-                            ResizableText::Paragraph,
-                            observe(|_: On<Activate>, steam_client: Res<Client>| {
-                                steam_client.friends().activate_game_overlay_to_web_page("steam://openurl/https://steamcommunity.com/sharedfiles/workshoplegalagreement");
-                            }),
-                        )],
+                        Text("workshop terms of service".to_string()),
+                        bold_text_font.clone(),
+                        Underline,
+                        Button,
+                        LinkText,
+                        Hovered::default(),
+                        TabIndex::default(),
+                        TextColor(LINK_COLOR),
+                        TextLayout::new(Justify::Center, LineBreak::NoWrap),
+                        ResizableText::Paragraph,
+                        observe(|_: On<Activate>, steam_client: Res<Client>| {
+                            steam_client.friends().activate_game_overlay_to_web_page("steam://openurl/https://steamcommunity.com/sharedfiles/workshoplegalagreement");
+                        }),
                     )],
                 ));
             }
@@ -450,6 +443,7 @@ fn process_and_update_upload_progress(
                 Node {
                     width: percent(100),
                     border: UiRect::all(px(2)),
+                    border_radius: BorderRadius::all(px(10)),
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
                     ..default()
@@ -458,11 +452,11 @@ fn process_and_update_upload_progress(
                 Hovered::default(),
                 TabIndex::default(),
                 BorderColor::all(crate::io::bevy_abstraction::Color::White),
-                BorderRadius::all(px(10)),
                 BackgroundColor(crate::io::bevy_abstraction::Color::Black.into()),
                 children![(
                     Text::new("Close"),
                     text_font.clone(),
+                    LineHeight::RelativeToFont(1.1),
                     TextColor(crate::io::bevy_abstraction::Color::White.into()),
                     ResizableText::Paragraph,
                 )],
@@ -521,7 +515,6 @@ fn process_and_update_upload_progress(
             let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
             let text_font = TextFont {
                 font: font.clone(),
-                line_height: LineHeight::RelativeToFont(1.1),
                 font_size: 1.0, //Dummy value
                 ..default()
             };
@@ -530,6 +523,7 @@ fn process_and_update_upload_progress(
                 Node {
                     width: percent(100),
                     border: UiRect::all(px(2)),
+                    border_radius: BorderRadius::all(px(10)),
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
                     ..default()
@@ -538,11 +532,11 @@ fn process_and_update_upload_progress(
                 Hovered::default(),
                 TabIndex::default(),
                 BorderColor::all(crate::io::bevy_abstraction::Color::White),
-                BorderRadius::all(px(10)),
                 BackgroundColor(crate::io::bevy_abstraction::Color::Black.into()),
                 children![(
                     Text::new("Close"),
                     text_font.clone(),
+                    LineHeight::RelativeToFont(1.1),
                     TextColor(crate::io::bevy_abstraction::Color::White.into()),
                     ResizableText::Paragraph,
                 )],
@@ -976,7 +970,6 @@ fn on_validate_and_start_upload(
         let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
         let text_font = TextFont {
             font: font.clone(),
-            line_height: LineHeight::RelativeToFont(1.1),
             font_size: 1.0, //Dummy value
             ..default()
         };
@@ -1017,6 +1010,7 @@ fn on_validate_and_start_upload(
                         height: percent(60),
                         min_width: px(380),
                         min_height: px(240),
+                        border_radius: BorderRadius::all(percent(5)),
                         align_items: AlignItems::Center,
                         grid_template_rows: vec![GridTrack::auto(), GridTrack::fr(1.0), GridTrack::auto()],
                         row_gap: vmin(0.5),
@@ -1024,7 +1018,6 @@ fn on_validate_and_start_upload(
                         ..default()
                     },
                     BackgroundColor(Color::srgb_u8(180, 180, 180)),
-                    BorderRadius::all(percent(5)),
                     children![(
                         Text("Upload in progress".to_string()),
                         UploadProgressPopupTitle,
@@ -1036,6 +1029,7 @@ fn on_validate_and_start_upload(
                         Text("Validating...".to_string()),
                         UploadProgressPopupContent,
                         text_font.clone(),
+                        LineHeight::RelativeToFont(1.1),
                         TextColor(Color::BLACK),
                         TextLayout::new(Justify::Center, LineBreak::WordBoundary),
                         ResizableText::Paragraph,
@@ -1075,7 +1069,6 @@ fn on_open_steam_workshop_upload_popup(
     let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
     let text_font = TextFont {
         font: font.clone(),
-        line_height: LineHeight::RelativeToFont(1.1),
         font_size: 1.0, //Dummy value
         ..default()
     };
@@ -1111,6 +1104,7 @@ fn on_open_steam_workshop_upload_popup(
                 height: percent(80),
                 min_width: px(460),
                 min_height: px(340),
+                border_radius: BorderRadius::all(percent(5)),
                 align_items: AlignItems::Center,
                 grid_template_rows: vec![GridTrack::auto(), GridTrack::fr(1.0), GridTrack::auto()],
                 row_gap: vmin(0.5),
@@ -1118,7 +1112,6 @@ fn on_open_steam_workshop_upload_popup(
                 ..default()
             },
             BackgroundColor(Color::srgb_u8(180, 180, 180)),
-            BorderRadius::all(percent(5)),
             children![(
                 Node {
                     flex_direction: FlexDirection::Column,
@@ -1134,6 +1127,7 @@ fn on_open_steam_workshop_upload_popup(
                 ), (
                     Text(format!("You are about to upload level pack \"{}\".", game.game_state().editor_state().get_current_level_pack().unwrap().id())),
                     text_font.clone(),
+                    LineHeight::RelativeToFont(1.1),
                     TextColor(Color::BLACK),
                     TextLayout::new(Justify::Center, LineBreak::WordBoundary),
                     ResizableText::Paragraph,
@@ -1178,12 +1172,14 @@ fn on_open_steam_workshop_upload_popup(
                     children![(
                         Text("".to_string()),
                         text_font.clone(),
+                        LineHeight::RelativeToFont(1.1),
                         TextColor(Color::BLACK),
                         ResizableText::Paragraph,
                         children![(
                             TextSpan("|".to_string()),
                             TextCursor,
                             text_font.clone(),
+                            LineHeight::RelativeToFont(1.1),
                             TextColor(Color::NONE),
                             ResizableText::Paragraph,
                         )],
@@ -1193,6 +1189,7 @@ fn on_open_steam_workshop_upload_popup(
 
                     Text("Level pack description:".to_string()),
                     bold_text_font.clone(),
+                    LineHeight::RelativeToFont(1.1),
                     TextColor(Color::BLACK),
                     TextLayout::new(Justify::Left, LineBreak::WordBoundary),
                     ResizableText::Paragraph,
@@ -1215,12 +1212,14 @@ fn on_open_steam_workshop_upload_popup(
                     children![(
                         Text("".to_string()),
                         text_font.clone(),
+                        LineHeight::RelativeToFont(1.1),
                         TextColor(Color::BLACK),
                         ResizableText::Paragraph,
                         children![(
                             TextSpan("|".to_string()),
                             TextCursor,
                             text_font.clone(),
+                            LineHeight::RelativeToFont(1.1),
                             TextColor(Color::NONE),
                             ResizableText::Paragraph,
                         )],
@@ -1300,26 +1299,19 @@ fn on_open_steam_workshop_upload_popup(
                         TextLayout::new(Justify::Center, LineBreak::NoWrap),
                         ResizableText::Paragraph,
                     ), (
-                        Node {
-                            border: UiRect::bottom(px(5)),
-                            box_sizing: BoxSizing::BorderBox,
-                            ..default()
-                        },
-                        BorderColor::all(LINK_COLOR),
-                        children![(
-                            Text("workshop terms of service".to_string()),
-                            bold_text_font.clone(),
-                            Button,
-                            LinkText,
-                            Hovered::default(),
-                            TabIndex::default(),
-                            TextColor(LINK_COLOR),
-                            TextLayout::new(Justify::Center, LineBreak::NoWrap),
-                            ResizableText::Paragraph,
-                            observe(|_: On<Activate>, steam_client: Res<Client>| {
-                                steam_client.friends().activate_game_overlay_to_web_page("steam://openurl/https://steamcommunity.com/sharedfiles/workshoplegalagreement");
-                            }),
-                        )],
+                        Text("workshop terms of service".to_string()),
+                        bold_text_font.clone(),
+                        Underline,
+                        Button,
+                        LinkText,
+                        Hovered::default(),
+                        TabIndex::default(),
+                        TextColor(LINK_COLOR),
+                        TextLayout::new(Justify::Center, LineBreak::NoWrap),
+                        ResizableText::Paragraph,
+                        observe(|_: On<Activate>, steam_client: Res<Client>| {
+                            steam_client.friends().activate_game_overlay_to_web_page("steam://openurl/https://steamcommunity.com/sharedfiles/workshoplegalagreement");
+                        }),
                     )],
                 ), (
                     two_column_layout(
@@ -1327,6 +1319,7 @@ fn on_open_steam_workshop_upload_popup(
                             Node {
                                 width: percent(100),
                                 border: UiRect::all(px(2)),
+                                border_radius: BorderRadius::all(px(10)),
                                 justify_content: JustifyContent::Center,
                                 align_items: AlignItems::Center,
                                 ..default()
@@ -1335,11 +1328,11 @@ fn on_open_steam_workshop_upload_popup(
                             Hovered::default(),
                             TabIndex::default(),
                             BorderColor::all(crate::io::bevy_abstraction::Color::White),
-                            BorderRadius::all(px(10)),
                             BackgroundColor(crate::io::bevy_abstraction::Color::Black.into()),
                             children![(
                                 Text::new("Ok"),
                                 text_font.clone(),
+                                LineHeight::RelativeToFont(1.1),
                                 TextColor(crate::io::bevy_abstraction::Color::White.into()),
                                 ResizableText::Paragraph,
                             )],
@@ -1358,6 +1351,7 @@ fn on_open_steam_workshop_upload_popup(
                             Node {
                                 width: percent(100),
                                 border: UiRect::all(px(2)),
+                                border_radius: BorderRadius::all(px(10)),
                                 justify_content: JustifyContent::Center,
                                 align_items: AlignItems::Center,
                                 ..default()
@@ -1366,11 +1360,11 @@ fn on_open_steam_workshop_upload_popup(
                             Hovered::default(),
                             TabIndex::default(),
                             BorderColor::all(crate::io::bevy_abstraction::Color::White),
-                            BorderRadius::all(px(10)),
                             BackgroundColor(crate::io::bevy_abstraction::Color::Black.into()),
                             children![(
                                 Text::new("Cancel"),
                                 text_font.clone(),
+                                LineHeight::RelativeToFont(1.1),
                                 TextColor(crate::io::bevy_abstraction::Color::White.into()),
                                 ResizableText::Paragraph,
                             )],
@@ -1415,7 +1409,7 @@ fn create_level_pack_thumbnail(
         return;
     };
 
-    let image = Image::new_target_texture(1920, 1080, TextureFormat::bevy_default());
+    let image = Image::new_target_texture(1920, 1080, TextureFormat::bevy_default(), None);
 
     let window_width = image.width() as f32;
     let window_height = image.height() as f32;
@@ -1435,9 +1429,9 @@ fn create_level_pack_thumbnail(
         LevelPackThumbnailCamera,
         Camera {
             order: -1,
-            target: image_handle.clone().into(),
             ..default()
         },
+        RenderTarget::Image(image_handle.clone().into()),
         RenderLayers::layer(0).with(1),
     ));
 
@@ -1534,7 +1528,7 @@ fn handle_thumbnail_screenshot(
     let image_handle = level_pack_thumbnail_image_handle.deref().0.clone();
     commands.spawn(Screenshot::image(image_handle.clone())).observe(
         #[expect(clippy::type_complexity)]
-        move |screenshot_captured: On<ScreenshotCaptured>,
+        (move |screenshot_captured: On<ScreenshotCaptured>,
 
               mut commands: Commands,
 
@@ -1557,7 +1551,7 @@ fn handle_thumbnail_screenshot(
             image.save(Path::new(&tmp_thumbnail_path))?;
 
             Ok(())
-        }.pipe(handle_recoverable_error),
+        }).pipe(handle_recoverable_error),
     );
 }
 
@@ -1690,6 +1684,7 @@ fn checkbox(text_font: TextFont, value: impl Component, label: &str) -> impl Bun
             children![(
                 Node {
                     border: UiRect::all(percent(10)),
+                    border_radius: BorderRadius::all(px(3)),
                     box_sizing: BoxSizing::BorderBox,
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
@@ -1697,7 +1692,6 @@ fn checkbox(text_font: TextFont, value: impl Component, label: &str) -> impl Bun
                 },
                 ResizableNodeDimension::Both(0.5, 0.5),
                 BorderColor::all(Color::BLACK),
-                BorderRadius::all(px(3)),
                 children![(
                     Node {
                         position_type: PositionType::Absolute,
@@ -1717,6 +1711,7 @@ fn checkbox(text_font: TextFont, value: impl Component, label: &str) -> impl Bun
         ), (
             Text::new(label),
             text_font,
+            LineHeight::RelativeToFont(1.1),
             TextColor(Color::BLACK),
             ResizableText::Paragraph,
         )],
@@ -1747,6 +1742,7 @@ fn radio(text_font: TextFont, value: impl Component, label: &str) -> impl Bundle
             children![(
                 Node {
                     border: UiRect::all(percent(10)),
+                        border_radius: BorderRadius::MAX,
                     box_sizing: BoxSizing::BorderBox,
                     justify_content: JustifyContent::Center,
                     align_items: AlignItems::Center,
@@ -1754,16 +1750,15 @@ fn radio(text_font: TextFont, value: impl Component, label: &str) -> impl Bundle
                 },
                 ResizableNodeDimension::Both(0.5, 0.5),
                 BorderColor::all(Color::BLACK),
-                BorderRadius::MAX,
                 children![(
                     Node {
                         position_type: PositionType::Absolute,
+                        border_radius: BorderRadius::MAX,
                         margin: UiRect::all(percent(10)),
                         border: UiRect::all(percent(20)),
                         ..default()
                     },
                     ResizableNodeDimension::Both(0.5, 0.5),
-                    BorderRadius::MAX,
                     BackgroundColor(RADIO_BUTTON_COLOR),
                 )],
             )],
@@ -1775,6 +1770,7 @@ fn radio(text_font: TextFont, value: impl Component, label: &str) -> impl Bundle
         ), (
             Text::new(label),
             text_font,
+            LineHeight::RelativeToFont(1.1),
             TextColor(Color::BLACK),
             ResizableText::Paragraph,
         )],
