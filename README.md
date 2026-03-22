@@ -1,6 +1,6 @@
 # SokoTerm
 
-Test your puzzle game with more than 200 brand-new puzzles across 5 built-in level packs with unique challenges which get
+Test your puzzle game with more than 150 brand-new puzzles across 5 built-in level packs with unique challenges which get
 progressively harder. In the GUI version you can play this game with Graphical Tiles:
 ![Animated SokoTerm Gameplay - Pack 04 - Level 03 - Graphical](https://github.com/user-attachments/assets/3a5fbcbd-ac14-426f-a44a-71a5ef78e208)
 or traditional ASCII tiles:
