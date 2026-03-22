@@ -1,6 +1,6 @@
 [package]
 name = "SokoTerm"
-version = "1.0.0-beta.1"
+version = "1.0.0-beta.2-dev"
 edition = "2024"
 
 [dependencies]
