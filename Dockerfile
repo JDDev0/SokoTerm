@@ -84,25 +84,25 @@ set -eux
 mkdir /app/release/
 
 # Linux 64 bit
-cargo build --features ${CARGO_FEATURE_FLAGS} -r
+cargo build --features "${CARGO_FEATURE_FLAGS}" -r
 mkdir /app/release/linux_64/
 cp -p ./target/release/${BINARY_NAME} /app/release/linux_64/${BINARY_NAME}
 find ./target/release/ -iname 'libsteam_api*.so' -exec cp {} /app/release/linux_64/ \;
 
 # Windows 64 bit
-cargo build --features ${CARGO_FEATURE_FLAGS} --target x86_64-pc-windows-gnu -r
+cargo build --features "${CARGO_FEATURE_FLAGS}" --target x86_64-pc-windows-gnu -r
 mkdir /app/release/windows_64/
 cp -p ./target/x86_64-pc-windows-gnu/release/${BINARY_NAME}.exe /app/release/windows_64/${BINARY_NAME}.exe
 find ./target/x86_64-pc-windows-gnu/release/ -iname 'steam_api*.dll' -exec cp {} /app/release/windows_64/ \;
 
 # Linux 32 bit
-PKG_CONFIG_SYSROOT_DIR=/usr/x86_64-w64-mingw32/ cargo build --features ${CARGO_FEATURE_FLAGS} --target i686-unknown-linux-gnu -r
+PKG_CONFIG_SYSROOT_DIR=/usr/x86_64-w64-mingw32/ cargo build --features "${CARGO_FEATURE_FLAGS}" --target i686-unknown-linux-gnu -r
 mkdir /app/release/linux_32/
 cp -p ./target/i686-unknown-linux-gnu/release/${BINARY_NAME} /app/release/linux_32/${BINARY_NAME}
 find ./target/i686-unknown-linux-gnu/release/ -iname 'libsteam_api*.so' -exec cp {} /app/release/linux_32/ \;
 
 # Windows 32 bit
-cargo build --features ${CARGO_FEATURE_FLAGS} --target i686-pc-windows-gnu -r
+cargo build --features "${CARGO_FEATURE_FLAGS}" --target i686-pc-windows-gnu -r
 mkdir /app/release/windows_32/
 cp -p ./target/i686-pc-windows-gnu/release/${BINARY_NAME}.exe /app/release/windows_32/${BINARY_NAME}.exe
 find ./target/i686-pc-windows-gnu/release/ -iname 'steam_api*.dll' -exec cp {} /app/release/windows_32/ \;
