@@ -4,8 +4,6 @@ use std::path::Path;
 use std::sync::{Arc, LazyLock, Mutex};
 use bevy::camera::RenderTarget;
 use bevy::camera::visibility::RenderLayers;
-use bevy::input::ButtonState;
-use bevy::input::keyboard::{Key, KeyboardInput};
 use bevy::input_focus::{AutoFocus, InputFocus};
 use bevy::input_focus::tab_navigation::{TabGroup, TabIndex, TabNavigationPlugin};
 use bevy::picking::hover::Hovered;
@@ -13,7 +11,7 @@ use bevy::ui_widgets::{checkbox_self_update, observe, Activate, Button, Checkbox
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
-use bevy::text::LineHeight;
+use bevy::text::{EditableText, LineHeight, TextCursorStyle};
 use bevy::ui::Checked;
 use bevy::window::{CursorIcon, PrimaryWindow, SystemCursorIcon};
 use bevy_steamworks::*;
@@ -27,8 +25,6 @@ use crate::utils;
 const RADIO_BUTTON_COLOR: Color = Color::srgb_u8(140, 148, 64);
 const LINK_COLOR: Color = Color::srgb_u8(42, 123, 222);
 const LINK_COLOR_HOVERED: Color = Color::srgb_u8(18, 72, 139);
-
-const TEXT_CURSOR_CHARACTER: &str = "\u{258F}";
 
 pub struct SteamWorkshopUploadPopupPlugin;
 
@@ -48,7 +44,6 @@ impl Plugin for SteamWorkshopUploadPopupPlugin {
                 add_systems(Update, (
                     process_and_update_upload_progress.pipe(handle_recoverable_error),
                     process_update_progress_status.pipe(handle_recoverable_error),
-                    update_text_input_fields,
                     update_radio_button_checked_state,
                     update_ui_styles,
                     update_hover_ui_styles,
@@ -124,9 +119,6 @@ struct SetUploadProgressPopupContent {
 }
 
 #[derive(Debug, Component)]
-struct TextInputField;
-
-#[derive(Debug, Component)]
 struct LevelPackName;
 
 #[derive(Debug, Component)]
@@ -173,20 +165,18 @@ fn process_and_update_upload_progress(
     mut commands: Commands,
 
     level_pack_name_text_input_field_query: Query<
-        &Children,
+        &EditableText,
         With<LevelPackName>,
     >,
 
     level_pack_description_text_input_field_query: Query<
-        &Children,
+        &EditableText,
         With<LevelPackDescription>,
     >,
 
     gameplay_tag_checkboxes_query: Query<
         (Has<Checked>, &GameplayTagComponent),
     >,
-
-    text_query: Query<&Text>,
 
     upload_progress_popup_button_container_query: Query<Entity, With<UploadProgressPopupButtonContainer>>,
 
@@ -280,34 +270,18 @@ fn process_and_update_upload_progress(
 
         SteamWorkshopUploadWorkingData::CreateItemResult(Ok((id, _needs_to_accept_workshop_terms))) => {
             let level_pack_name = {
-                let Ok(children) = level_pack_name_text_input_field_query.single() else {
+                let Ok(level_pack_name) = level_pack_name_text_input_field_query.single() else {
                     return Err(Box::new(GameError::new("Level pack name input field invalid")));
                 };
 
-                let Some(text_entity_id) = children.first() else {
-                    return Err(Box::new(GameError::new("Level pack name input field is invalid")));
-                };
-
-                let Ok(level_pack_name) = text_query.get(*text_entity_id) else {
-                    return Err(Box::new(GameError::new("Level pack name input field is invalid")));
-                };
-
-                level_pack_name
+                level_pack_name.value()
             };
             let level_pack_description = {
-                let Ok(children) = level_pack_description_text_input_field_query.single() else {
+                let Ok(level_pack_description) = level_pack_description_text_input_field_query.single() else {
                     return Err(Box::new(GameError::new("Level pack description input field invalid")));
                 };
 
-                let Some(text_entity_id) = children.first() else {
-                    return Err(Box::new(GameError::new("Level pack description input field is invalid")));
-                };
-
-                let Ok(level_pack_description) = text_query.get(*text_entity_id) else {
-                    return Err(Box::new(GameError::new("Level pack description input field is invalid")));
-                };
-
-                level_pack_description
+                level_pack_description.value()
             };
 
             let difficulty_tag = match &*difficulty_tag_resource {
@@ -341,8 +315,8 @@ fn process_and_update_upload_progress(
 
             let handle = steam_client.ugc().start_item_update(steam::APP_ID, id).
                     visibility(PublishedFileVisibility::Private).
-                    title(level_pack_name).
-                    description(level_pack_description).
+                    title(&level_pack_name.to_string()).
+                    description(&level_pack_description.to_string()).
                     content_path(Path::new(&tmp_upload_path)).
                     preview_path(Path::new(&tmp_thumbnail_path)).
                     tags(tags, false).
@@ -711,92 +685,6 @@ fn process_update_progress_status(
     Ok(())
 }
 
-fn update_text_input_fields(
-    focus: Res<InputFocus>,
-    time: Res<Time>,
-
-    text_input_field_query: Query<
-        (&Children, Has<LevelPackName>),
-        With<TextInputField>,
-    >,
-
-    children_query: Query<&Children>,
-    mut text_query: Query<&mut Text>,
-    mut text_color_query: Query<&mut TextColor>,
-
-    mut keyboard_event: MessageReader<KeyboardInput>,
-) {
-    let Some(entity_id) = focus.get() else {
-        return;
-    };
-
-    let Ok((children, is_level_pack_name)) = text_input_field_query.get(entity_id) else {
-        return;
-    };
-
-    let Some(text_entity_id) = children.first() else {
-        warn!("Invalid text input field");
-        return;
-    };
-
-    let Ok(mut text) = text_query.get_mut(*text_entity_id) else {
-        return;
-    };
-
-    let show_cursor = (time.elapsed_secs_wrapped() * 2.0) as u32 & 1 == 1;
-    if let Ok(children) = children_query.get(*text_entity_id) {
-        let Some(text_span_entity_id) = children.first() else {
-            warn!("Invalid text input field");
-            return;
-        };
-
-        if let Ok(mut text_color) = text_color_query.get_mut(*text_span_entity_id) {
-            if show_cursor {
-                text_color.0 = Color::BLACK;
-            }else {
-                text_color.0 = Color::NONE;
-            }
-        }
-    }
-
-    for event in keyboard_event.read() {
-        if event.state == ButtonState::Released {
-            continue;
-        }
-
-        if event.logical_key == Key::Tab {
-            //Focus changed
-            return;
-        }
-
-        if event.logical_key == Key::Backspace {
-            if !text.is_empty() {
-                text.pop();
-            }
-
-            continue;
-        }
-
-        if matches!(event.logical_key, Key::Delete | Key::Escape) {
-            continue;
-        }
-
-        if is_level_pack_name  && event.logical_key == Key::Enter {
-            continue;
-        }
-
-        //TODO check for control key
-
-        if let Some(key) = &event.text {
-            if key == "\r" {
-                text.push('\n');
-            }else {
-                text.push_str(key);
-            }
-        }
-    }
-}
-
 fn update_radio_button_checked_state(
     mut commands: Commands,
 
@@ -971,7 +859,7 @@ fn update_focus_styles(
 
     ui_element_query: Query<
         Entity,
-        Or<(With<TextInputField>, With<Button>, With<RadioGroup>, With<Checkbox>)>,
+        Or<(With<EditableText>, With<Button>, With<RadioGroup>, With<Checkbox>)>,
     >,
 
     text_cursor_query: Query<
@@ -1002,7 +890,7 @@ fn update_mouse_cursor_style(
     mut commands: Commands,
 
     hovering_changed_query: Query<&Hovered, Changed<Hovered>>,
-    hovered_query: Query<(&Hovered, Has<TextInputField>)>,
+    hovered_query: Query<(&Hovered, Has<EditableText>)>,
 
     window_query: Query<Entity, With<PrimaryWindow>>,
     cursor_icon_query: Query<&CursorIcon, With<PrimaryWindow>>,
@@ -1270,26 +1158,20 @@ fn on_open_steam_workshop_upload_popup(
                         ..default()
                     },
                     LevelPackName,
-                    TextInputField,
+                    EditableText {
+                        allow_newlines: false,
+                        ..default()
+                    },
+                    TextCursorStyle::default(),
+                    text_font.clone(),
+                    LineHeight::RelativeToFont(1.1),
+                    TextColor(Color::BLACK),
+                    TextLayout::no_wrap(),
+                    ResizableText::Paragraph,
                     Hovered::default(),
                     TabIndex::default(),
                     BackgroundColor(Color::srgb_u8(120, 120, 120)),
                     ResizableNodeDimension::Height(1.2),
-                    children![(
-                        Text("".to_string()),
-                        text_font.clone(),
-                        LineHeight::RelativeToFont(1.1),
-                        TextColor(Color::BLACK),
-                        ResizableText::Paragraph,
-                        children![(
-                            TextSpan(TEXT_CURSOR_CHARACTER.to_string()),
-                            TextCursor,
-                            text_font.clone(),
-                            LineHeight::RelativeToFont(1.1),
-                            TextColor(Color::NONE),
-                            ResizableText::Paragraph,
-                        )],
-                    )],
                 ), (
                     //TODO Mark with red color if invalid
 
@@ -1310,26 +1192,20 @@ fn on_open_steam_workshop_upload_popup(
                         ..default()
                     },
                     LevelPackDescription,
-                    TextInputField,
+                    EditableText {
+                        allow_newlines: true,
+                        ..default()
+                    },
+                    TextCursorStyle::default(),
+                    text_font.clone(),
+                    LineHeight::RelativeToFont(1.1),
+                    TextColor(Color::BLACK),
+                    TextLayout::no_wrap(),
+                    ResizableText::Paragraph,
                     Hovered::default(),
                     TabIndex::default(),
                     BackgroundColor(Color::srgb_u8(120, 120, 120)),
                     ResizableNodeDimension::Height(3.2),
-                    children![(
-                        Text("".to_string()),
-                        text_font.clone(),
-                        LineHeight::RelativeToFont(1.1),
-                        TextColor(Color::BLACK),
-                        ResizableText::Paragraph,
-                        children![(
-                            TextSpan(TEXT_CURSOR_CHARACTER.to_string()),
-                            TextCursor,
-                            text_font.clone(),
-                            LineHeight::RelativeToFont(1.1),
-                            TextColor(Color::NONE),
-                            ResizableText::Paragraph,
-                        )],
-                    )],
                 ), (
                     two_column_layout(
                          children![(

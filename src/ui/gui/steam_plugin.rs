@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::error::Error;
 use std::sync::{Arc, LazyLock, Mutex};
 use bevy::prelude::*;
+use bevy::window::WindowResized;
 use bevy_steamworks::*;
 use crate::game::{steam, Game, GameError};
 use crate::game::audio::SoundEffect;
@@ -46,7 +47,7 @@ impl Plugin for SteamPlugin {
 
                 add_systems(Update, steam::steam_callback).
                 add_systems(Update, handle_workshop_item_loading_queue.pipe(handle_recoverable_error)).
-                add_systems(Update, on_resize_popup_text.after(on_resize)).
+                add_systems(Update, (on_resizable_text_or_node_component_added, on_resize_popup_text).after(on_resize)).
                 add_systems(Update, on_play_sound_effect);
     }
 }
@@ -79,8 +80,37 @@ fn on_resize_popup_text(
     character_scaling: Res<CharacterScaling>,
 
     resizable_text_query: Query<(&mut TextFont, &ResizableText), With<ResizableText>>,
-
     resizable_node_dimension_query: Query<(&mut Node, &ResizableNodeDimension), With<ResizableNodeDimension>>,
+
+    mut resize_reader: MessageReader<WindowResized>,
+) {
+    let event = resize_reader.read().last();
+    if event.is_some() {
+        for (mut font, resizeable_text) in resizable_text_query {
+            font.font_size = match resizeable_text {
+                ResizableText::Paragraph => FontSize::Px(character_scaling.font_size * 0.9),
+                ResizableText::Heading => FontSize::Px(character_scaling.font_size * 1.2),
+            };
+        }
+
+        for (mut node, resizable_node_dimension) in resizable_node_dimension_query {
+            match resizable_node_dimension {
+                ResizableNodeDimension::Width(width) => node.width = px(width * character_scaling.font_size),
+                ResizableNodeDimension::Height(height) => node.height = px(height * character_scaling.font_size),
+                ResizableNodeDimension::Both(width, height) => {
+                    node.width = px(width * character_scaling.font_size);
+                    node.height = px(height * character_scaling.font_size);
+                },
+            }
+        }
+    }
+}
+
+fn on_resizable_text_or_node_component_added(
+    character_scaling: Res<CharacterScaling>,
+
+    resizable_text_query: Query<(&mut TextFont, &ResizableText), Added<ResizableText>>,
+    resizable_node_dimension_query: Query<(&mut Node, &ResizableNodeDimension), Added<ResizableNodeDimension>>,
 ) {
     for (mut font, resizeable_text) in resizable_text_query {
         font.font_size = match resizeable_text {
