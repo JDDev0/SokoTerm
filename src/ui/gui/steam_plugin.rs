@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::window::WindowResized;
 use bevy_steamworks::*;
 use crate::game::{steam, Game, GameError};
 use crate::game::audio::SoundEffect;
@@ -35,7 +36,7 @@ impl Plugin for SteamPlugin {
                 add_systems(Startup, steam::steam_init).
 
                 add_systems(Update, steam::steam_callback).
-                add_systems(Update, on_resize_popup_text.after(on_resize)).
+                add_systems(Update, (on_resizable_text_added, on_resize_popup_text).after(on_resize)).
                 add_systems(Update, on_play_sound_effect);
     }
 }
@@ -55,6 +56,24 @@ fn on_resize_popup_text(
     character_scaling: Res<CharacterScaling>,
 
     resizable_text_query: Query<(&mut TextFont, &ResizableText), With<ResizableText>>,
+
+    mut resize_reader: MessageReader<WindowResized>,
+) {
+    let event = resize_reader.read().last();
+    if event.is_some() {
+        for (mut font, resizeable_text) in resizable_text_query {
+            font.font_size = match resizeable_text {
+                ResizableText::Paragraph => FontSize::Px(character_scaling.font_size * 0.9),
+                ResizableText::Heading => FontSize::Px(character_scaling.font_size * 1.2),
+            };
+        }
+    }
+}
+
+fn on_resizable_text_added(
+    character_scaling: Res<CharacterScaling>,
+
+    resizable_text_query: Query<(&mut TextFont, &ResizableText), Added<ResizableText>>,
 ) {
     for (mut font, resizeable_text) in resizable_text_query {
         font.font_size = match resizeable_text {
