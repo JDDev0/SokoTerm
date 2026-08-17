@@ -1,4 +1,5 @@
 #![allow(clippy::uninlined_format_args)]
+#![allow(clippy::collapsible_match)]
 
 //Disable windows console window for GUI build
 #![cfg_attr(feature = "gui", windows_subsystem = "windows")]
