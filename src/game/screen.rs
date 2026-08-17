@@ -2336,7 +2336,7 @@ impl Screen for ScreenSelectLevelPackEditor {
 
             console.set_cursor_pos(1, y + 2);
             console.set_color(Color::Cyan, Color::Default);
-            console.draw_text(format!("> {}", &self.new_level_pack_id));
+            console.draw_text(format!("> {}", self.new_level_pack_id));
         }else if cursor_index == 0 {
             console.reset_color();
             console.set_cursor_pos(35, y + 2);
@@ -2909,7 +2909,7 @@ impl ScreenLevelPackEditor {
                 Color::Cyan
             }, Color::Default);
             console.set_cursor_pos(1, y + 2);
-            console.draw_text(format!("Width: {}", &self.new_level_width_str));
+            console.draw_text(format!("Width: {}", self.new_level_width_str));
 
             console.set_color(if self.is_editing_height {
                 Color::Cyan
@@ -2917,7 +2917,7 @@ impl ScreenLevelPackEditor {
                 Color::LightBlue
             }, Color::Default);
             console.set_cursor_pos(14, y + 2);
-            console.draw_text(format!("Height: {}", &self.new_level_height_str));
+            console.draw_text(format!("Height: {}", self.new_level_height_str));
         }else if cursor_index == 0 {
             console.reset_color();
             console.set_cursor_pos(35, y + 2);
