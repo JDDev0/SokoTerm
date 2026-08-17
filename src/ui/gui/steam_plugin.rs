@@ -84,8 +84,8 @@ fn on_resize_popup_text(
 ) {
     for (mut font, resizeable_text) in resizable_text_query {
         font.font_size = match resizeable_text {
-            ResizableText::Paragraph => character_scaling.font_size * 0.9,
-            ResizableText::Heading => character_scaling.font_size * 1.2,
+            ResizableText::Paragraph => FontSize::Px(character_scaling.font_size * 0.9),
+            ResizableText::Heading => FontSize::Px(character_scaling.font_size * 1.2),
         };
     }
 

@@ -6,10 +6,10 @@ use bevy::camera::RenderTarget;
 use bevy::camera::visibility::RenderLayers;
 use bevy::input::ButtonState;
 use bevy::input::keyboard::{Key, KeyboardInput};
-use bevy::input_focus::{AutoFocus, InputDispatchPlugin, InputFocus};
+use bevy::input_focus::{AutoFocus, InputFocus};
 use bevy::input_focus::tab_navigation::{TabGroup, TabIndex, TabNavigationPlugin};
 use bevy::picking::hover::Hovered;
-use bevy::ui_widgets::{checkbox_self_update, observe, Activate, Button, Checkbox, RadioButton, RadioGroup, UiWidgetsPlugins, ValueChange};
+use bevy::ui_widgets::{checkbox_self_update, observe, Activate, Button, Checkbox, RadioButton, RadioGroup, ValueChange};
 use bevy::prelude::*;
 use bevy::render::render_resource::TextureFormat;
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured};
@@ -36,8 +36,6 @@ impl Plugin for SteamWorkshopUploadPopupPlugin {
     fn build(&self, app: &mut App) {
         app.
                 add_plugins((
-                    UiWidgetsPlugins,
-                    InputDispatchPlugin,
                     TabNavigationPlugin,
                 )).
 
@@ -140,7 +138,7 @@ struct TextCursor;
 #[derive(Debug, Component)]
 struct LinkText;
 
-#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Resource, Component)]
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Resource)]
 enum DifficultyTag {
     Easy,
     Medium,
@@ -148,12 +146,18 @@ enum DifficultyTag {
     Demon,
 }
 
-#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Resource, Component)]
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Component)]
+struct DifficultyTagComponent(DifficultyTag);
+
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Resource)]
 enum GameplayTag {
     Fun,
     Tricky,
     Weird,
 }
+
+#[derive(Debug, Clone, Copy, Ord, PartialOrd, Eq, PartialEq, Hash, Component)]
+struct GameplayTagComponent(GameplayTag);
 
 #[derive(Debug, Component)]
 struct LevelPackThumbnailCamera;
@@ -179,7 +183,7 @@ fn process_and_update_upload_progress(
     >,
 
     gameplay_tag_checkboxes_query: Query<
-        (Has<Checked>, &GameplayTag),
+        (Has<Checked>, &GameplayTagComponent),
     >,
 
     text_query: Query<&Text>,
@@ -226,8 +230,8 @@ fn process_and_update_upload_progress(
 
             let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
             let text_font = TextFont {
-                font: font.clone(),
-                font_size: 1.0, //Dummy value
+                font: font.clone().into(),
+                font_size: FontSize::Px(1.0), //Dummy value
                 ..default()
             };
 
@@ -316,7 +320,7 @@ fn process_and_update_upload_progress(
             let mut gameplay_tags = Vec::new();
             for (checked, gameplay_tag) in gameplay_tag_checkboxes_query {
                 if checked {
-                    gameplay_tags.push(match gameplay_tag {
+                    gameplay_tags.push(match gameplay_tag.0 {
                         GameplayTag::Fun => "Fun",
                         GameplayTag::Tricky => "Tricky",
                         GameplayTag::Weird => "Weird",
@@ -386,8 +390,8 @@ fn process_and_update_upload_progress(
 
             let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
             let text_font = TextFont {
-                font: font.clone(),
-                font_size: 1.0, //Dummy value
+                font: font.clone().into(),
+                font_size: FontSize::Px(1.0), //Dummy value
                 ..default()
             };
 
@@ -473,15 +477,15 @@ fn process_and_update_upload_progress(
 
             let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
             let text_font = TextFont {
-                font: font.clone(),
-                font_size: 1.0, //Dummy value
+                font: font.clone().into(),
+                font_size: FontSize::Px(1.0), //Dummy value
                 ..default()
             };
 
             let font = asset_server.load("embedded://font/JetBrainsMono-Bold.ttf");
             let bold_text_font = TextFont {
-                font: font.clone(),
-                font_size: 1.0, //Dummy value
+                font: font.clone().into(),
+                font_size: FontSize::Px(1.0), //Dummy value
                 ..default()
             };
 
@@ -592,8 +596,8 @@ fn process_and_update_upload_progress(
 
             let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
             let text_font = TextFont {
-                font: font.clone(),
-                font_size: 1.0, //Dummy value
+                font: font.clone().into(),
+                font_size: FontSize::Px(1.0), //Dummy value
                 ..default()
             };
 
@@ -722,7 +726,7 @@ fn update_text_input_fields(
 
     mut keyboard_event: MessageReader<KeyboardInput>,
 ) {
-    let Some(entity_id) = focus.0 else {
+    let Some(entity_id) = focus.get() else {
         return;
     };
 
@@ -796,12 +800,12 @@ fn update_text_input_fields(
 fn update_radio_button_checked_state(
     mut commands: Commands,
 
-    difficulty_tag_radio_input_query: Query<(Entity, &DifficultyTag, Has<Checked>)>,
+    difficulty_tag_radio_input_query: Query<(Entity, &DifficultyTagComponent, Has<Checked>)>,
 
     difficulty_tag_resource: Res<DifficultyTag>,
 ) {
     for (entity_id, value, checked) in difficulty_tag_radio_input_query.iter() {
-        let checked_new = *value == *difficulty_tag_resource;
+        let checked_new = value.0 == *difficulty_tag_resource;
         if checked_new != checked {
             if checked_new {
                 commands.entity(entity_id).insert(Checked);
@@ -818,7 +822,7 @@ fn update_ui_styles(
         (Has<Checked>, &Hovered, &Children),
         (
             Or<(With<RadioButton>, With<Checkbox>)>,
-            Or<(Added<Checked>, Changed<Hovered>, Changed<DifficultyTag>)>
+            Or<(Added<Checked>, Changed<Hovered>, Changed<DifficultyTagComponent>)>
         ),
     >,
 
@@ -981,7 +985,7 @@ fn update_focus_styles(
         }
 
         for ui_element_id in ui_element_query {
-            if focus.0 == Some(ui_element_id) {
+            if focus.get() == Some(ui_element_id) {
                 commands.entity(ui_element_id).insert(Outline {
                     color: Color::WHITE,
                     width: vmin(0.25),
@@ -1054,14 +1058,14 @@ fn on_validate_and_start_upload(
 
         let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
         let text_font = TextFont {
-            font: font.clone(),
-            font_size: 1.0, //Dummy value
+            font: font.clone().into(),
+            font_size: FontSize::Px(1.0), //Dummy value
             ..default()
         };
         let font = asset_server.load("embedded://font/JetBrainsMono-Bold.ttf");
         let heading_font = TextFont {
-            font: font.clone(),
-            font_size: 1.0, //Dummy value
+            font: font.clone().into(),
+            font_size: FontSize::Px(1.0), //Dummy value
             ..default()
         };
         commands.spawn((
@@ -1170,20 +1174,20 @@ fn on_open_steam_workshop_upload_popup(
 
     let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
     let text_font = TextFont {
-        font: font.clone(),
-        font_size: 1.0, //Dummy value
+        font: font.clone().into(),
+        font_size: FontSize::Px(1.0), //Dummy value
         ..default()
     };
 
     let font = asset_server.load("embedded://font/JetBrainsMono-Bold.ttf");
     let bold_text_font = TextFont {
-        font: font.clone(),
-        font_size: 1.0, //Dummy value
+        font: font.clone().into(),
+        font_size: FontSize::Px(1.0), //Dummy value
         ..default()
     };
     let heading_font = TextFont {
-        font: font.clone(),
-        font_size: 1.0, //Dummy value
+        font: font.clone().into(),
+        font_size: FontSize::Px(1.0), //Dummy value
         ..default()
     };
 
@@ -1344,20 +1348,20 @@ fn on_open_steam_workshop_upload_popup(
                             RadioGroup,
                             TabIndex::default(),
                             children![(
-                                radio(text_font.clone(), DifficultyTag::Easy, "Easy"),
+                                radio(text_font.clone(), DifficultyTagComponent(DifficultyTag::Easy), "Easy"),
                             ), (
-                                radio(text_font.clone(), DifficultyTag::Medium, "Medium"),
+                                radio(text_font.clone(), DifficultyTagComponent(DifficultyTag::Medium), "Medium"),
                             ), (
-                                radio(text_font.clone(), DifficultyTag::Hard, "Hard"),
+                                radio(text_font.clone(), DifficultyTagComponent(DifficultyTag::Hard), "Hard"),
                             ), (
-                                radio(text_font.clone(), DifficultyTag::Demon, "Demon"),
+                                radio(text_font.clone(), DifficultyTagComponent(DifficultyTag::Demon), "Demon"),
                             )],
                             observe(
                                 |entity_id: On<ValueChange<Entity>>,
                                 mut difficulty_tag_resource: ResMut<DifficultyTag>,
-                                value_query: Query<&DifficultyTag>| {
+                                value_query: Query<&DifficultyTagComponent>| {
                                     if let Ok(value) = value_query.get(entity_id.value) {
-                                        *difficulty_tag_resource = *value;
+                                        *difficulty_tag_resource = value.0;
                                     }
                                 },
                             ),
@@ -1370,13 +1374,13 @@ fn on_open_steam_workshop_upload_popup(
                             TextLayout::new(Justify::Left, LineBreak::WordBoundary),
                             ResizableText::Paragraph,
                         ), (
-                            checkbox(text_font.clone(), GameplayTag::Fun, "Fun"),
+                            checkbox(text_font.clone(), GameplayTagComponent(GameplayTag::Fun), "Fun"),
                             observe(checkbox_self_update),
                         ), (
-                            checkbox(text_font.clone(), GameplayTag::Tricky, "Tricky"),
+                            checkbox(text_font.clone(), GameplayTagComponent(GameplayTag::Tricky), "Tricky"),
                             observe(checkbox_self_update),
                         ), (
-                            checkbox(text_font.clone(), GameplayTag::Weird, "Weird"),
+                            checkbox(text_font.clone(), GameplayTagComponent(GameplayTag::Weird), "Weird"),
                             observe(checkbox_self_update),
                         )],
                     ),
@@ -1511,7 +1515,7 @@ fn create_level_pack_thumbnail(
         return;
     };
 
-    let image = Image::new_target_texture(1920, 1080, TextureFormat::bevy_default(), None);
+    let image = Image::new_target_texture(1920, 1080, TextureFormat::Rgba8UnormSrgb, None);
 
     let window_width = image.width() as f32;
     let window_height = image.height() as f32;
@@ -1547,8 +1551,8 @@ fn create_level_pack_thumbnail(
 
     let font = asset_server.load("embedded://font/JetBrainsMono-Bold.ttf");
     let text_font = TextFont {
-        font: font.clone(),
-        font_size: character_scaling.font_size,
+        font: font.clone().into(),
+        font_size: FontSize::Px(character_scaling.font_size),
         ..default()
     };
 

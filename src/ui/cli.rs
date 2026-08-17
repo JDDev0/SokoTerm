@@ -50,7 +50,7 @@ fn run_game_internal(console: &'static Console) -> Result<ExitCode, Box<dyn Erro
 
             insert_resource(Time::<Fixed>::from_seconds(0.040)). //Run FixedUpdate every 40ms
 
-            insert_non_send_resource(game).
+            insert_non_send(game).
 
             add_systems(FixedUpdate, update_game);
 
