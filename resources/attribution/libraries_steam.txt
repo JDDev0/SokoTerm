@@ -19,10 +19,7 @@ async-lock v3.4.2;Apache-2.0 OR MIT;https://github.com/smol-rs/async-lock
 async-task v4.7.1;Apache-2.0 OR MIT;https://github.com/smol-rs/async-task
 atomicow v1.1.0;MIT OR Apache-2.0;https://github.com/bevyengine/atomicow
 atomic-waker v1.1.2;Apache-2.0 OR MIT;https://github.com/smol-rs/atomic-waker
-base64 v0.22.1;MIT OR Apache-2.0;https://github.com/marshallpierce/rust-base64
 bevy_a11y v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_animation_macros v0.18.1 (proc-macro);MIT OR Apache-2.0;
-bevy_animation v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_anti_alias v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_app v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_asset_macros v0.18.1 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
@@ -38,7 +35,6 @@ bevy_encase_derive v0.18.1 (proc-macro);MIT OR Apache-2.0;https://github.com/bev
 bevy_gilrs v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_gizmos_macros v0.18.1 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_gizmos v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_gltf v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_image v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_input_focus v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_input v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
@@ -48,8 +44,6 @@ bevy_log v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_macro_utils v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_math v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_mesh v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_mikktspace v0.17.0-dev;Zlib AND (MIT OR Apache-2.0);https://github.com/bevyengine/bevy_mikktspace
-bevy_pbr v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_picking v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_platform v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bevy_post_process v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
@@ -148,9 +142,6 @@ getrandom v0.3.4;MIT OR Apache-2.0;https://github.com/rust-random/getrandom
 gilrs-core v0.6.7;Apache-2.0/MIT;https://gitlab.com/gilrs-project/gilrs
 gilrs v0.11.1;Apache-2.0/MIT;https://gitlab.com/gilrs-project/gilrs
 glam v0.30.10;MIT OR Apache-2.0;https://github.com/bitshifter/glam-rs
-gltf-derive v1.4.1 (proc-macro);MIT OR Apache-2.0;https://github.com/gltf-rs/gltf
-gltf-json v1.4.1;MIT OR Apache-2.0;https://github.com/gltf-rs/gltf
-gltf v1.4.1;MIT OR Apache-2.0;https://github.com/gltf-rs/gltf
 gpu-alloc-types v0.3.0;MIT OR Apache-2.0;https://github.com/zakarumych/gpu-alloc
 gpu-alloc v0.6.0;MIT OR Apache-2.0;https://github.com/zakarumych/gpu-alloc
 gpu-descriptor-types v0.2.0;MIT OR Apache-2.0;https://github.com/zakarumych/gpu-descriptor
@@ -166,12 +157,10 @@ hexf-parse v0.2.1;CC0-1.0;https://github.com/lifthrasiir/hexf
 hound v3.5.1;Apache-2.0;https://github.com/ruuda/hound
 image v0.25.9;MIT OR Apache-2.0;https://github.com/image-rs/image
 indexmap v2.13.0;Apache-2.0 OR MIT;https://github.com/indexmap-rs/indexmap
-inflections v1.1.1;MIT;https://docs.rs/inflections
 inotify-sys v0.1.5;ISC;https://github.com/hannobraun/inotify-sys
 inotify v0.11.0;ISC;https://github.com/hannobraun/inotify
 inventory v0.3.21;MIT OR Apache-2.0;https://github.com/dtolnay/inventory
 itertools v0.14.0;MIT OR Apache-2.0;https://github.com/rust-itertools/itertools
-itoa v1.0.17;MIT OR Apache-2.0;https://github.com/dtolnay/itoa
 ktx2 v0.4.0;Apache-2.0;https://github.com/BVE-Reborn/ktx2
 lazy_static v1.5.0;MIT OR Apache-2.0;https://github.com/rust-lang-nursery/lazy-static.rs
 lewton v0.10.2;MIT OR Apache-2.0;https://github.com/RustAudio/lewton
@@ -205,7 +194,6 @@ parking_lot v0.12.5;MIT OR Apache-2.0;https://github.com/Amanieu/parking_lot
 parking v2.2.1;Apache-2.0 OR MIT;https://github.com/smol-rs/parking
 paste v1.0.15 (proc-macro);MIT OR Apache-2.0;https://github.com/dtolnay/paste
 percent-encoding v2.3.2;MIT OR Apache-2.0;https://github.com/servo/rust-url/
-petgraph v0.8.3;MIT OR Apache-2.0;https://github.com/petgraph/petgraph
 pin-project-lite v0.2.16;Apache-2.0 OR MIT;https://github.com/taiki-e/pin-project-lite
 pin-utils v0.1.0;MIT OR Apache-2.0;https://github.com/rust-lang-nursery/pin-utils
 piper v0.2.4;MIT OR Apache-2.0;https://github.com/smol-rs/piper
@@ -241,7 +229,6 @@ scopeguard v1.2.0;MIT OR Apache-2.0;https://github.com/bluss/scopeguard
 self_cell v1.2.2;Apache-2.0 OR GPL-2.0-only;https://github.com/Voultapher/self_cell
 serde_core v1.0.228;MIT OR Apache-2.0;https://github.com/serde-rs/serde
 serde_derive v1.0.228 (proc-macro);MIT OR Apache-2.0;https://github.com/serde-rs/serde
-serde_json v1.0.149;MIT OR Apache-2.0;https://github.com/serde-rs/json
 serde v1.0.228;MIT OR Apache-2.0;https://github.com/serde-rs/serde
 sharded-slab v0.1.7;MIT;https://github.com/hawkw/sharded-slab
 simd-adler32 v0.3.8;MIT;https://github.com/mcountryman/simd-adler32
@@ -313,4 +300,3 @@ yazi v0.2.1;Apache-2.0 OR MIT;https://github.com/dfrg/yazi
 zeno v0.3.3;Apache-2.0 OR MIT;https://github.com/dfrg/zeno
 zerocopy-derive v0.8.39 (proc-macro);BSD-2-Clause OR Apache-2.0 OR MIT;https://github.com/google/zerocopy
 zerocopy v0.8.39;BSD-2-Clause OR Apache-2.0 OR MIT;https://github.com/google/zerocopy
-zmij v1.0.19;MIT;https://github.com/dtolnay/zmij
