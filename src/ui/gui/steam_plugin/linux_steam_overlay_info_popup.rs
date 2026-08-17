@@ -40,20 +40,20 @@ fn on_overlay_activated(
             if *active {
                 let font = asset_server.load("embedded://font/JetBrainsMonoNL-ExtraLight.ttf");
                 let text_font = TextFont {
-                    font: font.clone(),
-                    font_size: 1.0, //Dummy value
+                    font: font.clone().into(),
+                    font_size: FontSize::Px(1.0), //Dummy value
                     ..default()
                 };
 
                 let font = asset_server.load("embedded://font/JetBrainsMono-Bold.ttf");
                 let bold_text_font = TextFont {
-                    font: font.clone(),
-                    font_size: 1.0, //Dummy value
+                    font: font.clone().into(),
+                    font_size: FontSize::Px(1.0), //Dummy value
                     ..default()
                 };
                 let heading_font = TextFont {
-                    font: font.clone(),
-                    font_size: 1.0, //Dummy value
+                    font: font.clone().into(),
+                    font_size: FontSize::Px(1.0), //Dummy value
                     ..default()
                 };
 

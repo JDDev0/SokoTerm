@@ -134,7 +134,7 @@ pub fn run_game() -> ExitCode {
             add_systems(Startup, spawn_camera).
             add_systems(Startup, preload_tiles).
             add_systems(Startup, update_text_entities).
-            insert_non_send_resource(game).
+            insert_non_send(game).
 
             add_systems(FixedUpdate, update_game).
 
@@ -241,8 +241,8 @@ fn update_text_entities(
 
     let font = asset_server.load("embedded://font/JetBrainsMono-Bold.ttf");
     let text_font = TextFont {
-        font: font.clone(),
-        font_size: character_scaling.font_size,
+        font: font.clone().into(),
+        font_size: FontSize::Px(character_scaling.font_size),
         ..default()
     };
 

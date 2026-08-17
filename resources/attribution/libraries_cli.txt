@@ -5,18 +5,19 @@ assert_type_match v0.1.1 (proc-macro);MIT OR Apache-2.0;https://github.com/MrGVS
 async-executor v1.13.3;Apache-2.0 OR MIT;https://github.com/smol-rs/async-executor
 async-task v4.7.1;Apache-2.0 OR MIT;https://github.com/smol-rs/async-task
 atomic-waker v1.1.2;Apache-2.0 OR MIT;https://github.com/smol-rs/atomic-waker
-bevy_app v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_derive v0.18.1 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_ecs_macros v0.18.1 (proc-macro);MIT OR Apache-2.0;
-bevy_ecs v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_macro_utils v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_platform v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_ptr v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_reflect_derive v0.18.1 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_reflect v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_tasks v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_time v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
-bevy_utils v0.18.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_app v0.19.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_derive v0.19.1 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_ecs_macro_logic v0.19.1;MIT OR Apache-2.0;
+bevy_ecs_macros v0.19.1 (proc-macro);MIT OR Apache-2.0;
+bevy_ecs v0.19.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_macro_utils v0.19.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_platform v0.19.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_ptr v0.19.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_reflect_derive v0.19.1 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_reflect v0.19.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_tasks v0.19.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_time v0.19.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
+bevy_utils v0.19.1;MIT OR Apache-2.0;https://github.com/bevyengine/bevy
 bitflags v1.3.2;MIT/Apache-2.0;https://github.com/bitflags/bitflags
 bitflags v2.10.0;MIT OR Apache-2.0;https://github.com/bitflags/bitflags
 bumpalo v3.19.1;MIT OR Apache-2.0;https://github.com/fitzgen/bumpalo
@@ -82,13 +83,13 @@ thiserror v2.0.18;MIT OR Apache-2.0;https://github.com/dtolnay/thiserror
 thread_local v1.1.9;MIT OR Apache-2.0;https://github.com/Amanieu/thread_local-rs
 tinyvec_macros v0.1.1;MIT OR Apache-2.0 OR Zlib;https://github.com/Soveu/tinyvec_macros
 tinyvec v1.10.0;Zlib OR Apache-2.0 OR MIT;https://github.com/Lokathor/tinyvec
-toml_datetime v0.7.5+spec-1.1.0;MIT OR Apache-2.0;https://github.com/toml-rs/toml
-toml_edit v0.23.10+spec-1.0.0;MIT OR Apache-2.0;https://github.com/toml-rs/toml
-toml_parser v1.0.6+spec-1.1.0;MIT OR Apache-2.0;https://github.com/toml-rs/toml
+toml_datetime v1.1.1+spec-1.1.0;MIT OR Apache-2.0;https://github.com/toml-rs/toml
+toml_edit v0.25.13+spec-1.1.0;MIT OR Apache-2.0;https://github.com/toml-rs/toml
+toml_parser v1.1.3+spec-1.1.0;MIT OR Apache-2.0;https://github.com/toml-rs/toml
 typeid v1.0.3;MIT OR Apache-2.0;https://github.com/dtolnay/typeid
 unicode-ident v1.0.22;(MIT OR Apache-2.0) AND Unicode-3.0;https://github.com/dtolnay/unicode-ident
 unicode-segmentation v1.12.0;MIT OR Apache-2.0;https://github.com/unicode-rs/unicode-segmentation
 unicode-xid v0.2.6;MIT OR Apache-2.0;https://github.com/unicode-rs/unicode-xid
 variadics_please v1.1.0 (proc-macro);MIT OR Apache-2.0;https://github.com/bevyengine/variadics_please
-winnow v0.7.14;MIT;https://github.com/winnow-rs/winnow
+winnow v1.0.4;MIT;https://github.com/winnow-rs/winnow
 zerocopy v0.8.39;BSD-2-Clause OR Apache-2.0 OR MIT;https://github.com/google/zerocopy

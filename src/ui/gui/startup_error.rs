@@ -2,12 +2,12 @@ use std::io::Cursor;
 use std::mem;
 use std::path::{Path, PathBuf};
 use bevy::asset::io::embedded::EmbeddedAssetRegistry;
-use bevy::input_focus::{AutoFocus, InputDispatchPlugin, InputFocus};
+use bevy::input_focus::{AutoFocus, InputFocus};
 use bevy::input_focus::tab_navigation::{TabGroup, TabIndex, TabNavigationPlugin};
 use bevy::log::LogPlugin;
 use bevy::picking::hover::Hovered;
 use bevy::prelude::*;
-use bevy::ui_widgets::{observe, Activate, Button, Checkbox, RadioGroup, UiWidgetsPlugins};
+use bevy::ui_widgets::{observe, Activate, Button, Checkbox, RadioGroup};
 use bevy::window::{CursorIcon, PrimaryWindow, SystemCursorIcon};
 use rodio::{Decoder, OutputStream, Source};
 use crate::game::{audio, Game};
@@ -35,8 +35,6 @@ pub fn show_startup_error_dialog(app: &mut App, error_message: &str) {
                 ..default()
             }).disable::<LogPlugin>()).
             add_plugins((
-                UiWidgetsPlugins,
-                InputDispatchPlugin,
                 TabNavigationPlugin,
             )).
 
@@ -89,13 +87,13 @@ fn create_error_dialog_menu(
 
     let font = asset_server.load("embedded://font/JetBrainsMono-Bold.ttf");
     let text_font = TextFont {
-        font: font.clone(),
-        font_size: 25.0,
+        font: font.clone().into(),
+        font_size: FontSize::Px(25.0),
         ..default()
     };
     let heading_font = TextFont {
-        font: font.clone(),
-        font_size: 40.0,
+        font: font.clone().into(),
+        font_size: FontSize::Px(40.0),
         ..default()
     };
 
@@ -180,7 +178,7 @@ fn update_focus_styles(
 ) {
     if focus.is_changed() {
         for ui_element_id in ui_element_query {
-            if focus.0 == Some(ui_element_id) {
+            if focus.get() == Some(ui_element_id) {
                 commands.entity(ui_element_id).insert(Outline {
                     color: Color::WHITE,
                     width: px(5),
