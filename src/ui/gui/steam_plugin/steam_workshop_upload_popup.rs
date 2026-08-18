@@ -1153,7 +1153,7 @@ fn on_open_steam_workshop_upload_popup(
                         align_items: AlignItems::FlexStart,
                         flex_direction: FlexDirection::Row,
                         justify_content: JustifyContent::FlexStart,
-                        padding: UiRect::all(px(10)),
+                        padding: UiRect::all(vmin(0.1)),
                         overflow: Overflow::scroll(),
                         ..default()
                     },
@@ -1187,7 +1187,7 @@ fn on_open_steam_workshop_upload_popup(
                         align_items: AlignItems::FlexStart,
                         flex_direction: FlexDirection::Row,
                         justify_content: JustifyContent::FlexStart,
-                        padding: UiRect::all(px(10)),
+                        padding: UiRect::all(vmin(0.1)),
                         overflow: Overflow::scroll(),
                         ..default()
                     },
