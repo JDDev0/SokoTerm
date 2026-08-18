@@ -560,7 +560,11 @@ fn process_and_update_upload_progress(
             });
 
             set_upload_progress_popup_content.write(SetUploadProgressPopupContent {
-                text: format!("An error occurred during level pack submission: {err}"),
+                text: format!("An error occurred during level pack submission: {err}{}", if err.to_string() == "limit exceeded" {
+                    "\n\nThis is most likely caused by the thumbnail level image. To fix this you can either change the thumbnail level to a smaller one or switch your graphics mode to ASCII."
+                }else {
+                    ""
+                }),
                 error: true,
             });
 
