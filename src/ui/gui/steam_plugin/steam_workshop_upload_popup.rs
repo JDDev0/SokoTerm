@@ -519,19 +519,17 @@ fn process_and_update_upload_progress(
                 observe(
                     |_: On<Activate>,
 
-                     commands: Commands,
-
                      upload_progress_popup_elements: Query<Entity, With<UploadProgressPopup>>,
 
-                     mut app_state_next_state: ResMut<NextState<AppState>>,
+                     mut play_sound_effect: MessageWriter<PlaySoundEffect>,
 
-                     mut play_sound_effect: MessageWriter<PlaySoundEffect>| {
+                     mut commands: Commands| {
                         play_sound_effect.write(PlaySoundEffect {
                             sound_effect: audio::UI_SELECT_EFFECT,
                         });
 
+                        commands.delayed().secs(0.1).set_state(AppState::InGame);
                         close_upload_progress_popup(commands, upload_progress_popup_elements);
-                        app_state_next_state.set(AppState::InGame);
                     },
                 ),
             ));
@@ -1354,16 +1352,21 @@ fn on_open_steam_workshop_upload_popup(
                                 TextColor(crate::io::bevy_abstraction::Color::White.into()),
                                 ResizableText::Paragraph,
                             )],
-                            observe(|_: On<Activate>, mut app_state_next_state: ResMut<NextState<AppState>>, mut play_sound_effect: MessageWriter<PlaySoundEffect>| {
-                                if let SteamWorkshopUploadWorkingData::Idle = *STEAM_WORKSHOP_UPLOAD_WORKING_DATA.lock().unwrap() {
-                                    play_sound_effect.write(PlaySoundEffect {
-                                        sound_effect: audio::UI_SELECT_EFFECT,
-                                    });
+                            observe(
+                                |_: On<Activate>,
 
-                                    //TODO Fix input on click will be send to console wrapper directly after state change
-                                    app_state_next_state.set(AppState::InGame);
-                                }
-                            }),
+                                mut play_sound_effect: MessageWriter<PlaySoundEffect>,
+
+                                mut commands: Commands| {
+                                    if let SteamWorkshopUploadWorkingData::Idle = *STEAM_WORKSHOP_UPLOAD_WORKING_DATA.lock().unwrap() {
+                                        play_sound_effect.write(PlaySoundEffect {
+                                            sound_effect: audio::UI_SELECT_EFFECT,
+                                        });
+
+                                        commands.delayed().secs(0.1).set_state(AppState::InGame);
+                                    }
+                                },
+                            ),
                         )],
                     ),
                 )],
