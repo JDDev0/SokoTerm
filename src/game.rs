@@ -365,6 +365,7 @@ pub struct GameState {
 
     current_level_index: usize,
     allow_skip_level: bool,
+    allow_skip_level_pack_index: usize,
 
     is_player_background: bool,
     player_background_tmp: i32,
@@ -408,6 +409,7 @@ impl GameState {
 
             current_level_index: Default::default(),
             allow_skip_level: false,
+            allow_skip_level_pack_index: 0,
 
             is_player_background: Default::default(),
             player_background_tmp: Default::default(),

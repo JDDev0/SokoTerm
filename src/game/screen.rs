@@ -1098,6 +1098,7 @@ impl ScreenSelectLevel {
 
                         if level_index == min_level_not_completed {
                             game_state.allow_skip_level = true;
+                            game_state.allow_skip_level_pack_index = game_state.current_level_pack_index;
                         }
                     }else {
                         game_state.play_sound_effect_ui_error();
@@ -1204,8 +1205,8 @@ impl ScreenSelectLevel {
             console.reset_color();
             console.draw_text(" for level preview");
 
-            if game_state.allow_skip_level && cursor_index - 1 == level_pack.min_level_not_completed() &&
-                    cursor_index < level_pack.level_count()  {
+            if game_state.allow_skip_level && game_state.allow_skip_level_pack_index == game_state.current_level_pack_index
+                    && cursor_index - 1 == level_pack.min_level_not_completed() && cursor_index < level_pack.level_count()  {
                 console.reset_color();
                 console.set_cursor_pos(29, y + 3);
                 console.draw_text("Press ");
@@ -1328,7 +1329,7 @@ impl Screen for ScreenSelectLevel {
             return;
         }
 
-        if key == Key::N && game_state.allow_skip_level &&
+        if key == Key::N && game_state.allow_skip_level && game_state.allow_skip_level_pack_index == game_state.current_level_pack_index &&
                 self.level_list.cursor_index() - 1 == game_state.get_current_level_pack().as_ref().unwrap().min_level_not_completed() &&
                 self.level_list.cursor_index() < game_state.get_current_level_pack().as_ref().unwrap().level_count() {
             game_state.open_dialog(Dialog::new_yes_no("Do you really want to skip this level?"));
@@ -1377,6 +1378,7 @@ impl Screen for ScreenSelectLevel {
             }
 
             game_state.allow_skip_level = false;
+            //allow_skip_level_pack_index does not need to be reset
 
             self.level_list.set_cursor_index(self.level_list.cursor_index() + 1);
             self.update_list_elements(game_state);
