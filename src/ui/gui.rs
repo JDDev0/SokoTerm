@@ -11,6 +11,7 @@ use bevy::input::mouse::MouseButtonInput;
 use bevy::window::{PrimaryWindow, WindowMode, WindowResized};
 use bevy::asset::io::embedded::EmbeddedAssetRegistry;
 use bevy::log::LogPlugin;
+use bevy::text::LineHeight;
 use crate::game::Game;
 use crate::game::screen::dialog::Dialog;
 use crate::io::bevy_abstraction::{ConsoleState, GraphicalCharacter, Key, COLOR_SCHEMES};
@@ -307,10 +308,14 @@ fn update_text_entities(
 
             let inverted = bg == crate::io::bevy_abstraction::Color::Black;
 
+            //TODO fix text background does not match tile size with RelativeToFont(1.0):
+            //TODO Remove TextBounds, SetLineHeight to 1.0, remove character scaling subtraction from screen_y, and change Transform back to fixed 1.0 for text and 0.0 for images
+
             commands.spawn((
                 Text2d::new(String::from_utf8_lossy(&[char.unwrap_or(b' ')])),
+                LineHeight::RelativeToFont(1.2),
                 text_font.clone(),
-                Transform::from_translation(Vec3::new(screen_x, screen_y, 1.0)),
+                Transform::from_translation(Vec3::new(screen_x, screen_y - character_scaling.char_height * 0.05, 0.02 * y as f32 + 0.01)),
                 TextColor(fg.into_bevy_color(color_scheme)),
                 TextBackgroundColor(bg.into_bevy_color(color_scheme).with_alpha(if char.is_ok() || !inverted { 1.0 } else { 0.9 })),
                 ConsoleTextCharacter { x, y },
@@ -328,7 +333,7 @@ fn update_text_entities(
 
             commands.spawn((
                 sprite,
-                Transform::from_translation(Vec3::new(screen_x, screen_y, 0.0)),
+                Transform::from_translation(Vec3::new(screen_x, screen_y, 0.02 * y as f32 + 0.0)),
                 ConsoleTileCharacter { x, y },
                 if char.is_err() { Visibility::Visible } else { Visibility::Hidden },
             ));
