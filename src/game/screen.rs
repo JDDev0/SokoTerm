@@ -860,13 +860,13 @@ impl ScreenSelectLevel {
 
         console.set_cursor_pos(0, y);
         console.reset_color();
-        console.draw_text(".-------------------------.");
+        console.draw_text(".------------------------------------------------------------------------.");
         for i in 1..4 {
             console.set_cursor_pos(0, y + i);
-            console.draw_text("|                         |");
+            console.draw_text("|                                                                        |");
         }
         console.set_cursor_pos(0, y + 4);
-        console.draw_text("\'-------------------------\'");
+        console.draw_text("\'------------------------------------------------------------------------\'");
 
         let cursor_index = self.level_list.cursor_index();
         if cursor_index == 0 {
@@ -906,7 +906,7 @@ impl ScreenSelectLevel {
             }
 
             console.reset_color();
-            console.set_cursor_pos(29, y + 1);
+            console.set_cursor_pos(Game::CONSOLE_MIN_WIDTH - 26, y + 1);
             console.draw_text("Press ");
 
             console.draw_key_input_text("p");
@@ -1048,7 +1048,7 @@ impl Screen for ScreenSelectLevel {
 
         let element_count = self.level_list.elements().len();
         let y = 4 + ((element_count - 1)/24)*2;
-        if row == y + 1 && (29..54).contains(&column) {
+        if row == y + 1 && (Game::CONSOLE_MIN_WIDTH - 26..Game::CONSOLE_MIN_WIDTH - 1).contains(&column) {
             self.on_key_pressed(game_state, Key::P);
         }
 
