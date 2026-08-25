@@ -859,7 +859,7 @@ impl ScreenSelectLevel {
         let y = 4 + ((entry_count - 1)/24)*2;
 
         console.set_cursor_pos(0, y);
-        console.set_color(Color::Cyan, Color::Default);
+        console.reset_color();
         console.draw_text(".-------------------------.");
         for i in 1..4 {
             console.set_cursor_pos(0, y + i);
@@ -953,7 +953,7 @@ impl ScreenSelectLevel {
             let y = ((Game::CONSOLE_MIN_HEIGHT - 5) as f64 * 0.5) as usize;
 
             console.set_cursor_pos(x, y);
-            console.set_color(Color::Cyan, Color::Default);
+            console.reset_color();
             console.draw_text(".--------------------------------------.");
             for i in 1..4 {
                 console.set_cursor_pos(x, y + i);
@@ -974,7 +974,7 @@ impl ScreenSelectLevel {
                 let y = ((Game::CONSOLE_MIN_HEIGHT - 5) as f64 * 0.5) as usize;
 
                 console.set_cursor_pos(x, y);
-                console.set_color(Color::Cyan, Color::Default);
+                console.reset_color();
                 console.draw_text(".--------------------------------------.");
                 for i in 1..4 {
                     console.set_cursor_pos(x, y + i);
