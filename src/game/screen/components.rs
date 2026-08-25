@@ -99,7 +99,8 @@ impl <T> UIList<T> {
             }
 
             console.set_cursor_pos(x, y);
-            console.set_color(ele.fg_color, ele.bg_color);
+            //Invert colors of selected element
+            console.set_color_invertible(ele.fg_color, ele.bg_color, self.cursor_index == i);
             console.draw_text(&*ele.display_text);
 
             console.reset_color();
