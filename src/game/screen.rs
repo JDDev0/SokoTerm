@@ -988,7 +988,7 @@ impl ScreenSelectLevel {
                 console.draw_text(format!("Beat level {:03} to unlock this level.", cursor_index - 1));
             }else {
                 let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
-                let y_offset = 1;
+                let y_offset = 1 + ((Game::CONSOLE_MIN_HEIGHT - 1 - level.height()) as f64 * 0.5) as usize;
 
                 level.draw(console, x_offset, y_offset, game_state.is_player_background(), None);
             }
@@ -1123,7 +1123,7 @@ impl ScreenInGame {
             console.reset_color();
 
             if matches!(game_state.current_level_index, 3 | 4..6 | 15) {
-                console.set_cursor_pos(47, 3);
+                console.set_cursor_pos(47, 10);
                 console.draw_key_input_text("z");
                 console.reset_color();
                 console.draw_text("/");
@@ -1132,13 +1132,13 @@ impl ScreenInGame {
                 console.reset_color();
                 console.draw_text(": Undo");
 
-                console.set_cursor_pos(47, 4);
+                console.set_cursor_pos(47, 11);
                 console.draw_key_input_text("y");
 
                 console.reset_color();
                 console.draw_text(": Redo");
 
-                console.set_cursor_pos(47, 5);
+                console.set_cursor_pos(47, 12);
                 console.draw_key_input_text("r");
 
                 console.reset_color();
@@ -1148,7 +1148,7 @@ impl ScreenInGame {
             match game_state.current_level_index {
                 0 => {
                     if self.continue_flag {
-                        console.set_cursor_pos(13, 8);
+                        console.set_cursor_pos(13, 16);
                         console.draw_text("Press ");
 
                         console.draw_key_input_text("ENTER");
@@ -1159,7 +1159,7 @@ impl ScreenInGame {
                         console.reset_color();
                         console.draw_text(" to go to the next level...");
                     }else {
-                        console.set_cursor_pos(13, 8);
+                        console.set_cursor_pos(13, 16);
                         console.draw_text("Use ");
 
                         console.draw_key_input_text("Arrow Keys");
@@ -1174,7 +1174,7 @@ impl ScreenInGame {
                     }
                 },
                 1 => {
-                    console.set_cursor_pos(16, 8);
+                    console.set_cursor_pos(16, 16);
                     console.draw_text("Boxes (");
 
                     Tile::Box.draw(console, false, false);
@@ -1194,7 +1194,7 @@ impl ScreenInGame {
                     console.draw_text(")");
                 },
                 2 => {
-                    console.set_cursor_pos(5, 8);
+                    console.set_cursor_pos(5, 16);
                     console.draw_text("One-way doors (");
 
                     Tile::OneWayLeft.draw(console, false, false);
@@ -1218,7 +1218,7 @@ impl ScreenInGame {
                     console.draw_text(") can only be entered from the opened side");
                 },
                 3 => {
-                    console.set_cursor_pos(8, 8);
+                    console.set_cursor_pos(8, 16);
                     console.draw_text("Boxes (");
 
                     Tile::Box.draw(console, false, false);
@@ -1247,7 +1247,7 @@ impl ScreenInGame {
                     console.draw_text(")");
                 },
                 10 => {
-                    console.set_cursor_pos(18, 11);
+                    console.set_cursor_pos(18, 17);
                     console.draw_text("Keys (");
 
                     Tile::Key.draw(console, false, false);
@@ -1261,12 +1261,12 @@ impl ScreenInGame {
                     console.draw_text(")");
                 },
                 15 => {
-                    console.set_cursor_pos(35, 7);
+                    console.set_cursor_pos(35, 15);
                     console.draw_text("???");
                 },
                 34 => {
                     if !self.game_over_flag {
-                        console.set_cursor_pos(11, 9);
+                        console.set_cursor_pos(11, 17);
                         console.draw_text("Ice (");
 
                         Tile::Ice.draw(console, false, false);
@@ -1448,7 +1448,7 @@ impl Screen for ScreenInGame {
             let level = &playing_level.current_playing_level().0;
 
             let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
-            let y_offset = 1;
+            let y_offset = 1 + ((Game::CONSOLE_MIN_HEIGHT - 1 - level.height()) as f64 * 0.5) as usize;
 
             if self.show_floor {
                 level.draw_floor(console, x_offset, y_offset, game_state.is_player_background(), playing_level.original_level(), None);
