@@ -648,13 +648,25 @@ impl Level {
 
         console.set_color(Color::Default, Color::Default);
         for y in level_y_start.saturating_sub(1)..level_y_start + self.height + 1 {
+            if y < screen_y {
+                continue;
+            }
+
             if y == level_y_start.saturating_sub(1) || y == level_y_start + self.height {
                 for x in level_x_start.saturating_sub(1)..level_x_start + self.width + 1 {
+                    if x < screen_x {
+                        continue;
+                    }
+
                     console.set_cursor_pos(x, y);
                     console.draw_text(" ");
                 }
             }else {
                 for x in [level_x_start.saturating_sub(1), level_x_start + self.width] {
+                    if x < screen_x {
+                        continue;
+                    }
+
                     console.set_cursor_pos(x, y);
                     console.draw_text(" ");
                 }
