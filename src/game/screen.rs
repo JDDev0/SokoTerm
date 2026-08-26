@@ -1271,6 +1271,7 @@ impl ScreenSelectLevel {
         }else {
             let min_level_not_completed = game_state.get_current_level_pack().as_ref().unwrap().min_level_not_completed();
             let level = game_state.get_current_level_pack().unwrap().levels()[cursor_index - 1].level();
+            let background_music_id = game_state.get_current_level_pack().unwrap().background_music_id();
 
             if cursor_index - 1 > min_level_not_completed {
                 let x = ((Game::CONSOLE_MIN_WIDTH - 40) as f64 * 0.5) as usize;
@@ -1292,6 +1293,18 @@ impl ScreenSelectLevel {
             }else {
                 let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
                 let y_offset = 1 + ((Game::CONSOLE_MIN_HEIGHT - 1 - level.height()) as f64 * 0.5) as usize;
+
+                if let Some(background_music_id) = background_music_id {
+                    level.draw_level_ascii_art_background(
+                        console,
+
+                        (0, 1, Game::CONSOLE_MIN_WIDTH, Game::CONSOLE_MIN_HEIGHT - 1),
+                        (x_offset, y_offset),
+
+                        background_music_id,
+                        game_state.is_player_background(),
+                    );
+                }
 
                 level.draw(console, x_offset, y_offset, game_state.is_player_background(), None);
             }
@@ -1981,9 +1994,22 @@ impl Screen for ScreenInGame {
 
         if let Some(playing_level) = self.level.as_ref() {
             let level = &playing_level.current_playing_level().0;
+            let background_music_id = game_state.get_current_level_pack().unwrap().background_music_id();
 
             let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
             let y_offset = 1 + ((Game::CONSOLE_MIN_HEIGHT - 1 - level.height()) as f64 * 0.5) as usize;
+
+            if let Some(background_music_id) = background_music_id {
+                level.draw_level_ascii_art_background(
+                    console,
+
+                    (0, 1, Game::CONSOLE_MIN_WIDTH, Game::CONSOLE_MIN_HEIGHT - 1),
+                    (x_offset, y_offset),
+
+                    background_music_id,
+                    game_state.is_player_background(),
+                );
+            }
 
             if self.show_floor {
                 level.draw_floor(console, x_offset, y_offset, game_state.is_player_background(), playing_level.original_level(), None);
@@ -3105,9 +3131,22 @@ impl ScreenLevelPackEditor {
             console.draw_text(format!(") [Level {:03}]", cursor_index));
 
             let level = game_state.editor_state.get_current_level_pack().unwrap().levels()[cursor_index - 1].level();
+            let background_music_id = game_state.editor_state.get_current_level_pack().unwrap().background_music_id();
 
             let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
             let y_offset = 1 + ((Game::CONSOLE_MIN_HEIGHT - 1 - level.height()) as f64 * 0.5) as usize;
+
+            if let Some(background_music_id) = background_music_id {
+                level.draw_level_ascii_art_background(
+                    console,
+
+                    (0, 1, Game::CONSOLE_MIN_WIDTH, Game::CONSOLE_MIN_HEIGHT - 1),
+                    (x_offset, y_offset),
+
+                    background_music_id,
+                    game_state.is_player_background(),
+                );
+            }
 
             level.draw(console, x_offset, y_offset, game_state.is_player_background(), None);
         }
@@ -3903,9 +3942,21 @@ impl Screen for ScreenLevelEditor {
         let x_offset = ((Game::CONSOLE_MIN_WIDTH - self.level.current().width()) as f64 * 0.5) as usize;
         let y_offset = 1 + ((Game::CONSOLE_MIN_HEIGHT - 1 - self.level.current().height()) as f64 * 0.5) as usize;
 
-
+        let background_music_id = game_state.editor_state.get_current_level_pack().unwrap().background_music_id();
         if let Some(playing_level) = self.playing_level.as_ref() {
             let level = &playing_level.current_playing_level().0;
+
+            if let Some(background_music_id) = background_music_id {
+                level.draw_level_ascii_art_background(
+                    console,
+
+                    (0, 1, Game::CONSOLE_MIN_WIDTH, Game::CONSOLE_MIN_HEIGHT - 1),
+                    (x_offset, y_offset),
+
+                    background_music_id,
+                    game_state.is_player_background(),
+                );
+            }
 
             if self.show_floor {
                 level.draw_floor(console, x_offset, y_offset, game_state.is_player_background(), playing_level.original_level(), None);
@@ -3914,6 +3965,18 @@ impl Screen for ScreenLevelEditor {
             }
         }else {
             let level = self.level.current();
+
+            if let Some(background_music_id) = background_music_id {
+                level.draw_level_ascii_art_background(
+                    console,
+
+                    (0, 1, Game::CONSOLE_MIN_WIDTH, Game::CONSOLE_MIN_HEIGHT - 1),
+                    (x_offset, y_offset),
+
+                    background_music_id,
+                    game_state.is_player_background(),
+                );
+            }
 
             if self.show_floor {
                 level.draw_floor(console, x_offset, y_offset, game_state.is_player_background(), level, Some(self.cursor_pos));
