@@ -500,44 +500,17 @@ impl Level {
             console.set_cursor_pos(screen_x + screen_width - 5, y);
             console.draw_text(r#".:''"#);
 
-            //Clouds
-            console.set_color(Color::White, Color::Default);
-            for (x, y) in [
-                (0, 10),
-                (12, 14),
-                (15, 4),
-                (39, 18),
-                (47, 9),
-                (59, 5),
-            ] {
-                let x = screen_x + x;
-                let mut y = screen_y + y;
-                console.set_cursor_pos(x, y);
-                console.draw_text(" ::::::");
-
-                y += 1;
-                console.set_cursor_pos(x, y);
-                console.draw_text("::::::::");
-
-                y += 1;
-                console.set_cursor_pos(x, y);
-                console.draw_text(" ::::::");
-            }
-
-            //Small stars (dark)
+            //Small stars (yellow, dark)
             console.set_color(Color::Yellow, Color::Default);
             for (x, y) in [
                 (0, 5),
                 (5, 16),
-                (10, 1),
-                (12, 21),
                 (15, 18),
                 (25, 6),
                 (32, 8),
                 (34, 3),
                 (36, 0),
                 (37, 18),
-                (39, 13),
                 (45, 9),
                 (49, 0),
                 (50, 20),
@@ -554,31 +527,25 @@ impl Level {
                 console.draw_text("*");
             }
 
-            //Small stars (bright)
+            //Small stars (yellow, bright)
             console.set_color(Color::LightYellow, Color::Default);
             for (x, y) in [
                 (0, 14),
                 (1, 18),
-                (4, 20),
                 (7, 4),
-                (8, 12),
                 (10, 9),
                 (12, 6),
                 (16, 20),
                 (19, 12),
-                (20, 2),
                 (22, 7),
                 (24, 4),
                 (29, 17),
                 (30, 2),
-                (33, 14),
                 (35, 6),
-                (40, 1),
                 (50, 7),
                 (51, 15),
                 (53, 18),
                 (55, 3),
-                (57, 16),
                 (59, 8),
                 (64, 17),
                 (67, 15),
@@ -589,7 +556,7 @@ impl Level {
                 console.draw_text("*");
             }
 
-            //Small stars (blinking)
+            //Small stars (yellow, blinking)
             console.set_color(if is_player_background { Color::Yellow } else { Color::LightYellow }, Color::Default);
             for (x, y) in [
                 (0, 21),
@@ -601,7 +568,6 @@ impl Level {
                 (15, 3),
                 (19, 9),
                 (22, 16),
-                (24, 19),
                 (25, 0),
                 (26, 11),
                 (30, 21),
@@ -612,13 +578,77 @@ impl Level {
                 (55, 5),
                 (58, 11),
                 (60, 21),
-                (61, 15),
                 (64, 0),
                 (65, 9),
                 (67, 3),
                 (68, 19),
-                (70, 7),
                 (71, 14),
+            ] {
+                console.set_cursor_pos(screen_x + x, screen_y + y);
+                console.draw_text("*");
+            }
+
+            //Small stars (blue, dark)
+            console.set_color(Color::Blue, Color::Default);
+            for (x, y) in [
+                (4, 20),
+                (20, 2),
+                (57, 16),
+            ] {
+                console.set_cursor_pos(screen_x + x, screen_y + y);
+                console.draw_text("*");
+            }
+
+            //Small stars (blue, bright)
+            console.set_color(Color::LightBlue, Color::Default);
+            for (x, y) in [
+                (17, 15),
+                (16, 5),
+                (44, 19),
+                (64, 6),
+            ] {
+                console.set_cursor_pos(screen_x + x, screen_y + y);
+                console.draw_text("*");
+            }
+
+            //Small stars (blue, blinking)
+            console.set_color(if is_player_background { Color::Blue } else { Color::LightBlue }, Color::Default);
+            for (x, y) in [
+                (0, 11),
+                (40, 1),
+                (52, 10),
+            ] {
+                console.set_cursor_pos(screen_x + x, screen_y + y);
+                console.draw_text("*");
+            }
+
+            //Small stars (red, dark)
+            console.set_color(Color::Red, Color::Default);
+            for (x, y) in [
+                (10, 1),
+                (12, 21),
+                (39, 13),
+            ] {
+                console.set_cursor_pos(screen_x + x, screen_y + y);
+                console.draw_text("*");
+            }
+
+            //Small stars (red, bright)
+            console.set_color(Color::LightRed, Color::Default);
+            for (x, y) in [
+                (24, 19),
+                (61, 15),
+            ] {
+                console.set_cursor_pos(screen_x + x, screen_y + y);
+                console.draw_text("*");
+            }
+
+            //Small stars (red, blinking)
+            console.set_color(if is_player_background { Color::Red } else { Color::LightRed }, Color::Default);
+            for (x, y) in [
+                (8, 12),
+                (33, 14),
+                (70, 7),
             ] {
                 console.set_cursor_pos(screen_x + x, screen_y + y);
                 console.draw_text("*");
