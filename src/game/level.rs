@@ -653,6 +653,81 @@ impl Level {
                 console.set_cursor_pos(screen_x + x, screen_y + y);
                 console.draw_text("*");
             }
+        }else if background_music_id == audio::BACKGROUND_MUSIC_CATCHY.id() {
+            //Grass
+            console.set_cursor_pos(screen_x, screen_y + screen_height - 1);
+            for x in screen_x..screen_x + screen_width {
+                if (((x % 7) % 3) + x) % 5 < 3 {
+                    console.set_color(Color::Green, Color::Default);
+                }else {
+                    console.set_color(Color::LightGreen, Color::Default);
+                }
+
+                console.draw_text("_");
+            }
+
+            //Trees
+            let tree_1_str = r#"
+     @%&%
+   ###&%&&%`     #%@
+ &%%.:.&%%&#&` &#&%##@
+&&#'#@':.@&%%#@&%%##@&&#
+%#:%#@&#:~~._##@.-~-@&&#
+ @@#%%:'&#%'~\./*#&#&`
+  ##@/%&#%&%#'\.#`@&&
+   %%'@@@&&`#.||@&##&%%
+    #%%`    `||'  ####&&
+            .|| #@_=~~~_&
+            ||/--'&&#@@``
+           ~||' #&@``
+           |||
+           |||
+        _./|||\._
+            "#[1..].trim_end(); //Remove leading newline and trailing spaces
+
+            let tree_2_str = r#"
+             ##&&&`
+          ##&&&&@#@&
+     &@%&%##%.~##@#%%%`
+   &%%@#%#@./%#@@#.:.@@#`
+  %##&%%@@/&%@@#&.:'&%'%##
+  %##&-~-:&%%_.~~:%#&%@:%@
+    `#%#%*\./~'@%#':@@%&&
+   %%##&`%./'%@#@%#@\&%%
+ %%%&&%%#&||.%`##&&&'@@
+&_=~-=_&%'||.%#`%`@@%
+``&&%##'--/||###@%%
+    ``&#% '||\=~-.%%#
+           ||:/%##'.#%#
+           |||%##@@@%#`
+           |||     #%`
+        _./|||\._
+            "#[1..].trim_end(); //Remove leading newline and trailing spaces
+
+            for (i, tree) in [tree_1_str, tree_2_str].into_iter().enumerate() {
+                let start_x = if i == 0 { screen_x } else { screen_x + screen_width - 25 };
+                let start_y = screen_y + screen_height - 15 - i;
+
+                for (y, line) in tree.split("\n").enumerate() {
+                    for (x, c) in line.bytes().enumerate() {
+                        if c == b' ' {
+                            continue;
+                        }
+
+                        console.set_cursor_pos(start_x + x, start_y + y);
+
+                        let is_stem = matches!(c, b':' | b'.' | b'\'' | b'~' | b'-' | b'_' | b'=' | b'/' | b'|' | b'\\');
+
+                        if (((y + i) % 3) + x + 2 * i) % 5 < 3 {
+                            console.set_color(if is_stem { Color::Yellow } else { Color::Pink }, Color::Default);
+                        }else {
+                            console.set_color(if is_stem { Color::LightYellow } else { Color::LightPink }, Color::Default);
+                        }
+
+                        console.draw_text(c as char);
+                    }
+                }
+            }
         }
     }
 
