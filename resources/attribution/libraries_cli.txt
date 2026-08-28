@@ -26,7 +26,7 @@ byteorder v1.5.0;Unlicense OR MIT;https://github.com/BurntSushi/byteorder
 cfg-if v1.0.4;MIT OR Apache-2.0;https://github.com/rust-lang/cfg-if
 claxon v0.4.3;Apache-2.0;https://github.com/ruuda/claxon
 concurrent-queue v2.5.0;Apache-2.0 OR MIT;https://github.com/smol-rs/concurrent-queue
-console-lib v0.3.0;MIT;https://github.com/JDDev0/ConsoleLib
+console-lib v0.3.1;MIT;https://github.com/JDDev0/ConsoleLib
 convert_case v0.10.0;MIT;https://github.com/rutrum/convert-case
 cpal v0.15.3;Apache-2.0;https://github.com/rustaudio/cpal
 crossbeam-channel v0.5.15;MIT OR Apache-2.0;https://github.com/crossbeam-rs/crossbeam
