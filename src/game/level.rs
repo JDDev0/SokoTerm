@@ -743,7 +743,7 @@ impl Level {
                 let ice_cube_3_str = r#"
 +---+
 |\###\
-+#+--+
++#+---+
  \|###|
   +---+
                 "#[1..].trim_end(); //Remove leading newline and trailing spaces
