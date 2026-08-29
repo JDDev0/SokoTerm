@@ -479,26 +479,29 @@ impl Level {
     ) {
         if background_music_id == audio::BACKGROUND_MUSIC_LONELY_NIGHT.id() {
             //Moon
-            let mut y = screen_y + 1;
-            console.set_color(Color::LightYellow, Color::Default);
-            console.set_cursor_pos(screen_x + screen_width - 5, y);
-            console.draw_text(r#"'::."#);
+            let moon_str = r#"
+'::.
+ `::.
+  :::
+ .::'
+.::'
+            "#[1..].trim_end(); //Remove leading newline and trailing spaces
 
-            y += 1;
-            console.set_cursor_pos(screen_x + screen_width - 5, y);
-            console.draw_text(r#" `::."#);
+            let start_x = screen_x + screen_width - 5;
+            let start_y = screen_y + 1;
 
-            y += 1;
-            console.set_cursor_pos(screen_x + screen_width - 5, y);
-            console.draw_text(r#"  :::"#);
+            for (y, line) in moon_str.split("\n").enumerate() {
+                for (x, c) in line.bytes().enumerate() {
+                    if c == b' ' {
+                        continue;
+                    }
 
-            y += 1;
-            console.set_cursor_pos(screen_x + screen_width - 5, y);
-            console.draw_text(r#" .::'"#);
+                    console.set_cursor_pos(start_x + x, start_y + y);
+                    console.set_color(Color::LightYellow, Color::Default);
 
-            y += 1;
-            console.set_cursor_pos(screen_x + screen_width - 5, y);
-            console.draw_text(r#".:''"#);
+                    console.draw_text(c as char);
+                }
+            }
 
             //Small stars (yellow, dark)
             console.set_color(Color::Yellow, Color::Default);
