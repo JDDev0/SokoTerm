@@ -730,6 +730,26 @@ impl Screen for ScreenSettings {
 
         console.reset_color();
         console.draw_text(")");
+
+        console.reset_color();
+        console.set_cursor_pos(0, 12);
+        console.draw_text("Level Backgrounds: ");
+
+        if game_state.settings.level_background {
+            console.set_color(Color::Green, Color::Default);
+            console.draw_text("Enabled");
+        }else {
+            console.set_color(Color::Red, Color::Default);
+            console.draw_text("Disabled");
+        }
+
+        console.reset_color();
+        console.draw_text(" (Toggle with ");
+
+        console.draw_key_input_text("F6");
+
+        console.reset_color();
+        console.draw_text(")");
     }
 
     fn on_key_pressed(&mut self, game_state: &mut GameState, key: Key) {
@@ -1294,7 +1314,7 @@ impl ScreenSelectLevel {
                 let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
                 let y_offset = 1 + ((Game::CONSOLE_MIN_HEIGHT - 1 - level.height()) as f64 * 0.5) as usize;
 
-                if let Some(background_music_id) = background_music_id {
+                if game_state.settings.level_background && let Some(background_music_id) = background_music_id {
                     level.draw_level_ascii_art_background(
                         console,
 
@@ -1999,7 +2019,7 @@ impl Screen for ScreenInGame {
             let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
             let y_offset = 1 + ((Game::CONSOLE_MIN_HEIGHT - 1 - level.height()) as f64 * 0.5) as usize;
 
-            if let Some(background_music_id) = background_music_id {
+            if game_state.settings.level_background && let Some(background_music_id) = background_music_id {
                 level.draw_level_ascii_art_background(
                     console,
 
@@ -3136,7 +3156,7 @@ impl ScreenLevelPackEditor {
             let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
             let y_offset = 1 + ((Game::CONSOLE_MIN_HEIGHT - 1 - level.height()) as f64 * 0.5) as usize;
 
-            if let Some(background_music_id) = background_music_id {
+            if game_state.settings.level_background && let Some(background_music_id) = background_music_id {
                 level.draw_level_ascii_art_background(
                     console,
 
@@ -3946,7 +3966,7 @@ impl Screen for ScreenLevelEditor {
         if let Some(playing_level) = self.playing_level.as_ref() {
             let level = &playing_level.current_playing_level().0;
 
-            if let Some(background_music_id) = background_music_id {
+            if game_state.settings.level_background && let Some(background_music_id) = background_music_id {
                 level.draw_level_ascii_art_background(
                     console,
 
@@ -3966,7 +3986,7 @@ impl Screen for ScreenLevelEditor {
         }else {
             let level = self.level.current();
 
-            if let Some(background_music_id) = background_music_id {
+            if game_state.settings.level_background && let Some(background_music_id) = background_music_id {
                 level.draw_level_ascii_art_background(
                     console,
 

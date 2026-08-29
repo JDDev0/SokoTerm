@@ -194,6 +194,8 @@ pub struct GameSettings {
     background_music: bool,
 
     animation_speed: AnimationSpeed,
+
+    level_background: bool,
 }
 
 impl GameSettings {
@@ -205,6 +207,8 @@ impl GameSettings {
             background_music: true,
 
             animation_speed: AnimationSpeed::default(),
+
+            level_background: true,
         }
     }
 
@@ -294,6 +298,21 @@ impl GameSettings {
                             settings.animation_speed = value;
                         },
 
+                        "level_background" => {
+                            let Ok(value) = bool::from_str(value) else {
+                                #[cfg(feature = "gui")]
+                                {
+                                    warn!("\"settings.data\" contains invalid value for option \"{key}\": \"{value}\": Using default");
+                                }
+
+                                //TODO warning in cli version
+
+                                continue;
+                            };
+
+                            settings.level_background = value;
+                        },
+
                         _ => {
                             #[cfg(feature = "gui")]
                             {
@@ -326,6 +345,7 @@ impl GameSettings {
         writeln!(file, "tile_mode = {}", self.tile_mode)?;
         writeln!(file, "background_music = {}", self.background_music)?;
         writeln!(file, "animation_speed = {:?}", self.animation_speed)?;
+        writeln!(file, "level_background = {:?}", self.level_background)?;
 
         Ok(())
     }
@@ -344,6 +364,10 @@ impl GameSettings {
 
     pub fn animation_speed(&self) -> AnimationSpeed {
         self.animation_speed
+    }
+
+    pub fn level_background(&self) -> bool {
+        self.level_background
     }
 }
 
@@ -648,7 +672,13 @@ impl GameState {
 
     pub fn set_and_save_animation_speed(&mut self, animation_speed: AnimationSpeed) -> Result<(), Box<dyn Error>> {
         self.settings.animation_speed = animation_speed;
+        self.settings.save_to_file()?;
 
+        Ok(())
+    }
+
+    pub fn set_and_save_level_background_enabled(&mut self, level_background: bool) -> Result<(), Box<dyn Error>> {
+        self.settings.level_background = level_background;
         self.settings.save_to_file()?;
 
         Ok(())
@@ -1140,7 +1170,15 @@ impl <'a> Game<'a> {
     }
 
     fn update_key(&mut self, key: Key) {
-        if key == Key::F7 {
+        if key == Key::F6 {
+            self.game_state.play_sound_effect_ui_select();
+
+            if let Err(err) = self.game_state.set_and_save_level_background_enabled(!self.game_state.settings.level_background) {
+                self.game_state.open_dialog(Dialog::new_ok_error(format!("Cannot save settings: {}", err)));
+            }
+
+            return;
+        }else if key == Key::F7 {
             self.game_state.play_sound_effect_ui_select();
 
             if let Err(err) = self.game_state.set_and_save_animation_speed(self.game_state.settings.animation_speed.next_setting()) {
