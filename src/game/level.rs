@@ -469,7 +469,9 @@ impl Level {
         }
     }
 
-    pub fn draw_ascii_art_background(
+    fn draw_ascii_art_background_internal(
+        &self,
+
         console: &Console,
 
         (screen_x, screen_y, screen_width, screen_height): (usize, usize, usize, usize),
@@ -656,6 +658,170 @@ impl Level {
                 console.set_cursor_pos(screen_x + x, screen_y + y);
                 console.draw_text("*");
             }
+        }else if background_music_id == audio::BACKGROUND_MUSIC_RESOW.id() {
+            let contains_ice_tiles = self.tiles.iter().any(|tile| matches!(tile, Tile::Ice | Tile::KeyOnIce | Tile::BoxOnIce | Tile::PlayerOnIce));
+
+            //Demon
+            let demon_str = r#"
+(     _.-----._     )
+|\  .'---. .---'.  /|
+| `:/.---.v.---.\:' |
+ `:~~|\#/| |\#/|~~:'
+  |~~'---')'---'~~|
+  ( ===  (_.) === )
+   \  /\_____/\  /
+    | | V===V | |
+     \ `-----' /
+      `-------'
+ .-^^--' \ / '--^^-.
+/  ===   ===   ===  \
+            "#[1..].trim_end(); //Remove leading newline and trailing spaces
+
+            let pitchfork_str = r#"
+    /\
+/\  ||  /\
+||  ||  ||
+||  ||  ||
+'===++==='
+    ||
+    ||
+    ||
+    ||
+    ||
+    ||
+    ||
+    ||
+    ||
+            "#[1..].trim_end(); //Remove leading newline and trailing spaces
+
+            for (i, demon_part) in [demon_str, pitchfork_str].into_iter().enumerate() {
+                let start_x = if i == 0 { screen_x } else { screen_x + screen_width - 10 };
+                let start_y = if i == 0 { screen_y + screen_height - 12 } else { screen_y + screen_height - 14 };
+
+                for (y, line) in demon_part.split("\n").enumerate() {
+                    for (x, c) in line.bytes().enumerate() {
+                        if c == b' ' {
+                            continue;
+                        }
+
+                        console.set_cursor_pos(start_x + x, start_y + y);
+
+                        let is_eyes = c == b'#';
+
+                        if is_eyes {
+                            console.set_color(if is_player_background { Color::Yellow } else { Color::LightYellow }, Color::Default);
+                        }else {
+                            if ((y % 3) + x) % 5 < 3 {
+                                console.set_color(if contains_ice_tiles { Color::Blue } else { Color::Red }, Color::Default);
+                            }else {
+                                console.set_color(if contains_ice_tiles { Color::LightBlue } else { Color::LightRed }, Color::Default);
+                            }
+                        }
+
+                        console.draw_text(c as char);
+                    }
+                }
+            }
+
+            if contains_ice_tiles {
+                let ice_cube_1_str = r#"
+  +---+
+ /###/|
++---+#+
+|###|/
++---+
+                "#[1..].trim_end(); //Remove leading newline and trailing spaces
+
+                let ice_cube_2_str = r#"
++---+
+|###|
++---+
+|###|
++---+
+                "#[1..].trim_end(); //Remove leading newline and trailing spaces
+
+                let ice_cube_3_str = r#"
++---+
+|\###\
++#+--+
+ \|###|
+  +---+
+                "#[1..].trim_end(); //Remove leading newline and trailing spaces
+
+                for (i, ice_cube) in [ice_cube_1_str, ice_cube_2_str, ice_cube_3_str].into_iter().enumerate() {
+                    let start_x = screen_x + 25 + 15 * i + (i & 1);
+                    let start_y = screen_y + screen_height - 5;
+
+                    for (y, line) in ice_cube.split("\n").enumerate() {
+                        for (x, c) in line.bytes().enumerate() {
+                            if c == b' ' {
+                                continue;
+                            }
+
+                            console.set_cursor_pos(start_x + x, start_y + y);
+
+                            if (((y + i) % 3) + x + 3 * i) % 5 < 3 {
+                                console.set_color(Color::Blue, Color::Default);
+                            }else {
+                                console.set_color(Color::LightBlue, Color::Default);
+                            }
+
+                            console.draw_text(c as char);
+                        }
+                    }
+                }
+            }else {
+                let flame_1_str = r#"
+  ^
+ /#\  ^
+/#^#\/^\
+#'#'####
+'######'
+                "#[1..].trim_end(); //Remove leading newline and trailing spaces
+
+                let flame_2_str = r#"
+ ^
+/^\
+'#'
+                "#[1..].trim_end(); //Remove leading newline and trailing spaces
+
+                for (i, flame) in [flame_1_str, flame_1_str, flame_2_str].into_iter().enumerate() {
+                    let start_x = if i == 0 { screen_x + 25 } else if i == 1 { screen_x + 54 } else { screen_x + 42 };
+                    let start_y = if i == 2 { screen_y + screen_height - 3 } else { screen_y + screen_height - 5 };
+
+                    for (y, line) in flame.split("\n").enumerate() {
+                        for (x, c) in line.bytes().enumerate() {
+                            if c == b' ' {
+                                continue;
+                            }
+
+                            let flip_flame = i != 2 && (is_player_background ^ (i == 1));
+
+                            console.set_cursor_pos(if flip_flame {
+                                start_x + 7 - x
+                            }else {
+                                start_x + x
+                            }, start_y + y);
+
+                            let is_inner_flame = if i == 2 { y == 1 && x == 1 } else { (y == 2 && (x == 2 || x == 6)) || (y == 3 && ((1..=3).contains(&x) || x == 6)) };
+
+                            if is_inner_flame {
+                                console.set_color(if i == 2 && is_player_background { Color::Yellow } else { Color::LightYellow }, Color::Default);
+                            }else {
+                                console.set_color(Color::LightRed, Color::Default);
+                            }
+
+                            if flip_flame && c == b'/' {
+                                console.draw_text('\\');
+                            }else if flip_flame && c == b'\\' {
+                                console.draw_text('/');
+                            }else {
+                                console.draw_text(c as char);
+                            }
+                        }
+                    }
+                }
+            }
         }else if background_music_id == audio::BACKGROUND_MUSIC_CATCHY.id() {
             //Grass
             console.set_cursor_pos(screen_x, screen_y + screen_height - 1);
@@ -745,7 +911,7 @@ impl Level {
         background_music_id: BackgroundMusicId,
         is_player_background: bool,
     ) {
-        Self::draw_ascii_art_background(
+        self.draw_ascii_art_background_internal(
             console,
 
             (screen_x, screen_y, screen_width, screen_height),
