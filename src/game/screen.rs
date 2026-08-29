@@ -742,7 +742,27 @@ impl Screen for ScreenSettings {
         console.reset_color();
         console.draw_text(")");
 
+        console.reset_color();
         console.set_cursor_pos(0, 12);
+        console.draw_text("Level Backgrounds: ");
+
+        if game_state.settings.level_background {
+            console.set_color(Color::Green, Color::Default);
+            console.draw_text("Enabled");
+        }else {
+            console.set_color(Color::Red, Color::Default);
+            console.draw_text("Disabled");
+        }
+
+        console.reset_color();
+        console.draw_text(" (Toggle with ");
+
+        console.draw_key_input_text("F6");
+
+        console.reset_color();
+        console.draw_text(")");
+
+        console.set_cursor_pos(0, 14);
         console.draw_key_input_text("r");
 
         console.reset_color();
