@@ -1489,6 +1489,8 @@ impl ScreenInGame {
             match game_state.current_level_index {
                 0 => {
                     if self.continue_flag {
+                        console.fill_rectangle(12, 15, 49, 3, b' ');
+
                         console.set_cursor_pos(13, 16);
                         console.draw_text("Press ");
 
@@ -1500,6 +1502,8 @@ impl ScreenInGame {
                         console.reset_color();
                         console.draw_text(" to go to the next level...");
                     }else {
+                        console.fill_rectangle(12, 15, 50, 3, b' ');
+
                         console.set_cursor_pos(13, 16);
                         console.draw_text("Use ");
 
@@ -1515,6 +1519,8 @@ impl ScreenInGame {
                     }
                 },
                 1 => {
+                    console.fill_rectangle(15, 15, 43, 3, b' ');
+
                     console.set_cursor_pos(16, 16);
                     console.draw_text("Boxes (");
 
@@ -1535,6 +1541,8 @@ impl ScreenInGame {
                     console.draw_text(")");
                 },
                 2 => {
+                    console.fill_rectangle(13, 15, 47, 3, b' ');
+
                     console.set_cursor_pos(14, 16);
                     console.draw_text("Some boxes (");
 
@@ -1549,6 +1557,8 @@ impl ScreenInGame {
                     console.draw_text(")");
                 },
                 3 => {
+                    console.fill_rectangle(13, 15, 48, 3, b' ');
+
                     console.set_cursor_pos(14, 16);
                     console.draw_text("Not all boxes (");
 
@@ -1563,6 +1573,8 @@ impl ScreenInGame {
                     console.draw_text(") to win");
                 },
                 4 => {
+                    console.fill_rectangle(4, 15, 66, 3, b' ');
+
                     console.set_cursor_pos(5, 16);
                     console.draw_text("One-way doors (");
 
@@ -1588,6 +1600,8 @@ impl ScreenInGame {
                 },
                 5 => {
                     if self.game_over_flag {
+                        console.fill_rectangle(5, 15, 63, 3, b' ');
+
                         console.set_cursor_pos(6, 16);
                         console.draw_text("Press ");
 
@@ -1599,6 +1613,8 @@ impl ScreenInGame {
                         console.reset_color();
                         console.draw_text(" to go back to the level selection screen");
                     }else {
+                        console.fill_rectangle(7, 15, 59, 3, b' ');
+
                         console.set_cursor_pos(8, 16);
                         console.draw_text("Boxes (");
 
@@ -1635,6 +1651,8 @@ impl ScreenInGame {
             if game_state.current_level_index < 3 {
                 let start_y = if game_state.current_level_index < 2 { 15 } else { 17 };
 
+                console.fill_rectangle(27, start_y - 1, 20, 4, b' ');
+
                 console.set_cursor_pos(28, start_y);
                 console.draw_key_input_text("z");
                 console.reset_color();
@@ -1659,6 +1677,8 @@ impl ScreenInGame {
             console.reset_color();
             match game_state.current_level_index {
                 0 => {
+                    console.fill_rectangle(17, 14, 40, 3, b' ');
+
                     console.set_cursor_pos(18, 15);
                     console.draw_text("Keys (");
 
@@ -1673,6 +1693,8 @@ impl ScreenInGame {
                     console.draw_text(")");
                 },
                 1 => {
+                    console.fill_rectangle(18, 14, 37, 3, b' ');
+
                     console.set_cursor_pos(19, 15);
                     console.draw_text("Every key (");
 
@@ -1687,6 +1709,8 @@ impl ScreenInGame {
                     console.draw_text(")");
                 },
                 2 => {
+                    console.fill_rectangle(20, 14, 33, 3, b' ');
+
                     console.set_cursor_pos(21, 15);
                     console.draw_text("Keys (");
 
@@ -1701,6 +1725,8 @@ impl ScreenInGame {
                     console.draw_text(")");
                 },
                 13 => {
+                    console.fill_rectangle(22, 14, 29, 3, b' ');
+
                     console.set_cursor_pos(23, 15);
                     console.draw_text("Holes (");
 
@@ -1710,6 +1736,8 @@ impl ScreenInGame {
                     console.draw_text(") cannot be crossed");
                 },
                 14 => {
+                    console.fill_rectangle(20, 14, 33, 3, b' ');
+
                     console.set_cursor_pos(21, 15);
                     console.draw_text("Filled holes (");
 
@@ -1719,6 +1747,8 @@ impl ScreenInGame {
                     console.draw_text(") can be crossed");
                 },
                 15 => {
+                    console.fill_rectangle(22, 14, 30, 3, b' ');
+
                     console.set_cursor_pos(23, 15);
                     console.draw_text("Boxes (");
 
@@ -1733,6 +1763,8 @@ impl ScreenInGame {
                     console.draw_text(")");
                 },
                 16 => {
+                    console.fill_rectangle(12, 14, 49, 3, b' ');
+
                     console.set_cursor_pos(13, 15);
                     console.draw_text("Keys (");
 
@@ -1747,6 +1779,8 @@ impl ScreenInGame {
                     console.draw_text(") and will be lost");
                 },
                 22 => {
+                    console.fill_rectangle(1, 13, 72, 5, b' ');
+
                     console.set_cursor_pos(2, 14);
                     console.draw_text("Fragile Floor (");
 
@@ -1774,6 +1808,8 @@ impl ScreenInGame {
                     console.draw_text(" to view floor tiles");
                 },
                 28 => {
+                    console.fill_rectangle(16, 15, 41, 4, b' ');
+
                     console.set_cursor_pos(17, 16);
                     console.draw_text("Ice (");
 
@@ -1801,6 +1837,8 @@ impl ScreenInGame {
                     console.draw_text(") to slide");
                 },
                 29 => {
+                    console.fill_rectangle(13, 14, 48, 5, b' ');
+
                     console.set_cursor_pos(14, 15);
                     console.draw_text("If a box (");
 
@@ -1836,6 +1874,8 @@ impl ScreenInGame {
                     console.draw_text(" to view floor tiles");
                 },
                 30 => {
+                    console.fill_rectangle(22, 16, 29, 3, b' ');
+
                     console.set_cursor_pos(23, 17);
                     console.draw_text("Press ");
 
@@ -1851,6 +1891,8 @@ impl ScreenInGame {
             #[expect(clippy::single_match)]
             match game_state.current_level_index {
                 0 => {
+                    console.fill_rectangle(34, 15, 5, 3, b' ');
+
                     console.set_cursor_pos(35, 16);
                     console.draw_text("???");
                 },
