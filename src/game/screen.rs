@@ -988,6 +988,7 @@ impl ScreenSelectLevel {
         }else {
             let min_level_not_completed = game_state.get_current_level_pack().as_ref().unwrap().min_level_not_completed();
             let level = game_state.get_current_level_pack().unwrap().levels()[cursor_index - 1].level();
+            let background_music_id = game_state.get_current_level_pack().unwrap().background_music_id();
 
             if cursor_index - 1 > min_level_not_completed {
                 let x = ((Game::CONSOLE_MIN_WIDTH - 40) as f64 * 0.5) as usize;
@@ -1009,6 +1010,18 @@ impl ScreenSelectLevel {
             }else {
                 let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
                 let y_offset = 1 + ((Game::CONSOLE_MIN_HEIGHT - 1 - level.height()) as f64 * 0.5) as usize;
+
+                if game_state.settings.level_background && let Some(background_music_id) = background_music_id {
+                    level.draw_level_ascii_art_background(
+                        console,
+
+                        (0, 1, Game::CONSOLE_MIN_WIDTH, Game::CONSOLE_MIN_HEIGHT - 1),
+                        (x_offset, y_offset),
+
+                        background_music_id,
+                        game_state.is_player_background(),
+                    );
+                }
 
                 level.draw(console, x_offset, y_offset, game_state.is_player_background(), None);
             }
@@ -1142,7 +1155,9 @@ impl ScreenInGame {
         if game_state.get_level_pack_index() == 0 { //Built-in Demo pack
             console.reset_color();
 
-            if matches!(game_state.current_level_index, 3 | 4..6 | 15) {
+            if matches!(game_state.current_level_index, 2..=3 | 4..=5 | 15) {
+                console.fill_rectangle(46, 9, 18, 5, b' ');
+
                 console.set_cursor_pos(47, 10);
                 console.draw_key_input_text("z");
                 console.reset_color();
@@ -1168,6 +1183,8 @@ impl ScreenInGame {
             match game_state.current_level_index {
                 0 => {
                     if self.continue_flag {
+                        console.fill_rectangle(12, 15, 49, 3, b' ');
+
                         console.set_cursor_pos(13, 16);
                         console.draw_text("Press ");
 
@@ -1179,6 +1196,8 @@ impl ScreenInGame {
                         console.reset_color();
                         console.draw_text(" to go to the next level...");
                     }else {
+                        console.fill_rectangle(12, 15, 50, 3, b' ');
+
                         console.set_cursor_pos(13, 16);
                         console.draw_text("Use ");
 
@@ -1194,6 +1213,8 @@ impl ScreenInGame {
                     }
                 },
                 1 => {
+                    console.fill_rectangle(15, 15, 43, 3, b' ');
+
                     console.set_cursor_pos(16, 16);
                     console.draw_text("Boxes (");
 
@@ -1214,6 +1235,11 @@ impl ScreenInGame {
                     console.draw_text(")");
                 },
                 2 => {
+                    //Extend blank rectangle from Undo/Redo/Restart Level
+                    console.fill_rectangle(46, 14, 18, 1, b' ');
+
+                    console.fill_rectangle(4, 15, 66, 3, b' ');
+
                     console.set_cursor_pos(5, 16);
                     console.draw_text("One-way doors (");
 
@@ -1238,6 +1264,11 @@ impl ScreenInGame {
                     console.draw_text(") can only be entered from the opened side");
                 },
                 3 => {
+                    //Extend blank rectangle from Undo/Redo/Restart Level
+                    console.fill_rectangle(46, 14, 18, 1, b' ');
+
+                    console.fill_rectangle(7, 15, 59, 3, b' ');
+
                     console.set_cursor_pos(8, 16);
                     console.draw_text("Boxes (");
 
@@ -1267,6 +1298,8 @@ impl ScreenInGame {
                     console.draw_text(")");
                 },
                 10 => {
+                    console.fill_rectangle(17, 16, 40, 3, b' ');
+
                     console.set_cursor_pos(18, 17);
                     console.draw_text("Keys (");
 
@@ -1281,11 +1314,15 @@ impl ScreenInGame {
                     console.draw_text(")");
                 },
                 15 => {
+                    console.fill_rectangle(34, 14, 5, 3, b' ');
+
                     console.set_cursor_pos(35, 15);
                     console.draw_text("???");
                 },
                 34 => {
                     if !self.game_over_flag {
+                        console.fill_rectangle(10, 16, 54, 3, b' ');
+
                         console.set_cursor_pos(11, 17);
                         console.draw_text("Ice (");
 
@@ -1466,9 +1503,22 @@ impl Screen for ScreenInGame {
             console.draw_text(" to go back to the level selection screen");
         }else if let Some(playing_level) = self.level.as_ref() {
             let level = &playing_level.current_playing_level().0;
+            let background_music_id = game_state.get_current_level_pack().unwrap().background_music_id();
 
             let x_offset = ((Game::CONSOLE_MIN_WIDTH - level.width()) as f64 * 0.5) as usize;
             let y_offset = 1 + ((Game::CONSOLE_MIN_HEIGHT - 1 - level.height()) as f64 * 0.5) as usize;
+
+            if game_state.settings.level_background && let Some(background_music_id) = background_music_id {
+                level.draw_level_ascii_art_background(
+                    console,
+
+                    (0, 1, Game::CONSOLE_MIN_WIDTH, Game::CONSOLE_MIN_HEIGHT - 1),
+                    (x_offset, y_offset),
+
+                    background_music_id,
+                    game_state.is_player_background(),
+                );
+            }
 
             if self.show_floor {
                 level.draw_floor(console, x_offset, y_offset, game_state.is_player_background(), playing_level.original_level(), None);

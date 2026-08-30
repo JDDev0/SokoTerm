@@ -449,6 +449,110 @@ impl Level {
         }
     }
 
+    fn draw_ascii_art_background_internal(
+        &self,
+
+        console: &Console,
+
+        (screen_x, screen_y, _screen_width, _screen_height): (usize, usize, usize, usize),
+
+        background_music_id: BackgroundMusicId,
+        _is_player_background: bool,
+    ) {
+        if background_music_id == audio::BACKGROUND_MUSIC_FIELDS_OF_ICE.id() {
+            let box_str = r#"
++----------+===============|#|/@@@@@@\|#|@@@@@@|#\/#+----+#|@//@@|@@\\@|#|
+|##########|##||#######||##|#'--------'#|@@@@@@|#/\#|###/|#|//@@@|@@@\\|#|
+|#,------,#|##||#######||##|############|@@@@@@|/##\|##/#|#|/@@@@|@@@@\|#|
+|#|\@@@//|#+-------+-------+------------+------+----+#/##|#'-----+-----'#|
+|#|\\@//@|#|\@@@@@/|                                |/###|###############|
+|#|@\v/@@|#|@\@@@/@|                                +----+-----+--+------+
+|#|@/^\@@|#|@@\@/@@|                                |@@@@@@@@@@|\/|\@\@\@|
+|#|//@\\@|#|@@@x@@@|                                |@@@@@@@@@@|/\|@\@\@\|
+|#|/@@@\\|#|@@/@\@@|                                +----------+--+------+
+|#'------'#|@/@@@\@|                                |####################|
+|##########|/@@@@@\|                                |#/\##/\##/\##/\##/\#|
++----------+--+----+                                |#\/##\/##\/##\/##\/#|
+|##########|#/|##/#|                                |####################|
+|#,------,#|/#|#/##|                                +----+--------+------+
+|#|@@@@//|#+--+----+                                |####|\@@@@@@@|@@@@@@|
+|#|@@@//@|#|#######|                                |####|@\@@@@@@+------+
+|#|@@//@@|#|-+-+-+-|                                |####|@@\@@@@@|\####/|
+|#|@//@@@|#|#|#|#|#+--------+-----------------------+----+@@@\@@@@|#\##/#|
+|#|//@@@@|#|#|#|#|#|######.'|#|#######'---'#######|#|@@@/|@@@@\@@@|##\/##|
+|#|/@@@@@|#|#|#|#|#|####.'##|#|###################|#|@@/@|@@@@@\@@|##/\##|
+|#'------'#|-+-+-+-|##.'####|=+===================+=|@/@@|@@@@@@\@|#/##\#|
+|##########|#######|.'######|#|##S#O#K#O#T#E#R#M##|#|/@@@|@@@@@@@\|/####\|
+            "#[1..].trim_end(); //Remove leading newline and trailing spaces
+
+            let start_x = screen_x;
+            let start_y = screen_y;
+
+            for (y, line) in box_str.split("\n").enumerate() {
+                for (x, c) in line.bytes().enumerate() {
+                    if c == b' ' {
+                        continue;
+                    }
+
+                    console.set_cursor_pos(start_x + x, start_y + y);
+
+                    let is_box_frame = !matches!(c, b'#' | b'@' | b'S' | b'O' | b'K' | b'T' | b'E' | b'R' | b'M');
+                    console.set_color(if is_box_frame { Color::Yellow } else { Color::LightYellow }, Color::Default);
+
+                    console.draw_text(c as char);
+                }
+            }
+        }
+    }
+
+    pub fn draw_level_ascii_art_background(
+        &self,
+
+        console: &Console,
+
+        (screen_x, screen_y, screen_width, screen_height): (usize, usize, usize, usize),
+        (level_x_start, level_y_start): (usize, usize),
+
+        background_music_id: BackgroundMusicId,
+        is_player_background: bool,
+    ) {
+        self.draw_ascii_art_background_internal(
+            console,
+
+            (screen_x, screen_y, screen_width, screen_height),
+
+            background_music_id,
+            is_player_background,
+        );
+
+        console.set_color(Color::Default, Color::Default);
+        for y in level_y_start.saturating_sub(1)..level_y_start + self.height + 1 {
+            if y < screen_y {
+                continue;
+            }
+
+            if y == level_y_start.saturating_sub(1) || y == level_y_start + self.height {
+                for x in level_x_start.saturating_sub(1)..level_x_start + self.width + 1 {
+                    if x < screen_x {
+                        continue;
+                    }
+
+                    console.set_cursor_pos(x, y);
+                    console.draw_text(" ");
+                }
+            }else {
+                for x in [level_x_start.saturating_sub(1), level_x_start + self.width] {
+                    if x < screen_x {
+                        continue;
+                    }
+
+                    console.set_cursor_pos(x, y);
+                    console.draw_text(" ");
+                }
+            }
+        }
+    }
+
     pub fn to_str(&self) -> String {
         let mut out = String::with_capacity(14 + self.width * self.height);
 
