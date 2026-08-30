@@ -479,8 +479,127 @@ impl Level {
         background_music_id: BackgroundMusicId,
         is_player_background: bool,
     ) {
-        if background_music_id == audio::BACKGROUND_MUSIC_LONELY_NIGHT.id() {
-            //Moon
+        if background_music_id == audio::BACKGROUND_MUSIC_TRIANGULAR.id() {
+            let building_1_str = r#"
+         .
+         |
+         |
+      ___|______
+     /###|#####/|
+    /###/|\###/:|_
+   /#########/://:|
+  |=========|://:/|
+  |:::::::::|//:/:|_
+ |===========|:/://:|
+ |:::::::::::|/://:/|
+ |-----------|://:/:|
+ |:::::::::::|//:/:/|
+|=============|:/:/:|
+|:::::::::::::|/:/:/|
+|-------------|:/:/:|
+|:::::::::::::|/:/:// /   //   / /###/
+|-------------|:/:// / / // / / /###/
+|:::::::::::::|/:// /   //   / /###/
+|-------------|:// / / // / / /###/
+|:::::::::::::|// /   //   / /###/
+|=============|/ / / // / / /###/
+            "#[1..].trim_end(); //Remove leading newline and trailing spaces
+
+            let building_2_str = r#"
+|## ##########|/#/:/|
+|#: #:###:##:#|#/#/#|
+|## ##########|/:/:/|
+|-- ----------|#/#/#|
+           #:#|/:/:/|
+           ###|#/#/#|
+             #|/:/:/|
+             -|#/#/#|
+             #|/:/:/|
+              |#/#/#|
+              |/:/:// /   //   / /###/
+              |#/#// / / // / / /###/
+              |/:// /   //   / /###/
+              |#// / / // / / /###/
+              |// /   //   / /###/
+              |/ / / // / / /###/
+            "#[1..].trim_end(); //Remove leading newline and trailing spaces
+
+            let building_3_str = r#"
+              |/:/:/:|
+              |:/:/:/|
+              |/:/:/:|
+              |:/:/:// / / // / / /###/
+              |/:/:// /   //   / /###/
+              |:/:// / / // / / /###/
+              |/:// /   //   / /###/
+              |:// / / // / / /###/
+              |// /   //   / /###/
+              |/ / / // / / /###/
+            "#[1..].trim_end(); //Remove leading newline and trailing spaces
+
+            let building_4_str = r#"
+              |/#// /   //   / /###/
+              |#// / / // / / /###/
+              |// /   //   / /###/
+              |/ / / // / / /###/
+            "#[1..].trim_end(); //Remove leading newline and trailing spaces
+
+            for (i, building) in [
+                building_1_str, building_2_str, building_3_str, building_4_str,
+            ].into_iter().enumerate() {
+                let start_x = screen_x + 6 * i;
+                let start_y = screen_y;
+
+                for (y, line) in building.split("\n").enumerate() {
+                    for (x, c) in line.bytes().enumerate() {
+                        if c == b' ' {
+                            continue;
+                        }
+
+                        console.set_cursor_pos(start_x + x, start_y + y);
+
+                        let is_window = c == b':';
+                        let is_antenna_top = c == b'.';
+                        if is_window {
+                            if (((y + i) % 3) + x + i) % 5 == 1 {
+                                console.set_color(if is_player_background { Color::Yellow } else { Color::LightYellow }, Color::Default);
+                            }else if ((y % 3) + x) % 5 < 3 {
+                                console.set_color(Color::LightYellow, Color::Default);
+                            }else {
+                                console.set_color(Color::Yellow, Color::Default);
+                            }
+                        }else if is_antenna_top {
+                            console.set_color(if is_player_background { Color::Red } else { Color::LightRed }, Color::Default);
+                        }else {
+                            if (((y + 2 * i) % 3) + x + i) % 5 < 3 {
+                                console.set_color(Color::Blue, Color::Default);
+                            }else {
+                                console.set_color(Color::LightBlue, Color::Default);
+                            }
+                        }
+
+                        console.draw_text(c as char);
+                    }
+                }
+            }
+
+            //Ocean
+            for (i, y) in (screen_y..screen_y + screen_height).into_iter().rev().enumerate() {
+                for x in screen_x + 34 + i..screen_x + screen_width {
+                    console.set_cursor_pos(x, y);
+
+                    if (is_player_background as usize + (y & 1) + x) & 1 == 0 {
+                        if (((y/2) % 3) + x/2) % 5 < 3 {
+                            console.set_color(Color::Blue, Color::Default);
+                        }else {
+                            console.set_color(Color::LightBlue, Color::Default);
+                        }
+
+                        console.draw_text("~");
+                    }
+                }
+            }
+        }else if background_music_id == audio::BACKGROUND_MUSIC_LONELY_NIGHT.id() {
             let moon_str = r#"
 '::.
  `::.
@@ -661,7 +780,6 @@ impl Level {
         }else if background_music_id == audio::BACKGROUND_MUSIC_RESOW.id() {
             let contains_ice_tiles = self.tiles.iter().any(|tile| matches!(tile, Tile::Ice | Tile::KeyOnIce | Tile::BoxOnIce | Tile::PlayerOnIce));
 
-            //Demon
             let demon_str = r#"
 (     _.-----._     )
 |\  .'---. .---'.  /|
@@ -835,7 +953,6 @@ impl Level {
                 console.draw_text("_");
             }
 
-            //Trees
             let tree_1_str = r#"
      @%&%
    ###&%&&%`     #%@
