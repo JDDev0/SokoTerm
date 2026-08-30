@@ -5,6 +5,8 @@ pub trait ConsoleExtension {
     fn draw_key_input_text(&self, input_text: &str);
 
     fn draw_tile(&self, tile: Tile, is_player_background: bool, inverted: bool);
+
+    fn fill_rectangle(&self, x: usize, y: usize, width: usize, height: usize, character: u8);
 }
 
 impl<'a> ConsoleExtension for Console<'a> {
@@ -21,5 +23,15 @@ impl<'a> ConsoleExtension for Console<'a> {
     #[cfg(feature = "gui")]
     fn draw_tile(&self, tile: Tile, is_player_background: bool, inverted: bool) {
         self.draw_tile_internal(tile, is_player_background, inverted);
+    }
+
+    fn fill_rectangle(&self, x: usize, y: usize, width: usize, height: usize, character: u8) {
+        for y_pos in y..y + height {
+            self.set_cursor_pos(x, y_pos);
+
+            for _ in x..x + width {
+                self.draw_text(character as char);
+            }
+        }
     }
 }
