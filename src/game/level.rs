@@ -518,7 +518,7 @@ impl Level {
                     console.set_cursor_pos(start_x + x, start_y + y);
 
                     let is_box_frame = !matches!(c, b'#' | b'@' | b'S' | b'O' | b'K' | b'T' | b'E' | b'R' | b'M');
-                    console.set_color(if is_box_frame { Color::Yellow } else { Color::LightYellow }, Color::Default);
+                    console.set_color(if is_box_frame { Color::LightYellow } else { Color::Yellow }, Color::Default);
 
                     console.draw_text(c as char);
                 }
