@@ -632,8 +632,8 @@ impl Level {
                 for x in screen_x + 34 + i..screen_x + screen_width {
                     console.set_cursor_pos(x, y);
 
-                    if (is_player_background as usize + (y & 1) + x) & 1 == 0 {
-                        if (((y/2) % 3) + x/2) % 5 < 3 {
+                    if ((y & 1) + x) & 1 == 0 {
+                        if (((y/2) % 3) + is_player_background as usize + x/2) % 5 < 3 {
                             console.set_color(Color::Blue, Color::Default);
                         }else {
                             console.set_color(Color::LightBlue, Color::Default);
