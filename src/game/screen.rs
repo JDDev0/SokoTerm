@@ -193,6 +193,8 @@ impl Screen for ScreenStartMenu {
 mod attribution {
     use std::sync::LazyLock;
 
+    const ATTRIBUTION_PLAYTESTERS_TEXT: &str = include_str!("../../resources/attribution/playtesters.txt");
+
     const ATTRIBUTION_AUDIO_SOUND_EFFECTS_TEXT: &str = include_str!("../../resources/attribution/audio_sound_effects.txt");
     const ATTRIBUTION_AUDIO_BACKGROUND_MUSIC_TEXT: &str = include_str!("../../resources/attribution/audio_background_music.txt");
 
@@ -207,6 +209,17 @@ mod attribution {
     const ATTRIBUTION_LIBRARIES_TEXT: &str = include_str!("../../resources/attribution/libraries_gui.txt");
     #[cfg(feature = "steam")]
     const ATTRIBUTION_LIBRARIES_TEXT: &str = include_str!("../../resources/attribution/libraries_steam.txt");
+
+    pub static ATTRIBUTION_PLAYTESTERS_TOKENS: LazyLock<Box<[[&str; 1]]>> = LazyLock::new(|| {
+        ATTRIBUTION_PLAYTESTERS_TEXT.split("\n").
+                filter(|line| !line.trim().is_empty()).
+                map(|line| {
+                    line.split(";").
+                            map(|token| token.trim()).
+                            collect::<Box<[&str]>>().
+                            as_ref().try_into().unwrap()
+                }).collect()
+    });
 
     pub static ATTRIBUTION_AUDIO_SOUND_EFFECTS_TOKENS: LazyLock<Box<[[&str; 4]]>> = LazyLock::new(|| {
         ATTRIBUTION_AUDIO_SOUND_EFFECTS_TEXT.split("\n").
@@ -262,6 +275,8 @@ pub struct ScreenAbout {
 impl ScreenAbout {
     pub fn new() -> Self {
         let mut scroll_position_row_max = 11; //Open source game, version, link, build info, thank you text
+
+        scroll_position_row_max += 3 + 2 * attribution::ATTRIBUTION_PLAYTESTERS_TOKENS.len();
 
         scroll_position_row_max += 3 + 5 * attribution::ATTRIBUTION_AUDIO_SOUND_EFFECTS_TOKENS.len();
         scroll_position_row_max += 3 + 5 * attribution::ATTRIBUTION_AUDIO_BACKGROUND_MUSIC_TOKENS.len();
@@ -383,6 +398,28 @@ impl Screen for ScreenAbout {
         }
 
         current_row += 3;
+        if self.set_cursor_pos_if_visible(console, 0, current_row) {
+            console.reset_color();
+            console.draw_text("A big thank you to all the playtesters:");
+        }
+
+        current_row += 1;
+        if self.set_cursor_pos_if_visible(console, 0, current_row) {
+            console.reset_color();
+            console.draw_text("=======================================");
+        }
+
+        for [name] in attribution::ATTRIBUTION_PLAYTESTERS_TOKENS.iter() {
+            current_row += 1;
+            if self.set_cursor_pos_if_visible(console, 0, current_row) {
+                console.set_color(Color::LightCyan, Color::Default);
+                console.draw_text(*name);
+            }
+
+            current_row += 1;
+        }
+
+        current_row += 2;
         if self.set_cursor_pos_if_visible(console, 0, current_row) {
             console.reset_color();
             console.draw_text("This build of the game uses the following sound effects:");
